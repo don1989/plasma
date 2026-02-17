@@ -19,7 +19,7 @@
 - Clean, confident linework — no sketchy or rough edges
 
 ### Character Color Palettes
-- **Spyke Tinwall:** Reds (bandana, accents), blacks (clothing), steel grey (armor/weapon metal), ginger hair, green eyes
+- **Spyke Tinwall:** Reds (bandana, left glove, bracer), white (cloak), blacks (combat clothing), steel grey (armor/weapon metal, right armoured glove), ginger hair, green eyes
 - **June:** Blues (sporty top), whites (accents), gold/blonde hair, warm skin tones
 - **Draster:** Navy (suit-robe), silver (hair highlights, glove accents), dark tones overall, dark brown skin
 - **Hood (Morkain):** Pure black (cloak), dark purple aura/energy wisps, no visible skin color
@@ -52,9 +52,9 @@ Hair: Shoulder-length ginger/copper-red hair, slightly messy and layered, with a
 
 Eyes: Piercing green eyes, sharp and intense gaze. Note on sheet: left eye transforms — turns purple with a black sclera when his inner demon activates, and turns solid glowing red in Adrenaline Mode.
 
-Clothing: Dark black fitted shirt, black combat pants with reinforced knees, a leather leg brace on his right calf that conceals hidden daggers (show the daggers partially visible in a detail callout). Dark boots. Overall color scheme is blacks, dark greys, and steel tones with the red bandana as the primary color accent.
+Clothing: A white knee-length cloak with the sleeves cut off (similar to his deceased Master's cloak — flowing, slightly battle-worn, open at the front). Underneath: dark black fitted shirt, black combat pants with reinforced knees, a leather leg brace on his right calf that conceals hidden daggers (show the daggers partially visible in a detail callout). Dark boots. Red fingerless glove on his LEFT hand with a red bracer/wrist guard on the left wrist. An armoured full-fingered glove on his RIGHT hand — the right glove is steel grey, plated, covering all fingers. Overall color scheme is white (cloak), reds (bandana, left glove, bracer), blacks (combat clothing), and steel grey (right armoured glove, weapon metal).
 
-Weapons: (1) A massive Plasma broadsword strapped to his back — the sword is absurdly oversized, nearly as tall as he is, with a wide heavy blade that emits a faint blue-white Plasma energy glow along its edges. The hilt is wrapped in dark leather. (2) A katana sheathed at his left hip in a simple dark scabbard. (3) Hidden daggers in the right leg brace (show in a detail inset).
+Weapons: (1) A massive Plasma broadsword strapped to his back over the cloak — the sword is absurdly oversized, nearly as tall as he is, with a wide heavy blade that emits a faint blue-white Plasma energy glow along its edges. The hilt is wrapped in dark leather. (2) A katana sheathed at his left hip in a simple dark scabbard. (3) Hidden daggers in the right leg brace (show in a detail inset).
 
 Views: Front full-body view, 3/4 angle view, side profile view, back view showing the broadsword strapped across his back.
 
@@ -66,7 +66,7 @@ Expression sheet (6 expressions, bust/head shots arranged in a row below the ful
 5. Shocked — wide eyes, mouth slightly open, caught off guard
 6. Inner pain — left eye bleeding (a thin trail of blood running from his left eye down his cheek), pained grimace, clenching teeth
 
-Include detail callouts for: the red bandana closeup, the Plasma broadsword blade glow effect, the leg brace with hidden daggers, and the demon eye transformation (green → purple/black → red).
+Include detail callouts for: the red bandana closeup, the white cloak (sleeves cut, knee-length), the red fingerless left glove and red bracer vs the armoured right glove comparison, the Plasma broadsword blade glow effect, the leg brace with hidden daggers, and the demon eye transformation (green → purple/black → red).
 ```
 
 ---
