@@ -4,7 +4,7 @@
 **Estimated pages:** 48
 **Characters appearing:** Spyke, June, Draster, Hood (Morkain), 3 Punks, Exam Registrar, Stewards, Ravage (boss)
 **Locations:** Westminster streets, Kings Cross station, Formican Army Base (exterior, reception, jungle dome)
-**Canon references:** Spyke's broadsword (Plasma-infused, impossibly heavy), katana (Master's, secondary weapon), red bandana, green eyes. June's shortsword/pistol/magician glove/Plasma shoes. Draster's dual Plasma Gloves, navy suit-robe. Hood = Morkain in disguise. Time-freeze is ancient power. Rage Mode = Adrenaline Mode (early form). Year 3031, flooded Earth, tower civilisation.
+**Canon references:** Spyke's broadsword (Plasma-infused, impossibly heavy), katana (Master's, secondary weapon), red bandana, green eyes, white knee-length cloak (sleeves cut, like Master's), red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered glove on right hand. June's shortsword/pistol/magician glove/Plasma shoes. Draster's dual Plasma Gloves, navy suit-robe. Hood = Morkain in disguise. Time-freeze is ancient power. Rage Mode = Adrenaline Mode (early form). Year 3031, flooded Earth, tower civilisation.
 
 ---
 

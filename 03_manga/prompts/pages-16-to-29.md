@@ -3,7 +3,7 @@
 **Style Reference:** Colored manga page, cel-shaded, clean linework, dynamic panel layout, vibrant colors, speed lines for action, stylized SFX text integrated into panels, screen tone textures for shading. Year 3031 sci-fi setting (shifts to alien planet Terra from page 24 onward).
 
 **Character Key:**
-- **Spyke:** Shoulder-length ginger hair, red bandana, green eyes (flash red in Adrenaline Mode), huge Plasma broadsword on back, katana at hip.
+- **Spyke:** Shoulder-length ginger hair, red bandana, green eyes (flash red in Adrenaline Mode), white knee-length cloak (sleeves cut), red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered glove on right hand, huge Plasma broadsword on back, katana at hip.
 - **June:** Blonde hair tied back, sporty top, short shorts, black tights, shoulder pad armor, shortsword, pistol holster, magician glove on left hand, Plasma shoes.
 - **Draster:** Dark brown skin, black and silver hair, soft brown eyes, navy suit-robe jacket, Plasma Gloves on both hands.
 - **Hood (Morkain):** Tall, full black hooded cloak, face hidden in shadow (only lower jaw barely visible), broadsword in one hand, dark purple-black aura.
@@ -31,9 +31,9 @@ Panel 4 (WIDE SHOT): The wind intensifies dramatically. Through swirling leaves,
 ```
 Colored manga page, cel-shaded, clean linework, vibrant colors, dynamic panel layout. Four-panel page — two smaller panels on top, one wide action panel in the middle, one action panel on the bottom. Interior of a futuristic biodome. Tension escalating into combat.
 
-Panel 1 (CLOSE-UP): Extreme close on the face of a young man with shoulder-length ginger hair and a red bandana. His green eyes widen — first with recognition, then shifting to anger. Jaw tightens. The emotion reads clearly: he has seen this figure before. Speech balloon: "It was you earlier."
+Panel 1 (CLOSE-UP): Extreme close on the face of a young man with shoulder-length ginger hair, a red bandana, and the collar of a white sleeveless cloak visible at his neck. His green eyes widen — first with recognition, then shifting to anger. Jaw tightens. The emotion reads clearly: he has seen this figure before. Speech balloon: "It was you earlier."
 
-Panel 2 (MEDIUM SHOT): The ginger-haired young man points his drawn katana directly at a tall figure in a full black hooded cloak whose face is hidden in shadow. The young man's stance is aggressive, demanding. His red bandana flutters. Speech balloon: "Who are you?!"
+Panel 2 (MEDIUM SHOT): The ginger-haired young man in a white knee-length sleeveless cloak points his drawn katana directly at a tall figure in a full black hooded cloak whose face is hidden in shadow. The young man's stance is aggressive, demanding — his red fingerless left glove and armoured right glove both grip the hilt. His red bandana flutters, white cloak billows. Speech balloon: "Who are you?!"
 
 Panel 3 (WIDE SHOT — ACTION): Before the hooded figure can respond, three punk-styled humanoid copies with blank, wrong eyes rush toward the trio of heroes. The punks' movements are inhuman — jerky, puppet-like, limbs bending at slightly wrong angles. Speed lines fill the panel. The three heroes — the ginger-haired swordsman, a blonde woman with a pistol and shoulder pad armor, and a dark brown-skinned man with glowing Plasma Gloves — are forced into immediate combat. Dynamic poses as they react to the sudden attack.
 
@@ -159,7 +159,7 @@ Panel 4 (MEDIUM SHOT): The ginger-haired swordsman pushes himself up to a crouch
 ```
 Colored manga page, cel-shaded, clean linework, vibrant colors, dynamic panel layout. FULL DOUBLE-PAGE SPREAD — a single breathtaking panoramic image spanning two full pages. No panel borders. This is THE KEY VISUAL of the entire chapter. The image must be awe-inspiring and beautiful.
 
-The ginger-haired young man with the red bandana stands in the center-left of the composition, having just risen to his feet on alien terrain. He is seen from behind or three-quarter view, looking out at the vista before him. His massive broadsword hangs at his side or rests on his back. His posture conveys stunned stillness.
+The ginger-haired young man with the red bandana stands in the center-left of the composition, having just risen to his feet on alien terrain. He wears a white knee-length cloak with sleeves cut, a red fingerless glove on his left hand with a red bracer on the left wrist, and an armoured steel-grey full-fingered glove on his right hand. He is seen from behind or three-quarter view, looking out at the vista before him — his white cloak catching the alien wind. His massive broadsword hangs at his side or rests on his back. His posture conveys stunned stillness.
 
 The landscape of TERRA stretches out before him in full panoramic glory:
 - Vivid BLUE grass carpets the rolling terrain to the horizon, swaying gently like an ocean of sapphire.
@@ -219,7 +219,7 @@ Colored manga page, cel-shaded, clean linework, vibrant colors, dynamic panel la
 
 Panel 1 (MEDIUM SHOT): The dark brown-skinned man with black and silver hair, wearing the navy suit-robe jacket and Plasma Gloves, points decisively toward a thin column of smoke rising in the distance above the treeline of blue-leafed trees. His expression is practical and determined — moving forward regardless of the group's dysfunction. Speech balloon: "Over there. Smoke. Let's go."
 
-Panel 2 (WIDE SHOT — FINAL COMPOSITION): A beautiful, cinematic composition. The dark-skinned man takes the lead, walking purposefully toward the distant smoke trail through a field of vivid blue grass. After a visible beat of hesitation — a gap of space between them — the ginger-haired swordsman with the red bandana follows on one side, and the blonde woman follows on the other, both keeping deliberate distance from each other. None of them walk side by side. Three separate people moving in the same direction because they have no other choice.
+Panel 2 (WIDE SHOT — FINAL COMPOSITION): A beautiful, cinematic composition. The dark-skinned man takes the lead, walking purposefully toward the distant smoke trail through a field of vivid blue grass. After a visible beat of hesitation — a gap of space between them — the ginger-haired swordsman with the red bandana and white knee-length cloak follows on one side, and the blonde woman follows on the other, both keeping deliberate distance from each other. None of them walk side by side. Three separate people moving in the same direction because they have no other choice.
 
 The alien landscape stretches around them — rolling blue grass, groves of blue-leafed trees with natural brown trunks, the pink sky with cotton-candy clouds overhead. Behind them, dominating the sky, EARTH hangs massive and beautiful — oceans, continents, and clouds clearly visible, a constant reminder of how far from home they are.
 

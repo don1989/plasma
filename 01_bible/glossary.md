@@ -8,7 +8,7 @@
 
 | Name | Also Known As | Description |
 |------|---------------|-------------|
-| Spyke Tinwall | Redhead (by Seymour, Marik) | Protagonist. Ginger hair, green eyes (left eye turns purple/black when demon activates). Wears Master's red bandana. Carries broadsword, Master's katana, and hidden daggers. Has the blood of the ancients. |
+| Spyke Tinwall | Redhead (by Seymour, Marik) | Protagonist. Ginger hair, green eyes (left eye turns purple/black when demon activates). Wears Master's red bandana. White knee-length cloak (sleeves cut, similar to Master's). Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Carries broadsword, Master's katana, and hidden daggers. Has the blood of the ancients. |
 | June | — | Blonde hair, sporty build. Shortsword, magician glove, pistol, Plasma-imbued shoes. Lost parents in Canary Wharf monster attack. |
 | Draster | — | Dark brown skin, black and silver hair, soft brown eyes. Slim build. Wears suit-robe like a navy jacket. Dual Plasma Gloves. Mage specializing in elemental magic. |
 | Morkain | Hood | Long blonde hair, wrinkled features, scar across face, long goatee. Black Formican Army uniform. Broadsword. Wind/time-freeze powers. Founder and leader of Formican Army. Elder's son. |

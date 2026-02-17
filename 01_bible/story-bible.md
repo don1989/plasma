@@ -68,7 +68,7 @@ See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 
 ### Spyke Tinwall (Protagonist)
 
-- **Appearance:** Shoulder-length ginger hair, green eyes (left eye turns purple/black when demon activates, red in Adrenaline Mode). Wears Master's red bandana. Slim but strong build.
+- **Appearance:** Shoulder-length ginger hair, green eyes (left eye turns purple/black when demon activates, red in Adrenaline Mode). Wears Master's red bandana. White knee-length cloak with sleeves cut (similar style to Master's white cloak). Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Slim but strong build.
 - **Weapons:** Huge Plasma broadsword (primary), Master's katana (secondary, iaijutsu), hidden daggers in leg brace. Max 5 blades.
 - **Role:** Swordsman, leader of the trio
 - **Goal:** Find his father Tinwall and get answers. Stop Morkain. Prevent the catastrophe.

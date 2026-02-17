@@ -71,7 +71,7 @@ For each chapter, output:
 ## Plasma-Specific Visual Rules
 
 ### Character Appearances (Must Be Consistent)
-- **Spyke:** Shoulder-length ginger hair, green eyes, red bandana. Broadsword on back, katana at hip, daggers hidden. When Adrenaline Mode activates: eyes turn red, art style becomes sharper/more intense. When demon activates: left eye turns purple/black, arm may transform green/purple.
+- **Spyke:** Shoulder-length ginger hair, green eyes, red bandana. White knee-length cloak (sleeves cut, similar to Master's). Red fingerless glove on left hand, red bracer on left wrist; armoured full-fingered glove on right hand. Broadsword on back, katana at hip, daggers hidden. When Adrenaline Mode activates: eyes turn red, art style becomes sharper/more intense. When demon activates: left eye turns purple/black, arm may transform green/purple.
 - **June:** Blonde hair, sporty build. Shortsword at hip, pistol holster, magician glove on one hand, Plasma shoes visible.
 - **Draster:** Dark brown skin, black/silver hair, brown eyes. Slim. Navy jacket-style robe. Dual Plasma Gloves (leather, always visible).
 - **Morkain:** Long blonde hair, facial scar, long goatee. Black Formican uniform. Broadsword. Always drawn with an aura of calm menace.
