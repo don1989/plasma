@@ -296,7 +296,7 @@ be him.”
 “So that must mean there is a way off this planet…”, said Draster. “And Morkain knows how. Do
 you know where he is based?”
 Jairek nodded, “his army is based up in Monument Heights. But he himself is holed up in the
-Dukedom of Bazzleton. It’s quite a journey from here though, you cannot reach by foot.”
+Dukedom of Bazzleworth. It’s quite a journey from here though, you cannot reach by foot.”
 “So how do we get there?” Spyke said.
 “Your best bet is to go through Red Hills, Crying Jungle, take a boat to Felix Pier, then…”.
 “Just give us a map”. Spyke interrupted.
@@ -1350,18 +1350,18 @@ Dukedom of *Carnaby* to the East lead by Duke Carnaby. The Dukedom of Sicklewort
 West, lead by Duke Sickleworth. The Dukedom of Rainvale in the North, lead by Duchess
 Rainvale…, the receptionist tailed off.
 “And the last one?”, June asked.
-“Well the Dukedom of Bazzleton to the Centre of Terra… which is lead by Lord Morkain!”, the
+“Well the Dukedom of Bazzleworth to the Centre of Terra… which is lead by Lord Morkain!”, the
 receptionist finished.
 Spyke and Draster’s ears propped up.
 “Lord Morkain?” June asked, gesturing for Spyke and Draster to remain calm. “I thought he
 invaded the South?”
 “Yes that is correct”, the receptionist said darkly. “He liberated all five Dukedoms and replaced
-the leaders with his own soldiers. He currently resides in Bazzleton to the Centre of Terra.”
-“How do we get to Bazzleton?”, June asked calmly.
-“Hehehe, one does not simply get an airship to Bazzleton if that’s what you’re thinking.”
+the leaders with his own soldiers. He currently resides in Bazzleworth to the Centre of Terra.”
+“How do we get to Bazzleworth?”, June asked calmly.
+“Hehehe, one does not simply get an airship to Bazzleworth if that’s what you’re thinking.”
 “Then how do we get there?!”, Spyke butted in impatiently.
 “Ssssorry sir…” the receptionist said startled. “Ever since the war, airships have never travelled
-to and from Bazzleton directly. The only way is via Rainvale…”.
+to and from Bazzleworth directly. The only way is via Rainvale…”.
 “Cut the crap!”, Spyke raged. “We need to travel to the north of this planet to get to the center?!”
 “Ye-yes sir!”, the receptionist stuttered. “His army are based in Rainvale to the North so…”.
 “I get it”, Draster butted in. “Thanks for your assistance. Let’s go.” Draster grabbed Spyke and
@@ -1376,7 +1376,7 @@ to mistake us for one of Morkain’s lackeys. Understood?”
 “Hmph”, Spyke grunted. “Anyway, we need to steal one of their airships.”
 “Spyke, that’s madness”, Draster started. “No, we need to sneak onto one of their airships and
 jump off before they realise we’re on it.”
-“But the airships don’t go directly to Bazzleton where Morkain is”, June said.
+“But the airships don’t go directly to Bazzleworth where Morkain is”, June said.
 “There must be a reason for that”, Draster said. “He probably has his base heavily guarded.
 Either way, we can’t go in all guns blazing or we’ll have a whole army on us.”
 Spyke and June eventually agreed, nodding in approval.
@@ -1633,7 +1633,7 @@ we reach our quota. For now they will continue gathering monsters.”
 “My Lord”, he began. He was a big, muscly man wearing a green uniform and he had the most
 presence physically. “We’ve had no interference at the gate to Hell. Everything is as it should
 be. We have also located another crystal.”
-“Excellent work Carnarby, overdeliverying as usual. Send that over to Bazzleton.”
+“Excellent work Carnarby, overdeliverying as usual. Send that over to Bazzleworth.”
 “Has our special guest arrived my Lord?”, Carnaby asked.
 “Yes, he has”, Morkain said shooting a look directly at Spyke, as if he could see him through the
 helmet.

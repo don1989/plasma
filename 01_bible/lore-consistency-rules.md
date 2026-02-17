@@ -78,7 +78,7 @@ When writing or reviewing any Plasma content, check every scene against these ru
 
 ## Geography & Travel Rules
 
-1. **Terra has 5 continents** corresponding to the 5 Dukedoms: South, East, West, North, Centre (Bazzleton).
+1. **Terra has 5 continents** corresponding to the 5 Dukedoms: South, East, West, North, Centre (Bazzleworth).
 2. **A barrier envelops Terra** that turns anything touching it to dust. No leaving by air or space.
 3. **Inter-continent travel options:** Airships (Formican-controlled), underground tunnels (under construction/dangerous), ocean (Formican-controlled ports).
 4. **Deadbane Desert is lethal on foot.** The ground itself is dangerous — requires a levitating vehicle.

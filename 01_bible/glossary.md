@@ -12,7 +12,7 @@
 | June | — | Blonde hair, sporty build. Shortsword, magician glove, pistol, Plasma-imbued shoes. Lost parents in Canary Wharf monster attack. |
 | Draster | — | Dark brown skin, black and silver hair, soft brown eyes. Slim build. Wears suit-robe like a navy jacket. Dual Plasma Gloves. Mage specializing in elemental magic. |
 | Morkain | Hood | Long blonde hair, wrinkled features, scar across face, long goatee. Black Formican Army uniform. Broadsword. Wind/time-freeze powers. Founder and leader of Formican Army. Elder's son. |
-| Tinwall | Spyke's Father | Formican Army general. Broadsword user. Father of both Spyke and Seymour. Abused and imprisoned Spyke as a child. Current whereabouts: Bazzleton. |
+| Tinwall | Spyke's Father | Formican Army general. Broadsword user. Father of both Spyke and Seymour. Abused and imprisoned Spyke as a child. Current whereabouts: Bazzleworth. |
 | Master | The Saviour | Blonde spiky shoulder-length hair, piercing blue eyes, white cloak, red bandana. Katana (iaijutsu style). Former Formican Army. Ran an orphanage/dojo. **Dead** — killed in battle with Tinwall and Formicans. |
 | Seymour | — | Spyke's half-brother (same father). Senior at Master's orphanage. Rival to Spyke. Has black/green crystal fused in chest. **Status unknown** — disappeared after the battle where Master died. |
 | Jairek | — | Former Supreme Governor of Terra. Pale blue skin, white balding hair, mustache, ~5'2". Wears grey overalls. Weapons maker living in a shack near the trio's landing site. |
@@ -61,8 +61,8 @@
 | Dukedom of Hart | South | Duke Hart | Monster manufacturing, airship base, palace with banquet hall |
 | Dukedom of Carnaby | East | Duke Carnaby | Guards "gate to Hell," found additional crystal |
 | Dukedom of Sickleworth | West | Duke Sickleworth | Laboratory for manufactured monsters |
-| Dukedom of Rainvale | North | Duchess Rainvale | Army base, 7000+ monsters, only route to Bazzleton |
-| Dukedom of Bazzleton | Centre | Lord Morkain | Formican Army stronghold, Morkain's residence |
+| Dukedom of Rainvale | North | Duchess Rainvale | Army base, 7000+ monsters, only route to Bazzleworth |
+| Dukedom of Bazzleworth | Centre | Lord Morkain | Formican Army stronghold, Morkain's residence |
 
 ### Terra — Locations
 | Name | Type | Description |
@@ -200,8 +200,7 @@
 ## Naming Conventions
 
 - **Earth locations** use real London place names (Kings Cross, Westminster, Canary Wharf, Goldhawk, Perivale, Welldon Bay).
-- **Terra locations** use fictional English-style names (Gunners Green, Stoke Nier, Calderio, Hemington, Knadville, Thicklewig, Sherryville, Bazzleton/Bazzleworth).
+- **Terra locations** use fictional English-style names (Gunners Green, Stoke Nier, Calderio, Hemington, Knadville, Thicklewig, Sherryville, Bazzleworth).
 - **Character names** are original/fictional. The Tinwall surname is shared by Spyke, Seymour, and their father.
-- **Dukedoms** are named after their Duke (Hart, Carnaby, Sickleworth, Rainvale) except Bazzleton.
+- **Dukedoms** are named after their Duke (Hart, Carnaby, Sickleworth, Rainvale) except Bazzleworth.
 - **Shrines** are named after zodiac signs (Sagittarius, Cancer, Leo, Gemini + 8 more TBD).
-- **Note:** "Bazzleton" and "Bazzleworth" are both used in the source document — needs author decision on canonical spelling.
