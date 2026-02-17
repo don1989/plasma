@@ -4,7 +4,7 @@
 **Estimated pages:** 48
 **Characters appearing:** Spyke, June, Draster, Hood (Morkain), 3 Punks, Exam Registrar, Stewards, Ravage (boss)
 **Locations:** Westminster streets, Kings Cross station, Formican Army Base (exterior, reception, jungle dome)
-**Canon references:** Spyke's broadsword (Plasma-infused, impossibly heavy), katana (Master's, secondary weapon), red bandana, green eyes, white knee-length cloak (sleeves cut, like Master's), red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered glove on right hand. June's shortsword/pistol/magician glove/Plasma shoes. Draster's dual Plasma Gloves, navy suit-robe. Hood = Morkain in disguise. Time-freeze is ancient power. Rage Mode = Adrenaline Mode (early form). Year 3031, flooded Earth, tower civilisation.
+**Canon references:** Spyke (age 21), spiky ginger hair (tips reach traps), broadsword (Plasma-infused, impossibly heavy), patterned katana (Master's, secondary weapon), red bandana, green eyes, white knee-length cloak (sleeves cut, dojo emblem on back, pattern along bottom hem), red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered glove on right hand, red-accented belt, metal knee pauldron (hides daggers — not revealed in Ch.1). June's shortsword/pistol/magician glove/Plasma shoes. Draster's dual Plasma Gloves, navy suit-robe. Hood = Morkain in disguise. Time-freeze is ancient power. Rage Mode = Adrenaline Mode (early form). Year 3031, flooded Earth, tower civilisation.
 
 ---
 
@@ -26,7 +26,7 @@
 
 ### Panel 3 — Medium-Wide
 
-**Action:** Spyke sprints along a crowded elevated walkway in Westminster. His huge broadsword swings wildly from side to side on his back, forcing commuters to dodge. His red bandana trails behind him. Shoulder-length ginger hair whipping in the wind. Green eyes focused ahead. He's weaving through a crowd of people in futuristic work clothes heading to their jobs.
+**Action:** Spyke sprints along a crowded elevated walkway in Westminster. His huge broadsword swings wildly from side to side on his back, forcing commuters to dodge. His red bandana trails behind him, white cloak billowing. Spiky ginger hair whipping in the wind. Green eyes focused ahead. He's weaving through a crowd of people in futuristic work clothes heading to their jobs.
 **Dialogue:**
 - SPYKE (thought): *Shit. I'm gonna be late...*
 **SFX:** —

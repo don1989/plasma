@@ -90,7 +90,7 @@ In addition to general continuity, always verify these Plasma-universe specifics
 - [ ] Travel times are realistic (days/weeks on foot, faster by vehicle)
 
 ### Item & Equipment Checks
-- [ ] Spyke carries: broadsword, Master's katana, hidden daggers (5 blades max)
+- [ ] Spyke carries: broadsword, Master's patterned katana, hidden daggers in metal knee pauldron (5 blades max, not revealed until later)
 - [ ] Trio has Plasma motorcycle (needs Plasma fuel, can levitate temporarily)
 - [ ] Zodiac gems collected so far: Sagittarius, Cancer, Leo, Gemini
 - [ ] Red crystal from Zena is in Spyke's possession

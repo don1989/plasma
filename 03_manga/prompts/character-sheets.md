@@ -46,17 +46,17 @@
 ```
 Colored manga character reference sheet, clean linework, cel-shaded, vibrant colors, white background, multiple views (front, 3/4, side, back), expression sheet below.
 
-Character: Spyke Tinwall, male, age 16, slim but strong athletic build, lean muscle definition visible on arms and shoulders.
+Character: Spyke Tinwall, male, age 21, slim but strong athletic build, lean muscle definition visible on arms and shoulders.
 
-Hair: Shoulder-length ginger/copper-red hair, slightly messy and layered, with a bright red bandana tied into the hair (the bandana belonged to his Master — it is worn wrapped around the top of his head with the tails trailing into his hair).
+Hair: Spiky ginger/copper-red hair — slightly longer than shoulder-length, with the tips reaching down to his trapezius muscles, but not super long. The hair is spiky and textured with natural volume and layering. A bright red bandana is tied into the hair (the bandana belonged to his Master — it is worn wrapped around the top of his head with the tails trailing into his hair).
 
 Eyes: Piercing green eyes, sharp and intense gaze. Note on sheet: left eye transforms — turns purple with a black sclera when his inner demon activates, and turns solid glowing red in Adrenaline Mode.
 
-Clothing: A white knee-length cloak with the sleeves cut off (similar to his deceased Master's cloak — flowing, slightly battle-worn, open at the front). Underneath: dark black fitted shirt, black combat pants with reinforced knees, a leather leg brace on his right calf that conceals hidden daggers (show the daggers partially visible in a detail callout). Dark boots. Red fingerless glove on his LEFT hand with a red bracer/wrist guard on the left wrist. An armoured full-fingered glove on his RIGHT hand — the right glove is steel grey, plated, covering all fingers. Overall color scheme is white (cloak), reds (bandana, left glove, bracer), blacks (combat clothing), and steel grey (right armoured glove, weapon metal).
+Clothing: A white knee-length cloak with the sleeves cut off (similar to his deceased Master's cloak — flowing, slightly battle-worn, open at the front). The cloak has a dojo emblem/crest on the back (his Master's dojo insignia) and a decorative pattern running along the bottom hem. Underneath: dark black fitted shirt, black combat pants with reinforced knees, a metal knee pauldron on his right knee (the pauldron conceals hidden daggers — but in this reference sheet DO NOT show the daggers; the pauldron should look like a solid armour piece). Dark boots. A red-accented belt around his waist. Red fingerless glove on his LEFT hand with a red bracer/wrist guard on the left wrist. An armoured full-fingered glove on his RIGHT hand — the right glove is steel grey, plated, covering all fingers. Overall color scheme is white (cloak), reds (bandana, left glove, bracer, belt accent), blacks (combat clothing), and steel grey (right armoured glove, knee pauldron, weapon metal).
 
-Weapons: (1) A massive Plasma broadsword strapped to his back over the cloak — the sword is absurdly oversized, nearly as tall as he is, with a wide heavy blade that emits a faint blue-white Plasma energy glow along its edges. The hilt is wrapped in dark leather. (2) A katana sheathed at his left hip in a simple dark scabbard. (3) Hidden daggers in the right leg brace (show in a detail inset).
+Weapons: (1) A massive Plasma broadsword strapped to his back over the cloak — the sword is absurdly oversized, nearly as tall as he is, with a wide heavy blade that emits a faint blue-white Plasma energy glow along its edges. The hilt is wrapped in dark leather. (2) A katana sheathed at his left hip — the blade has a distinctive pattern etched into the steel (a patterned/damascus-style blade). Dark scabbard. (3) Hidden daggers concealed inside the metal knee pauldron (NOT shown on this sheet — they are a secret reveal for later).
 
-Views: Front full-body view, 3/4 angle view, side profile view, back view showing the broadsword strapped across his back.
+Views: Front full-body view, 3/4 angle view, side profile view, back view showing the broadsword strapped across his back and the dojo emblem on the cloak.
 
 Expression sheet (6 expressions, bust/head shots arranged in a row below the full-body views):
 1. Neutral/cold — blank stare, emotionless, guarded
@@ -66,7 +66,7 @@ Expression sheet (6 expressions, bust/head shots arranged in a row below the ful
 5. Shocked — wide eyes, mouth slightly open, caught off guard
 6. Inner pain — left eye bleeding (a thin trail of blood running from his left eye down his cheek), pained grimace, clenching teeth
 
-Include detail callouts for: the red bandana closeup, the white cloak (sleeves cut, knee-length), the red fingerless left glove and red bracer vs the armoured right glove comparison, the Plasma broadsword blade glow effect, the leg brace with hidden daggers, and the demon eye transformation (green → purple/black → red).
+Include detail callouts for: the red bandana closeup, the white cloak back view showing the dojo emblem and bottom hem pattern, the red fingerless left glove and red bracer vs the armoured right glove comparison, the metal knee pauldron (closed, no daggers visible), the patterned katana blade closeup, the red belt accent, the Plasma broadsword blade glow effect, and the demon eye transformation (green → purple/black → red).
 ```
 
 ---
@@ -76,7 +76,7 @@ Include detail callouts for: the red bandana closeup, the white cloak (sleeves c
 ```
 Colored manga character reference sheet, clean linework, cel-shaded, vibrant colors, white background, multiple views (front, 3/4, side, back), expression sheet below.
 
-Character: June, female, age 16, sporty and athletic build, toned legs and arms, confident posture with energy and movement in her stance.
+Character: June, female, age 20, sporty and athletic build, toned legs and arms, confident posture with energy and movement in her stance.
 
 Hair: Blonde hair, medium length, worn down normally but tied back in a practical ponytail or bun for combat. Show both hairstyles on the sheet (one full-body with hair down, one with hair tied back).
 
@@ -106,7 +106,7 @@ Include detail callouts for: the magician glove with its rune markings on the le
 ```
 Colored manga character reference sheet, clean linework, cel-shaded, vibrant colors, white background, multiple views (front, 3/4, side, back), expression sheet below.
 
-Character: Draster, male, age 16, dark brown skin, slim build, composed and intellectual posture, hands often resting in pockets.
+Character: Draster, male, age 22, dark brown skin, slim build, composed and intellectual posture, hands often resting in pockets.
 
 Hair: Black and silver hair — primarily black with natural silver/grey streaks or highlights woven through. Short-to-medium length, neatly kept but with some natural texture and volume.
 
