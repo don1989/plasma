@@ -69,7 +69,7 @@ See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 ### Spyke Tinwall (Protagonist)
 
 - **Age:** 21
-- **Appearance:** Spiky ginger hair (tips reach his traps, not super long). Green eyes (left eye turns purple/black when demon activates, red in Adrenaline Mode). Wears Master's red bandana. White knee-length cloak with sleeves cut (similar style to Master's white cloak; dojo emblem on the back, decorative pattern along the bottom hem). Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Slim but strong build.
+- **Appearance:** Spiky ginger hair (tips reach his traps, not super long). Green eyes (left eye turns purple/black when demon activates, red in Adrenaline Mode). Small white half-cape draped from his right shoulder — short, asymmetric, reaching mid-back, battle-worn with frayed edges (a shoulder mantle in the style of Ezio/Lightning/Clive; dojo emblem on the back). A fragment of Master's cloak, not the full garment. Master's red bandana wrapped tightly around the hilt of Master's katana — a flash of red visible at his hip when sheathed, trailing slightly when drawn. Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Slim but strong build.
 - **Weapons:** Huge Plasma broadsword (primary), Master's katana (secondary, iaijutsu — patterned blade), hidden daggers concealed in a metal knee pauldron (not visible until later in the story). Max 5 blades.
 - **Role:** Swordsman, leader of the trio
 - **Goal:** Find his father Tinwall and get answers. Stop Morkain. Prevent the catastrophe.
@@ -129,7 +129,7 @@ See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 
 ### Master / "The Saviour" (Deceased)
 
-- **Appearance:** Blonde spiky shoulder-length hair, piercing blue eyes, white cloak, red bandana (now Spyke's). Katana.
+- **Appearance:** Blonde spiky shoulder-length hair, piercing blue eyes, white cloak, red bandana (given to Spyke — now wrapped around the katana hilt). Katana.
 - **Role:** Spyke's mentor. Former Formican Army member. Ran an orphanage/dojo training children to fight monsters.
 - **Goal (in life):** Protect children. Train the next generation. Atone for his Formican Army past.
 - **Secret:** His real name is never revealed. His father Ruben was a Formican Army doctor who helped the trio escape to Terra.
