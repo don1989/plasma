@@ -71,7 +71,7 @@ For each chapter, output:
 ## Plasma-Specific Visual Rules
 
 ### Character Appearances (Must Be Consistent)
-- **Spyke (age 21):** Spiky ginger hair (tips reach traps), green eyes, red bandana. White knee-length cloak (sleeves cut, dojo emblem on back, decorative pattern along bottom hem). Red fingerless glove on left hand, red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Broadsword on back, patterned katana at hip, daggers hidden in metal knee pauldron (not revealed until later). When Adrenaline Mode activates: eyes turn red, art style becomes sharper/more intense. When demon activates: left eye turns purple/black, arm may transform green/purple.
+- **Spyke (age 21):** Spiky ginger hair (tips reach traps), green eyes. Small white half-cape draped from right shoulder (short, asymmetric, reaching mid-back, battle-worn with frayed edges, dojo emblem on back — a fragment of Master's cloak). Master's red bandana wrapped around the katana hilt (flash of red at hip, trails when drawn). Red fingerless glove on left hand, red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Broadsword on back, patterned katana at hip, daggers hidden in metal knee pauldron (not revealed until later). When Adrenaline Mode activates: eyes turn red, art style becomes sharper/more intense. When demon activates: left eye turns purple/black, arm may transform green/purple.
 - **June:** Blonde hair, sporty build. Shortsword at hip, pistol holster, magician glove on one hand, Plasma shoes visible.
 - **Draster:** Dark brown skin, black/silver hair, brown eyes. Slim. Navy jacket-style robe. Dual Plasma Gloves (leather, always visible).
 - **Morkain:** Long blonde hair, facial scar, long goatee. Black Formican uniform. Broadsword. Always drawn with an aura of calm menace.
@@ -90,7 +90,7 @@ For each chapter, output:
 - Final blow: **Single clean panel** with white/bright background, decisive strike in focus.
 
 ### Emotional Moments
-- **Master's death (Ch.5):** Slow down pacing. Multiple silent panels. Close-up of bandana being passed. Spyke's face transitions from shock to resolve.
+- **Master's death (Ch.5):** Slow down pacing. Multiple silent panels. Close-up of bandana being passed — Spyke later wraps it around Master's katana hilt. Spyke's face transitions from shock to resolve.
 - **June/Spyke conversations:** Intimate medium shots. Stars visible in night scenes. Comfortable silence between dialogue.
 - **Morkain confrontations:** Wide shots establishing his dominance. He should always look down at the trio (literally or compositionally).
 

@@ -31,8 +31,8 @@ swinging from side to side across his back.
 “Shit! I’m gonna be late…”, Spyke muttered to himself. He knew a shortcut through an alley that
 would save him approximately 23 seconds, so he glided through the hordes of people trying to
 get to work and slipped through.
-The air was cold and a gust of wind almost blew Spyke’s red bandana off his shoulder length
-ginger hair. It startled him for a second but he carried on. He came to a small grassy area where
+The air was cold and a gust of wind caught Spyke's white half-cape, pulling it taut from his
+shoulder. It startled him for a second but he carried on. He came to a small grassy area where
 he saw a trio of punks, young, dressed in black, smoking and giggling towards each other.
 As Spyke stepped out onto the grass, the punks turned towards him and stared at him, looking
 him up and down as if to size him up. Spyke glared back at them for a second with his piercing

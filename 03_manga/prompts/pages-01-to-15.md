@@ -18,7 +18,7 @@ All prompts share this base style:
 
 ### Character Quick Reference
 
-- **Spyke (age 21):** Spiky ginger hair (tips reach traps), red bandana, green eyes, white knee-length cloak (sleeves cut, dojo emblem on back, pattern along bottom hem), red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered glove on right hand, red-accented belt, metal knee pauldron on right knee, massive broadsword on back, patterned katana at left hip, black combat clothing under the cloak
+- **Spyke (age 21):** Spiky ginger hair (tips reach traps), green eyes, small white half-cape draped from right shoulder (short, asymmetric, mid-back, battle-worn with frayed edges, dojo emblem on back), Master's red bandana wrapped around katana hilt (flash of red at hip), red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered glove on right hand, red-accented belt, metal knee pauldron on right knee, massive broadsword on back, patterned katana at left hip, black combat clothing
 - **June:** Blonde hair, sporty blue top, short shorts over black tights, shoulder pad armor, shortsword at hip, pistol holster on right thigh, magician glove on left hand, Plasma shoes
 - **Draster:** Dark brown skin, black and silver hair, soft brown eyes, navy jacket-style suit-robe, leather Plasma Gloves on both hands, hands often in pockets
 - **Hood:** Tall hooded figure, full black cloak, face hidden in deep shadow, broadsword in one hand, dark purple-black aura
@@ -40,7 +40,7 @@ PANEL 1 (WIDE — top half of page): Breathtaking establishing shot of London in
 
 PANEL 2 (MEDIUM — bottom left): Close-medium shot of Big Ben's clock face, partially submerged — ocean water laps at the 6 o'clock mark. The clock reads 9:00. The bell is chiming. An elevated walkway runs past at clock-face level with tiny pedestrians visible. Stylized SFX text integrated into the panel in large bold letters: "BONG BONG BONG" radiating outward from the bell tower.
 
-PANEL 3 (MEDIUM-WIDE — bottom right): A young man (age 21) — Spyke (spiky ginger hair with tips reaching his traps, red bandana tied in his hair with tails trailing, green eyes, white knee-length cloak with sleeves cut and a decorative pattern along the bottom hem flowing behind him as he runs, a dojo emblem visible on the cloak's back, red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered steel grey glove on right hand, red-accented belt, metal knee pauldron on right knee, black combat clothing underneath) — sprints along a crowded elevated walkway in the Westminster district. A massive broadsword strapped to his back over the cloak swings wildly as he runs, forcing startled commuters to duck and dodge out of the way. A patterned katana at his left hip. His red bandana and white cloak stream behind him. Speed lines emphasize his velocity. A thought bubble near his head reads: "Shit. I'm gonna be late..." Energetic, dynamic running pose, slight low-angle camera.
+PANEL 3 (MEDIUM-WIDE — bottom right): A young man (age 21) — Spyke (spiky ginger hair with tips reaching his traps, green eyes, a small white half-cape draped from his right shoulder — short, asymmetric, reaching mid-back, battle-worn with frayed edges, dojo emblem on the back, red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered steel grey glove on right hand, red-accented belt, metal knee pauldron on right knee, black combat clothing underneath) — sprints along a crowded elevated walkway in the Westminster district. A massive broadsword strapped to his back swings wildly as he runs, forcing startled commuters to duck and dodge out of the way. A patterned katana at his left hip with a bright red cloth (Master's bandana) wrapped around the hilt. His white half-cape flutters behind his shoulder. Speed lines emphasize his velocity. A thought bubble near his head reads: "Shit. I'm gonna be late..." Energetic, dynamic running pose, slight low-angle camera.
 ```
 
 ---
@@ -52,7 +52,7 @@ Colored manga page, cel-shaded, clean linework, vibrant colors, dynamic panel la
 
 4-panel layout. Two panels on top row, two panels on bottom row.
 
-PANEL 1 (CLOSE-UP — top left): Tight profile close-up of Spyke's face mid-sprint. Wind blasts his ginger hair and red bandana backward. His green eyes are sharp and determined, locked forward. A bead of sweat on his brow. Speed lines streaking past. High energy, intense expression.
+PANEL 1 (CLOSE-UP — top left): Tight profile close-up of Spyke's face mid-sprint. Wind blasts his ginger hair backward. His green eyes are sharp and determined, locked forward. A bead of sweat on his brow. The edge of his white half-cape visible fluttering at his shoulder. Speed lines streaking past. High energy, intense expression.
 
 PANEL 2 (WIDE — top right): Spyke spots a narrow gap between two massive tower buildings — a tight alleyway shortcut. He cuts hard to the left off the main elevated walkway, leaping over a railing. The alley is a vertical slash of shadow between gleaming sci-fi architecture. A thought bubble reads: "The shortcut... 23 seconds." Dynamic angle showing the width of the main walkway versus the narrow alley entrance.
 
@@ -90,7 +90,7 @@ Colored manga page, cel-shaded, clean linework, vibrant colors, dynamic panel la
 
 PANEL 1 (MEDIUM-WIDE — top, largest panel): Two smaller punks rush Spyke from different angles simultaneously. The big punk stays back, arms crossed, watching. Spyke draws his katana in a fluid, lightning-fast motion, blocking the first punk's overhead slash. Steel meets steel. Dialogue — PUNK 2: "Come on, let's play..." Stylized SFX text: "CLANG" at the point of impact with radiating impact lines. Speed lines on Spyke's draw. Dynamic diagonal composition emphasizing the chaos of the attack.
 
-PANEL 2 (CLOSE-UP — middle): Tight action shot. Spyke pushes the first punk away with a shove of his katana blade, simultaneously pivoting his body to block the second punk's attack coming from behind. Sparks fly from the blade contact. Stylized SFX text: "SHING" on the push, "CLANG" on the block. Heavy speed lines tracing Spyke's rotation arc. His red bandana whips with the motion. Intense, tight framing focused on the katana work.
+PANEL 2 (CLOSE-UP — middle): Tight action shot. Spyke pushes the first punk away with a shove of his katana blade, simultaneously pivoting his body to block the second punk's attack coming from behind. Sparks fly from the blade contact. Stylized SFX text: "SHING" on the push, "CLANG" on the block. Heavy speed lines tracing Spyke's rotation arc. The red cloth on his katana hilt trails with the motion. Intense, tight framing focused on the katana work.
 
 PANEL 3 (MEDIUM — bottom): The aftermath. Spyke stands in a relaxed combat stance, katana held one-handed at his side, blade angled down. The two smaller punks are on the ground groaning, swords knocked away. The big punk watches from the background, unfazed, arms still crossed. A thought bubble from Spyke: "Hmph... guess I could do with a warm up." Slight smirk on Spyke's face. Calm after the storm — composed framing contrasting the action above.
 ```
@@ -110,7 +110,7 @@ PANEL 2 (CLOSE-UP — top right): Close-up of Spyke's face. A flicker of genuine
 
 PANEL 3 (WIDE — bottom, large action panel spanning most of the width): Explosive full-page-width action shot. Spyke swings his massive broadsword in a devastating horizontal arc. The big punk blocks with his own broadsword but is sent skidding backward across the grass, boots tearing furrows in the ground. Cracks spider-web through the platform beneath the punk's feet from the sheer force. A faint blue-white Plasma energy crackle runs along Spyke's blade edge — ethereal, luminous. Stylized SFX text in huge letters: "KRAAAANG" across the panel. Maximum speed lines, impact shockwave rings, dynamic low-angle camera. Screen tone shading on the impact zone.
 
-PANEL 4 (MEDIUM — bottom right, smaller): Spyke calmly sheathes his broadsword onto his back. The big punk lies on the ground behind him, defeated, sword broken. Spyke walks away without looking back. A thought bubble: "I'm gonna miss the train..." Calm, cool framing. Red bandana fluttering gently. Complete contrast to the explosive panel beside it.
+PANEL 4 (MEDIUM — bottom right, smaller): Spyke calmly sheathes his broadsword onto his back. The big punk lies on the ground behind him, defeated, sword broken. Spyke walks away without looking back. A thought bubble: "I'm gonna miss the train..." Calm, cool framing. Half-cape settled against his shoulder. Complete contrast to the explosive panel beside it.
 ```
 
 ---
