@@ -61,8 +61,8 @@ In addition to general continuity, always verify these Plasma-universe specifics
 
 ### Character Consistency
 - [ ] Spyke's eye color is green (left eye turns purple/black when demon activates, red in Adrenaline Mode)
-- [ ] Master's red bandana is wrapped around the hilt of Master's katana (not worn on head)
-- [ ] Spyke wears small white half-cape draped from right shoulder (short, asymmetric, mid-back, frayed edges, dojo emblem on back)
+- [ ] Spyke wears Master's red bandana
+- [ ] Spyke wears white knee-length cloak (sleeves cut, similar to Master's)
 - [ ] Spyke wears red fingerless glove on left hand with red bracer on left wrist
 - [ ] Spyke wears armoured full-fingered glove on right hand
 - [ ] June is blonde, uses shortsword + pistol + magician glove + Plasma shoes

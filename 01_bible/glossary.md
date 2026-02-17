@@ -8,7 +8,7 @@
 
 | Name | Also Known As | Description |
 |------|---------------|-------------|
-| Spyke Tinwall | Redhead (by Seymour, Marik) | Protagonist, age 21. Spiky ginger hair (tips reach his traps). Green eyes (left eye turns purple/black when demon activates). Small white half-cape draped from right shoulder — short, asymmetric, reaching mid-back, battle-worn with frayed edges (dojo emblem on back). Master's red bandana wrapped around the hilt of Master's katana. Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Carries broadsword, Master's patterned katana, and hidden daggers concealed in a metal knee pauldron. Has the blood of the ancients. |
+| Spyke Tinwall | Redhead (by Seymour, Marik) | Protagonist, age 21. Spiky ginger hair (tips reach his traps). Green eyes (left eye turns purple/black when demon activates). Wears Master's red bandana. White knee-length cloak (sleeves cut, dojo emblem on back, decorative pattern along bottom hem). Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Carries broadsword, Master's patterned katana, and hidden daggers concealed in a metal knee pauldron. Has the blood of the ancients. |
 | June | — | Blonde hair, sporty build. Shortsword, magician glove, pistol, Plasma-imbued shoes. Lost parents in Canary Wharf monster attack. |
 | Draster | — | Dark brown skin, black and silver hair, soft brown eyes. Slim build. Wears suit-robe like a navy jacket. Dual Plasma Gloves. Mage specializing in elemental magic. |
 | Morkain | Hood | Long blonde hair, wrinkled features, scar across face, long goatee. Black Formican Army uniform. Broadsword. Wind/time-freeze powers. Founder and leader of Formican Army. Elder's son. |
@@ -131,7 +131,7 @@
 | Name | Description | Significance |
 |------|-------------|--------------|
 | Master's Katana | Katana with iaijutsu heritage. Patterned blade. Glows gold/yellow when activated. Pulsed with light to save trio in Deadbane Desert. | Spyke's secondary weapon. Connection to Master's spirit. |
-| Master's Red Bandana | Red bandana given to Spyke as Master died. | Spyke wraps it around the hilt of Master's katana — a flash of red at his hip. Symbol of his promise. |
+| Master's Red Bandana | Red bandana given to Spyke as Master died. | Spyke wears it on his spiky ginger hair. Symbol of his promise. |
 | Spyke's Broadsword | Huge Plasma-infused broadsword. Had it since childhood imprisonment. | Primary weapon. Required years of training to lift. |
 | Plasma Motorcycle | Silver bike built by Cid from parts. Seats 3 + passenger pod. Runs on Plasma, can levitate temporarily. | Primary vehicle for traversing Terra. |
 | Zodiac Gems | Crystals obtained from the 12 shrines. Each bears a zodiac symbol. | Unknown power — likely needed to confront Morkain/catastrophe. Collected: Sagittarius, Cancer, Leo, Gemini. |
