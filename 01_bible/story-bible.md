@@ -68,8 +68,9 @@ See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 
 ### Spyke Tinwall (Protagonist)
 
-- **Appearance:** Shoulder-length ginger hair, green eyes (left eye turns purple/black when demon activates, red in Adrenaline Mode). Wears Master's red bandana. White knee-length cloak with sleeves cut (similar style to Master's white cloak). Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Slim but strong build.
-- **Weapons:** Huge Plasma broadsword (primary), Master's katana (secondary, iaijutsu), hidden daggers in leg brace. Max 5 blades.
+- **Age:** 21
+- **Appearance:** Spiky ginger hair (tips reach his traps, not super long). Green eyes (left eye turns purple/black when demon activates, red in Adrenaline Mode). Wears Master's red bandana. White knee-length cloak with sleeves cut (similar style to Master's white cloak; dojo emblem on the back, decorative pattern along the bottom hem). Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Slim but strong build.
+- **Weapons:** Huge Plasma broadsword (primary), Master's katana (secondary, iaijutsu — patterned blade), hidden daggers concealed in a metal knee pauldron (not visible until later in the story). Max 5 blades.
 - **Role:** Swordsman, leader of the trio
 - **Goal:** Find his father Tinwall and get answers. Stop Morkain. Prevent the catastrophe.
 - **Flaw:** Emotionally closed off from childhood abuse. Impatient, blunt, struggles to trust. The demon inside threatens to consume him.
@@ -80,6 +81,7 @@ See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 
 ### June
 
+- **Age:** 20
 - **Appearance:** Blonde hair, sporty build.
 - **Weapons:** Shortsword, magician glove, pistol, Plasma-imbued shoes (enhanced mobility).
 - **Role:** Fighter/gunner, emotional heart of the trio
@@ -92,6 +94,7 @@ See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 
 ### Draster
 
+- **Age:** 22
 - **Appearance:** Dark brown skin, black and silver hair, soft brown eyes. Slim build. Wears a navy jacket-style suit-robe.
 - **Weapons:** Dual Plasma Gloves (elemental magic: fire, water, wind, earth, thunder).
 - **Role:** Mage, navigator, strategist

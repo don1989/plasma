@@ -41,7 +41,7 @@ Each `.md` file serves as a **Claude skill** — a structured prompt/ruleset tha
 ## Quick Reference
 
 - **Setting:** Year 3031. Earth flooded, civilization on towers. Planet Terra entered solar system.
-- **Protagonist:** Spyke Tinwall — ginger hair, green eyes, red bandana, white cloak, red fingerless glove (left) + armoured glove (right), broadsword + katana
+- **Protagonist:** Spyke Tinwall (21) — spiky ginger hair, green eyes, red bandana, white cloak (dojo emblem), red fingerless glove (left) + armoured glove (right), broadsword + patterned katana
 - **Core trio:** Spyke (swordsman), June (fighter/gunner), Draster (mage)
 - **Antagonist:** Morkain — founder of the Formican Army, time-freeze powers, wants to become one with Terra
 - **Chapters written:** 1-15 (Act I: Earth, Act II: Terra/Shrines, Act III: Alliance Building)
