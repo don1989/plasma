@@ -192,7 +192,7 @@ After the chapter list, add:
 - **Goal:** Full military alliance with dwarves; first organized operation against Formicans; army-building begins
 - **Conflict:** Knadville occupied by Formicans; must navigate magical fog and Fluffy; earn dwarven trust
 - **Key scenes:** Knadville arrival, fog separation, Fluffy boss fight, Hector/Bella introduction, Bernholdt Mines tour, dwarven rebellion plan, RTS-style infantry battle, Morkain dream confrontation, drinking/bonding with Hector, Spyke's self-doubt and resolve
-- **Twist:** Morkain communicates through Spyke's dreams — reveals Tinwall is waiting at Bazzleton. The trio realizes they need their own army. All their allies add up.
+- **Twist:** Morkain communicates through Spyke's dreams — reveals Tinwall is waiting at Bazzleworth. The trio realizes they need their own army. All their allies add up.
 - **Cliffhanger:** Hector gives Spyke an armlet for Boligon in Draegons. The rebellion is forming.
 - **Characters:** Spyke, June, Draster, Dobblepot, Hector, Bella, Fluffy, Morkain (dream)
 - **Locations:** Knadville, Bernholdt Mines, dwarven hideout
@@ -204,7 +204,7 @@ After the chapter list, add:
 **Projected story threads to resolve:**
 - Remaining 8 shrines (Aries, Taurus, Virgo, Libra, Scorpio, Capricorn, Aquarius, Pisces)
 - Visit Draegons and recruit Boligon (via Hector's armlet)
-- Confront Tinwall at Bazzleton
+- Confront Tinwall at Bazzleworth
 - Build full alliance army
 - Morkain's plan to reach Terra's core
 - The gnome artefact (Guardians of Terra)

@@ -118,7 +118,7 @@ See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 
 - **Appearance:** Not fully described in current chapters. Broadsword user.
 - **Role:** Formican Army general. Spyke's father. Seymour's father.
-- **Goal:** Unknown — waiting for Spyke at Bazzleton.
+- **Goal:** Unknown — waiting for Spyke at Bazzleworth.
 - **Flaw:** Abusive, cold, imprisoned his own son from birth.
 - **Secret:** His motives for imprisoning Spyke and serving Morkain are unrevealed.
 - **Arc:** Unknown — current antagonist figure, future confrontation inevitable.
@@ -203,7 +203,7 @@ Not yet visited. Duchess Rainvale commands 7000+ monsters.
 ### Eastern Continent (Dukedom of Carnaby)
 Not yet visited. Duke Carnaby guards "the gate to Hell."
 
-### Central (Dukedom of Bazzleton)
+### Central (Dukedom of Bazzleworth)
 Not yet visited. Morkain's stronghold. Tinwall awaits Spyke here.
 
 ---
@@ -229,7 +229,7 @@ See [glossary.md](glossary.md) for the complete glossary of characters, places, 
 | What is Morkain's actual plan? | Wants to reach Terra's core. Claims to be saving Earth. Uses underground tunnels. | "Becoming one with Terra" — may involve merging with the planet's Plasma core. |
 | How to stop the catastrophe | Ancients tried magic and failed. Morkain claims he has a plan. | May require all 12 gems, the gnome artefact, AND Morkain's knowledge. May not be "stoppable" — only survivable. |
 | Why does Morkain want Spyke alive? | Spyke has blood of the ancients. Morkain threatened but never killed him. | May need Spyke's blood/power for his plan to reach Terra's core. |
-| Bazzleton/Bazzleworth spelling | Both appear in the source document. | **Author decision needed.** |
+| ~~Bazzleworth spelling~~ | Resolved. Canonical spelling is **Bazzleworth**. | **Resolved.** |
 
 ---
 

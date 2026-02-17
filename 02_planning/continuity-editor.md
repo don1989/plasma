@@ -111,7 +111,7 @@ In addition to general continuity, always verify these Plasma-universe specifics
 - [ ] Draster (not Draster)
 - [ ] Morkain (not Morcain)
 - [ ] Dobblepot (not Doublepot)
-- [ ] Bazzleton vs Bazzleworth — **AUTHOR DECISION NEEDED** (both appear in source doc)
+- [x] Bazzleworth — **RESOLVED** (canonical spelling confirmed)
 - [ ] Formican (not Formicant)
 - [ ] Knadville (not Nadville)
 - [ ] Thaconion (not Thaconeon)
