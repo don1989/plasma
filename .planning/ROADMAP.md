@@ -41,7 +41,14 @@ Plans:
   3. Each character has a locked prompt fingerprint in structured YAML/JSON that the template system injects verbatim into every prompt
   4. Running the prompt generator for a chapter produces one Gemini-optimized prompt per page with style guide prefix and character blocks embedded — no manual copy-pasting of character descriptions required
   5. Updating a character fingerprint in one place propagates to all prompts on the next generation run
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Install dependencies, expand types, create Zod validation schemas
+- [ ] 02-02-PLAN.md — Build markdown script parser and wire into script stage
+- [ ] 02-03-PLAN.md — Create character YAML fingerprints, registry, and CLI subcommand
+- [ ] 02-04-PLAN.md — Build Nunjucks template engine and prompt generator stage
+- [ ] 02-05-PLAN.md — Build per-panel QC checklist for character verification
 
 ### Phase 3: Image Generation Workflow
 **Goal**: Prompts flow to Gemini (manually or via API) and resulting images are organized with full traceability from prompt to approved file
@@ -71,6 +78,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 1/1 | Complete | 2026-02-18 |
-| 2. Scripts, Characters, and Prompts | 0/TBD | Not started | - |
+| 2. Scripts, Characters, and Prompts | 0/5 | Not started | - |
 | 3. Image Generation Workflow | 0/TBD | Not started | - |
 | 4. Assembly and Publish | 0/TBD | Not started | - |
