@@ -10,7 +10,7 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Foundation** - TypeScript pipeline infrastructure, CLI, and directory conventions
+- [x] **Phase 1: Foundation** - TypeScript pipeline infrastructure, CLI, and directory conventions
 - [ ] **Phase 2: Scripts, Characters, and Prompts** - Manga script generation, character fingerprint system, and Jinja2-style prompt templates
 - [ ] **Phase 3: Image Generation Workflow** - Manual and API Gemini workflows with naming conventions and prompt-to-image tracking
 - [ ] **Phase 4: Assembly and Publish** - Dialogue overlay, vertical Webtoon strip assembly, and Canvas-ready output
@@ -29,7 +29,7 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
 **Plans:** 1 plan
 
 Plans:
-- [ ] 01-01-PLAN.md — Pipeline project setup with CLI, stage stubs, types, path resolution, and tests
+- [x] 01-01-PLAN.md — Pipeline project setup with CLI, stage stubs, types, path resolution, and tests
 
 ### Phase 2: Scripts, Characters, and Prompts
 **Goal**: Any Plasma chapter can be converted to a panel-by-panel manga script with validated prompts that lock character visuals verbatim
@@ -70,7 +70,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/1 | Planning complete | - |
+| 1. Foundation | 1/1 | Complete | 2026-02-18 |
 | 2. Scripts, Characters, and Prompts | 0/TBD | Not started | - |
 | 3. Image Generation Workflow | 0/TBD | Not started | - |
 | 4. Assembly and Publish | 0/TBD | Not started | - |

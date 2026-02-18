@@ -49,11 +49,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFR-01**: All pipeline code lives in a separate `pipeline/` directory, decoupled from story content
-- [ ] **INFR-02**: Pipeline is built in TypeScript with Sharp for image processing
-- [ ] **INFR-03**: Pipeline reads from existing story directories (01_bible/, 03_manga/) but never writes to them
-- [ ] **INFR-04**: CLI interface allows running each pipeline stage independently
-- [ ] **INFR-05**: All work committed to feature branches, never directly to main
+- [x] **INFR-01**: All pipeline code lives in a separate `pipeline/` directory, decoupled from story content
+- [x] **INFR-02**: Pipeline is built in TypeScript with Sharp for image processing
+- [x] **INFR-03**: Pipeline reads from existing story directories (01_bible/, 03_manga/) but never writes to them
+- [x] **INFR-04**: CLI interface allows running each pipeline stage independently
+- [x] **INFR-05**: All work committed to feature branches, never directly to main
 
 ## v2 Requirements
 
@@ -119,11 +119,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASSM-02 | Phase 4 | Pending |
 | ASSM-03 | Phase 4 | Pending |
 | ASSM-04 | Phase 4 | Pending |
-| INFR-01 | Phase 1 | Pending |
-| INFR-02 | Phase 1 | Pending |
-| INFR-03 | Phase 1 | Pending |
-| INFR-04 | Phase 1 | Pending |
-| INFR-05 | Phase 1 | Pending |
+| INFR-01 | Phase 1 | Complete |
+| INFR-02 | Phase 1 | Complete |
+| INFR-03 | Phase 1 | Complete |
+| INFR-04 | Phase 1 | Complete |
+| INFR-05 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 27 total

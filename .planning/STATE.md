@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 1 of 4 (Foundation)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-18 — Roadmap created
+Plan: 1 of 1 in current phase
+Status: Phase 1 complete
+Last activity: 2026-02-18 — Completed 01-01-PLAN.md (pipeline setup)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [##########] 100% (Phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 4 min
+- Total execution time: 0.07 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 1. Foundation | 1 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: 01-01 (4 min)
+- Trend: First plan
 
 *Updated after each plan completion*
 
@@ -46,6 +46,10 @@ Recent decisions affecting current work:
 - [Init]: All pipeline code lives in `pipeline/` directory, decoupled from story content
 - [Init]: Text in panels is always programmatic overlay — never baked into AI-generated art
 - [Init]: Manual Gemini workflow (copy-paste) is a first-class path; API automation is upgrade, not prerequisite
+- [01-01]: Commander v14 for CLI (zero deps, native TS types, subcommand-per-stage pattern)
+- [01-01]: assertSourceDir throws on missing dirs (fail fast with descriptive errors)
+- [01-01]: output/ at project root as sibling to 01_bible/, not inside pipeline/
+- [01-01]: pnpm.onlyBuiltDependencies for Sharp/esbuild native build approval
 
 ### Pending Todos
 
@@ -59,5 +63,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Roadmap created, requirements mapped to 4 phases
-Resume file: None
+Stopped at: Completed 01-01-PLAN.md (pipeline setup). Phase 1 complete.
+Resume file: .planning/phases/01-foundation/01-01-SUMMARY.md
