@@ -1,0 +1,38 @@
+/**
+ * Centralized path resolution for the pipeline.
+ *
+ * Source directories (bible, manga) are READ-ONLY.
+ * Only the output directory is writable by pipeline stages.
+ */
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Project root is three levels up from config/ -> src/ -> pipeline/ -> project root
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
+
+export const PATHS = {
+  /** Canon story bible (READ-ONLY). */
+  bible: path.join(PROJECT_ROOT, '01_bible'),
+
+  /** Manga scripts and prompts (READ-ONLY). */
+  manga: path.join(PROJECT_ROOT, '03_manga'),
+
+  /** Prompt templates directory (READ-ONLY). */
+  prompts: path.join(PROJECT_ROOT, '03_manga', 'prompts'),
+
+  /** Pipeline output directory (WRITE). */
+  output: path.join(PROJECT_ROOT, 'output'),
+
+  /** Chapter-specific output paths. */
+  chapterOutput: (chapter: number) => {
+    const chNum = String(chapter).padStart(2, '0');
+    return {
+      root: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`),
+      raw: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'raw'),
+      processed: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'processed'),
+      lettered: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'lettered'),
+      webtoon: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'webtoon'),
+    };
+  },
+} as const;
