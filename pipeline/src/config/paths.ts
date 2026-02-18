@@ -11,6 +11,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 
+// Pipeline root is two levels up from config/ -> src/ -> pipeline/
+const PIPELINE_ROOT = path.resolve(__dirname, '..', '..');
+
 export const PATHS = {
   /** Canon story bible (READ-ONLY). */
   bible: path.join(PROJECT_ROOT, '01_bible'),
@@ -24,6 +27,18 @@ export const PATHS = {
   /** Pipeline output directory (WRITE). */
   output: path.join(PROJECT_ROOT, 'output'),
 
+  /** Pipeline root directory. */
+  pipelineRoot: PIPELINE_ROOT,
+
+  /** Character YAML data files. */
+  characterData: path.join(PIPELINE_ROOT, 'data', 'characters'),
+
+  /** Nunjucks template files. */
+  templates: path.join(PIPELINE_ROOT, 'data', 'templates'),
+
+  /** Style guide configuration. */
+  styleGuide: path.join(PIPELINE_ROOT, 'data', 'config', 'style-guide.yaml'),
+
   /** Chapter-specific output paths. */
   chapterOutput: (chapter: number) => {
     const chNum = String(chapter).padStart(2, '0');
@@ -33,6 +48,7 @@ export const PATHS = {
       processed: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'processed'),
       lettered: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'lettered'),
       webtoon: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'webtoon'),
+      prompts: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'prompts'),
     };
   },
 } as const;
