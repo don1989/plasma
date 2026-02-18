@@ -97,39 +97,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCRP-01 | — | Pending |
-| SCRP-02 | — | Pending |
-| SCRP-03 | — | Pending |
-| PRMT-01 | — | Pending |
-| PRMT-02 | — | Pending |
-| PRMT-03 | — | Pending |
-| PRMT-04 | — | Pending |
-| PRMT-05 | — | Pending |
-| IGEN-01 | — | Pending |
-| IGEN-02 | — | Pending |
-| IGEN-03 | — | Pending |
-| IGEN-04 | — | Pending |
-| CHAR-01 | — | Pending |
-| CHAR-02 | — | Pending |
-| CHAR-03 | — | Pending |
-| CHAR-04 | — | Pending |
-| TEXT-01 | — | Pending |
-| TEXT-02 | — | Pending |
-| ASSM-01 | — | Pending |
-| ASSM-02 | — | Pending |
-| ASSM-03 | — | Pending |
-| ASSM-04 | — | Pending |
-| INFR-01 | — | Pending |
-| INFR-02 | — | Pending |
-| INFR-03 | — | Pending |
-| INFR-04 | — | Pending |
-| INFR-05 | — | Pending |
+| SCRP-01 | Phase 2 | Pending |
+| SCRP-02 | Phase 2 | Pending |
+| SCRP-03 | Phase 2 | Pending |
+| PRMT-01 | Phase 2 | Pending |
+| PRMT-02 | Phase 2 | Pending |
+| PRMT-03 | Phase 2 | Pending |
+| PRMT-04 | Phase 2 | Pending |
+| PRMT-05 | Phase 2 | Pending |
+| IGEN-01 | Phase 3 | Pending |
+| IGEN-02 | Phase 3 | Pending |
+| IGEN-03 | Phase 3 | Pending |
+| IGEN-04 | Phase 3 | Pending |
+| CHAR-01 | Phase 2 | Pending |
+| CHAR-02 | Phase 2 | Pending |
+| CHAR-03 | Phase 2 | Pending |
+| CHAR-04 | Phase 2 | Pending |
+| TEXT-01 | Phase 4 | Pending |
+| TEXT-02 | Phase 4 | Pending |
+| ASSM-01 | Phase 4 | Pending |
+| ASSM-02 | Phase 4 | Pending |
+| ASSM-03 | Phase 4 | Pending |
+| ASSM-04 | Phase 4 | Pending |
+| INFR-01 | Phase 1 | Pending |
+| INFR-02 | Phase 1 | Pending |
+| INFR-03 | Phase 1 | Pending |
+| INFR-04 | Phase 1 | Pending |
+| INFR-05 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after initial definition*
+*Last updated: 2026-02-18 after roadmap creation — all 27 requirements mapped*
