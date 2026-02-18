@@ -26,7 +26,10 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
   2. Each pipeline stage can be invoked independently via CLI flags (e.g., `npm run stage:script`)
   3. Pipeline reads from `01_bible/` and `03_manga/` but writes only to `output/`
   4. All work exists on a feature branch, never committed to main
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — Pipeline project setup with CLI, stage stubs, types, path resolution, and tests
 
 ### Phase 2: Scripts, Characters, and Prompts
 **Goal**: Any Plasma chapter can be converted to a panel-by-panel manga script with validated prompts that lock character visuals verbatim
@@ -67,7 +70,7 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/1 | Planning complete | - |
 | 2. Scripts, Characters, and Prompts | 0/TBD | Not started | - |
 | 3. Image Generation Workflow | 0/TBD | Not started | - |
 | 4. Assembly and Publish | 0/TBD | Not started | - |
