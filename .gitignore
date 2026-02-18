@@ -1,0 +1,9 @@
+# Generated manga output
+output/
+
+# Pipeline build artifacts
+pipeline/node_modules/
+pipeline/dist/
+
+# OS files
+*.DS_Store
