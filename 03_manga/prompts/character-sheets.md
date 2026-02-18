@@ -20,7 +20,7 @@
 
 ### Character Color Palettes
 - **Spyke Tinwall:** Reds (bandana, right fingerless glove, left armored bracer/gauntlet), white (cloak), blacks (combat clothing, geometric cloak trim), dark grey/metallic (broadsword, knee pauldron), ginger hair, green eyes
-- **June:** Blues (sporty top), whites (accents), gold/blonde hair, warm skin tones
+- **June Kamara:** Dark pinks (sporty top, shorts, shoes), whites (accents), gold/blonde hair, white/fair skin, black (tights, belt)
 - **Draster:** Navy (suit-robe), silver (hair highlights, glove accents), dark tones overall, dark brown skin
 - **Hood (Morkain):** Pure black (cloak), dark purple aura/energy wisps, no visible skin color
 
@@ -92,24 +92,25 @@ Inserts: Detail callouts for the Red Bandana, Plasma Sword Glow, Leg Brace/Dagge
 
 ---
 
-### 2. June
+### 2. June Kamara
 
 ```
-Colored manga character reference sheet, clean linework, cel-shaded, vibrant colors, white background, multiple views (front, 3/4, side, back), expression sheet below.
+Colored manga character reference sheet, clean linework, cel-shaded, vibrant colors, white background, 4 multiple views (front, 3/4, side, back), expression sheet below with the various facial expressions.
 
-Character: June, female, age 20, sporty and athletic build, toned legs and arms, confident posture with energy and movement in her stance.
+Character: June Kamara, female, age 20, white skin, sporty build, but not too big, confident posture with energy and movement in her stance. Featuring studded earrings and a studded belly button piercing.
 
 Hair: Blonde hair, medium length, worn down normally but tied back in a practical ponytail or bun for combat. Show both hairstyles on the sheet (one full-body with hair down, one with hair tied back).
 
 Eyes: Bright, expressive eyes with a warm and lively look.
 
-Clothing: A sporty crop top or athletic top in blue tones, short shorts (athletic style), black opaque tights underneath the shorts covering her legs. One single shoulder pad armor piece on her right shoulder — a small curved plate of metal or hardened leather, practical and slightly battle-worn. Overall color scheme is blues, whites, and light tones with gold/blonde hair as an accent.
+Clothing: A vested sporty crop top in dark pink tones, with a big bust. One single shoulder pauldron on her LEFT shoulder — a small curved plate of metal or hardened leather, practical and slightly battle-worn. Dark pink medium shorts (athletic style) - shorts are flowy, but have undershorts which are tight to the skin. Wearing a big brown belt, with black tights covering her entire legs. Overall color scheme is pink, whites, and light tones with gold/blonde hair as an accent.
 
-Weapons and Gear: (1) A shortsword in a sheath at her left hip — compact and practical, suited for fast close-range combat. (2) One magician glove on her left hand — a fingerless glove with arcane/magical markings or subtle glowing runes etched into the fabric. (3) A pistol holster strapped to her right thigh containing a compact handgun. (4) Plasma-imbued shoes — her boots/sneakers have a faint blue-white Plasma energy glow emanating from the soles and edges, indicating they are magically enhanced for speed or agility.
+Weapons and Gear: (1) A shortsword in a sheath strictly on her LEFT hip — compact and practical, suited for fast close-range combat. (2) Magician gloves on both hands — fingerless gloves with arcane/magical markings or subtle glowing runes etched into the fabric. (3) A pistol holster strapped to her right thigh containing a compact handgun. (4) Plasma-imbued shoes — her boots/sneakers are dark pink and have a faint blue-white Plasma energy glow emanating from the soles and edges, indicating they are magically enhanced for speed or agility.
 
 Views: Front full-body view (hair down), 3/4 angle view (hair tied back, combat-ready), side profile view, back view.
 
-Expression sheet (6 expressions, bust/head shots arranged in a row below the full-body views):
+Expression sheet (6 expressions, bust/head shots arranged in a row at the very bottom, below the full-body views):
+
 1. Bright smile — wide genuine grin, eyes lit up, cheerful and warm
 2. Frustrated/yelling — mouth wide open, sharp teeth (comedic manga style), furrowed brows, "Grrr!" energy, comedic anger
 3. Worried — eyebrows raised and pinched together, mouth in a small frown, concerned eyes
@@ -117,7 +118,7 @@ Expression sheet (6 expressions, bust/head shots arranged in a row below the ful
 5. Teasing smirk — half-lidded eyes, sly grin, playful and mischievous
 6. Shocked — eyes wide as saucers, mouth agape, classic manga shock expression with small pupils
 
-Include detail callouts for: the magician glove with its rune markings on the left hand, the Plasma-imbued shoes showing the glow effect, the shoulder pad armor piece, and the pistol holster on the right thigh.
+Include detail callouts for: the magician glove with its rune markings, the shoulder pauldron armor piece, the Plasma-imbued shoes showing the glow effect, and the pistol holster on the right thigh.
 ```
 
 ---
