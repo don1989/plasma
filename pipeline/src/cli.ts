@@ -184,14 +184,43 @@ program
   .command('assemble')
   .description('Assemble lettered panels into Webtoon vertical strips')
   .requiredOption('-c, --chapter <number>', 'Chapter number')
+  .option('--format <type>', 'Output format (jpeg or png)', 'jpeg')
+  .option('--quality <number>', 'JPEG quality 1-100 (default: 90)', '90')
+  .option('--gutter <number>', 'Gutter height in pixels (default: 10)', '10')
   .option('-v, --verbose', 'Enable verbose logging')
   .option('--dry-run', 'Show what would be done without doing it')
   .action(async (options) => {
+    // Validate format
+    const format = options.format as string;
+    if (format !== 'jpeg' && format !== 'png') {
+      console.error(`Invalid format: ${format}. Must be 'jpeg' or 'png'.`);
+      process.exit(1);
+    }
+
+    // Parse and validate quality
+    const quality = parseInt(options.quality);
+    if (isNaN(quality) || quality < 1 || quality > 100) {
+      console.error(`Invalid quality: ${options.quality}. Must be 1-100.`);
+      process.exit(1);
+    }
+
+    // Parse and validate gutter
+    const gutter = parseInt(options.gutter);
+    if (isNaN(gutter) || gutter < 0) {
+      console.error(`Invalid gutter: ${options.gutter}. Must be >= 0.`);
+      process.exit(1);
+    }
+
     const { runAssemble } = await import('./stages/assemble.js');
     const result = await runAssemble({
       chapter: parseInt(options.chapter),
       verbose: options.verbose,
       dryRun: options.dryRun,
+      configOverride: {
+        format: format as 'jpeg' | 'png',
+        jpegQuality: quality,
+        gutterHeight: gutter,
+      },
     });
     if (!result.success) {
       console.error('Stage failed:', result.errors);
