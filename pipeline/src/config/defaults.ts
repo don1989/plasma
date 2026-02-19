@@ -18,3 +18,12 @@ export const STAGE_NAMES: readonly StageName[] = [
   'overlay',
   'assemble',
 ] as const;
+
+/** Default Gemini model for image generation (fast/cheap for drafting). */
+export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-image';
+
+/** Default aspect ratio for manga page generation (portrait). */
+export const DEFAULT_ASPECT_RATIO = '3:4';
+
+/** Delay in milliseconds between API calls for rate limiting. */
+export const DEFAULT_RATE_LIMIT_DELAY_MS = 2000;
