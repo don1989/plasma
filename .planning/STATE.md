@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Phase 5: Environment Validation
+**Current focus:** v2.0 — Phase 6: Spyke Dataset Preparation
 
 ## Current Position
 
 Phase: 6 — Spyke Dataset Preparation
-Plan: 0 of ? complete (Phase 5 fully done; Phase 6 planning not yet started)
-Status: Ready (Phase 5 gate PASS — all INFRA requirements satisfied)
-Last activity: 2026-02-19 — Completed 05-04 (ComfyUI MPS benchmark: 15s, PASS; Phase 5 gate cleared)
+Plan: 1 of 4 complete (06-01 done — crop script + 19 preview PNGs; user review needed before Plan 02)
+Status: In Progress (Plan 02 unblocked pending user visual review of preview crops)
+Last activity: 2026-02-19 — Completed 06-01 (Spyke crop script, dataset scaffold, 19 preview PNGs)
 
-Progress: [####______] ~43% (v2.0 Phase 5 complete — 4/4 plans done)
+Progress: [#####_____] ~47% (v2.0 Phase 6 in progress — 1/4 plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 10.5 min (skewed by 67-min 05-03 download-heavy plan)
-- Total execution time: 1.90 hours
+- Total plans completed: 12
+- Average duration: 10.1 min (skewed by 67-min 05-03 download-heavy plan)
+- Total execution time: 1.95 hours
 
 **By Phase:**
 
@@ -32,9 +32,10 @@ Progress: [####______] ~43% (v2.0 Phase 5 complete — 4/4 plans done)
 | 3. Image Generation | 3 | 15 min | 5.0 min |
 | 4. Assembly & Publish | 2 | 7 min | 3.5 min |
 | 5. Environment Validation | 4 | 93 min | 23.3 min |
+| 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (4 min), 04-02 (3 min), 05-01 (3 min), 05-03 (67 min — download-dominated), 05-04 (20 min — benchmark + human verify)
+- Last 5 plans: 04-02 (3 min), 05-01 (3 min), 05-03 (67 min — download-dominated), 05-04 (20 min — benchmark + human verify), 06-01 (3 min — crop script)
 - Trend: Stable; 05-03 outlier due to 3.4 GB of binary model downloads
 
 *Updated after each plan completion*
@@ -101,6 +102,10 @@ Recent decisions affecting current work:
 - [05-04]: INFRA-04 benchmark result: 15s for 512x512 20-step euler_ancestral — 8x under 120s threshold; Phase 7 job timeout should be ~90s with comfortable headroom
 - [05-04]: /system_stats is the correct ComfyUI health check endpoint (not /health, which does not exist); MPS detection via response.devices[0].type === "mps"
 - [05-04]: Phase 5 gate PASS on all five INFRA criteria — Phases 6 and 7 are unblocked
+- [Phase 06]: Standalone crop script uses manual process.argv (not Commander) for single --dry-run flag — zero dep overhead
+- [Phase 06]: crop-spyke.ts dry-run writes to preview/ subdir — protects final output, allows safe inspection
+- [Phase 06]: ref-sheet _back crop left coord corrected from 790 to 784 (1024px image; 790+240=1030 out of bounds)
+- [Phase 06]: spyke_final_calm crop is SPECULATIVE — must be visually confirmed or excluded at Plan 02 review checkpoint
 
 ### Pending Todos
 
@@ -111,9 +116,10 @@ None.
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
 - Phase 5 gates Phase 7 and Phase 10 — ComfyUI must be running and benchmarked before integration work begins
 - Phase 6 gates Phase 8 — dataset minimum (15-20 images) must be met before any training is attempted; skipping this is the highest-probability failure mode
+- Phase 8 blocker: ~/tools/kohya_ss/sd-scripts/ is empty — run `cd ~/tools/kohya_ss && git submodule update --init --recursive` before Phase 8 begins
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 05-04-PLAN.md (ComfyUI MPS benchmark: 15s, PASS). Phase 5 complete. Next: Phase 6 — Spyke Dataset Preparation (planning not yet started).
-Resume file: .planning/ROADMAP.md (Phase 6 plans to be defined)
+Stopped at: Completed 06-01-PLAN.md (Spyke crop script + dataset scaffold; 19 preview PNGs generated in dataset/spyke/train/10_spyke_plasma_v1/preview/). User must visually review previews before Plan 02.
+Resume file: .planning/phases/06-spyke-dataset-preparation/06-02-PLAN.md (flip augmentation + caption .txt files — after user reviews preview crops)
