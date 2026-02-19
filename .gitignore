@@ -5,5 +5,8 @@ output/
 pipeline/node_modules/
 pipeline/dist/
 
+# Environment variables (API keys)
+.env
+
 # OS files
 *.DS_Store

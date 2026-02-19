@@ -12,8 +12,8 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
 
 - [x] **Phase 1: Foundation** - TypeScript pipeline infrastructure, CLI, and directory conventions
 - [ ] **Phase 2: Scripts, Characters, and Prompts** - Manga script generation, character fingerprint system, and Jinja2-style prompt templates
-- [ ] **Phase 3: Image Generation Workflow** - Manual and API Gemini workflows with naming conventions and prompt-to-image tracking
-- [ ] **Phase 4: Assembly and Publish** - Dialogue overlay, vertical Webtoon strip assembly, and Canvas-ready output
+- [x] **Phase 3: Image Generation Workflow** - Manual and API Gemini workflows with naming conventions and prompt-to-image tracking
+- [x] **Phase 4: Assembly and Publish** - Dialogue overlay, vertical Webtoon strip assembly, and Canvas-ready output
 
 ## Phase Details
 
@@ -58,7 +58,12 @@ Plans:
   1. Copy-pasting a generated prompt into Gemini web UI and saving the result produces a file named `ch01_p003_v1.png` in the correct output directory
   2. Automated Gemini API workflow generates images into `output/ch-NN/raw/` by running a single CLI command
   3. A prompt-to-image log records which exact prompt produced which approved image file for every panel
-**Plans**: TBD
+**Plans:** 3/3 plans complete
+
+Plans:
+- [x] 03-01-PLAN.md — Generation types, panel image naming convention, and manifest module (TDD)
+- [x] 03-02-PLAN.md — Manual Gemini workflow with image import, CLI expansion, and manifest tracking
+- [x] 03-03-PLAN.md — Automated Gemini API workflow with @google/genai SDK and rate limiting
 
 ### Phase 4: Assembly and Publish
 **Goal**: Approved raw panel images become a complete, Webtoon Canvas-ready episode with programmatic dialogue, SFX, and vertical-scroll assembly
@@ -69,7 +74,11 @@ Plans:
   2. Running the assembler produces a vertical-scroll Webtoon strip at 800px wide, Webtoon Canvas-compatible (JPG/PNG at correct dimensions)
   3. Splash pages and double-spreads are assembled with correct aspect ratios — not treated as standard panels
   4. Intermediate artifacts exist in separate directories (`raw/`, `processed/`, `lettered/`, `webtoon/`) and no stage overwrites upstream output
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [x] 04-01-PLAN.md — Dialogue overlay stage with SVG balloons, SFX, and text measurement
+- [x] 04-02-PLAN.md — Webtoon assembly stage with vertical stacking, strip slicing, and Canvas output
 
 ## Progress
 
@@ -79,5 +88,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Foundation | 1/1 | Complete | 2026-02-18 |
 | 2. Scripts, Characters, and Prompts | 4/5 | In Progress | - |
-| 3. Image Generation Workflow | 0/TBD | Not started | - |
-| 4. Assembly and Publish | 0/TBD | Not started | - |
+| 3. Image Generation Workflow | 3/3 | Complete    | 2026-02-19 |
+| 4. Assembly and Publish | 2/2 | Complete    | 2026-02-19 |

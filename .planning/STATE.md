@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** Phase 2 — Scripts, Characters & Prompts
+**Current focus:** Phase 4 — Assembly and Publish
 
 ## Current Position
 
-Phase: 2 of 4 (Scripts, Characters & Prompts)
-Plan: 4 of 5 in current phase
-Status: Executing Phase 2
-Last activity: 2026-02-19 — Completed 02-04-PLAN.md (prompt template engine and generator)
+Phase: 4 of 4 (Assembly and Publish)
+Plan: 2 of 2 in current phase
+Status: Complete
+Last activity: 2026-02-19 — Completed 04-02-PLAN.md (Webtoon assembly stage)
 
-Progress: [########--] 80% (Phase 2)
+Progress: [##########] 100% (Phase 4 Complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 6.4 min
-- Total execution time: 0.53 hours
+- Total plans completed: 10
+- Average duration: 5.4 min
+- Total execution time: 0.90 hours
 
 **By Phase:**
 
@@ -29,9 +29,11 @@ Progress: [########--] 80% (Phase 2)
 |-------|-------|-------|----------|
 | 1. Foundation | 1 | 4 min | 4 min |
 | 2. Scripts/Characters | 4 | 28 min | 7.0 min |
+| 3. Image Generation | 3 | 15 min | 5.0 min |
+| 4. Assembly & Publish | 2 | 7 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4 min), 02-01 (7 min), 02-03 (5 min), 02-02 (8 min), 02-04 (8 min)
+- Last 5 plans: 02-04 (8 min), 03-01 (3 min), 03-02 (5 min), 03-03 (7 min), 04-01 (4 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -66,6 +68,21 @@ Recent decisions affecting current work:
 - [02-04]: Narrator excluded from character extraction -- narration boxes have no visual character to fingerprint
 - [02-04]: Character fingerprints deduplicated by id per panel -- prevents duplicates from name+alias matches
 - [02-04]: Layout description uses count-based text (vertical layout for 2-3, layout for 4+) matching hand-written style
+- [03-01]: readdirSync for nextVersion scan -- synchronous is fine for small directories, avoids async complexity
+- [03-01]: generation-log.json filename for manifest -- descriptive, avoids collision with other chapter metadata
+- [03-01]: getApprovedEntry returns latest by timestamp when multiple approved -- supports re-approval workflow
+- [03-02]: mode defaults to 'manual' when omitted -- manual is the first-class workflow path
+- [03-02]: importImage copies (never moves) source files -- user's original is always preserved
+- [03-02]: approveImage enforces single-approved-per-page -- approving v2 automatically unapproves v1
+- [03-02]: JPEG extension normalized to jpg in filenames -- consistency with common convention
+- [03-03]: Dry-run checked before API key validation so --dry-run works without a configured key
+- [03-03]: loadEnvFile inline helper avoids dotenv dependency for minimal .env parsing
+- [03-03]: vi.hoisted() pattern for vitest mocks that need constructor-safe references
+- [04-01]: SVG-to-Buffer balloon rendering — Sharp composites SVG buffers directly, no temp files needed
+- [04-01]: Zone-based balloon placement divides image height by panel count, alternates left-right
+- [04-01]: Thought bubbles use dashed-stroke ellipse (not trailing circles) for v1 simplicity
+- [04-01]: Passthrough mode copies raw to lettered when page has no dialogue/SFX — maintains stage chain
+- [04-01]: OverlayOptions interface separate from StageOptions for page/pages filtering
 
 ### Pending Todos
 
@@ -73,11 +90,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- Gemini API image generation access status is unknown — Phase 3 IGEN-02 depends on confirmed API access
-- Webtoon Canvas exact output specifications (max file size, supported formats) need verification before Phase 4 finalizes assembly
+- Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 02-04-PLAN.md (prompt template engine and generator). Phase 2 plans 1-4 of 5 done.
-Resume file: .planning/phases/02-scripts-characters-and-prompts/02-04-SUMMARY.md
+Stopped at: Completed 04-02-PLAN.md (Webtoon assembly stage). Phase 4 complete (2/2 plans). Milestone v1.0 complete.
+Resume file: .planning/phases/04-assembly-and-publish/04-02-SUMMARY.md
