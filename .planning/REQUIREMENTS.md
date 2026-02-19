@@ -163,7 +163,7 @@ The milestone is complete when ALL of the following are true:
 |-------------|-------|--------|
 | INFRA-01 | Phase 5 | Pending |
 | INFRA-02 | Phase 5 | Pending |
-| INFRA-03 | Phase 5 | Pending |
+| INFRA-03 | Phase 5 | Complete |
 | INFRA-04 | Phase 5 | Pending |
 | INFRA-05 | Phase 5 | Pending |
 | DATA-01 | Phase 6 | Pending |

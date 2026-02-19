@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 5 — Environment Validation
-Plan: —
-Status: Planning (roadmap created, phase plans TBD)
-Last activity: 2026-02-19 — Roadmap created for v2.0 milestone (Phases 5–10)
+Plan: 2 of 4 complete
+Status: Executing (05-02 complete — kohya_ss installed and accelerate MPS configured)
+Last activity: 2026-02-19 — Completed 05-02 (kohya_ss + accelerate MPS config)
 
-Progress: [__________] 0% (v2.0 Phase 5 — not yet planned)
+Progress: [##________] ~25% (v2.0 Phase 5 — 2/4 plans complete)
 
 ## Performance Metrics
 
@@ -33,7 +33,7 @@ Progress: [__________] 0% (v2.0 Phase 5 — not yet planned)
 | 4. Assembly & Publish | 2 | 7 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (8 min), 03-01 (3 min), 03-02 (5 min), 03-03 (7 min), 04-01 (4 min)
+- Last 5 plans: 03-01 (3 min), 03-02 (5 min), 03-03 (7 min), 04-01 (4 min), 05-02 (3 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -87,6 +87,10 @@ Recent decisions affecting current work:
 - [v2.0 Roadmap]: Phase 10 (ControlNet) depends on Phase 7 (Express service) and Phase 5 (OpenPose model) — can run in parallel with Phase 8/9
 - [v2.0 Roadmap]: GEN-04 split across Phase 7 (template + slot definition) and Phase 9 (LoRA wired into slot after training)
 - [v2.0 Roadmap]: Reproducibility defined as visually consistent same-character same-pose, not pixel-identical — MPS non-determinism is a hardware fact
+- [05-02]: Do not use requirements_macos_arm64.txt — references torch==2.8.0.* nightly (broken, GitHub issue #3281); manual pip install is correct path
+- [05-02]: accelerate mixed_precision must be 'no' — fp16 triggers ValueError on MPS (PyTorch AMP autocast does not support mps+fp16)
+- [05-02]: write_basic_config() sets use_cpu: true by default; manual YAML override needed to enforce use_cpu: false per spec
+- [05-02]: Omit bitsandbytes, xformers, triton from kohya_ss install — CUDA/Linux-only, incompatible with Apple Silicon
 
 ### Pending Todos
 
@@ -101,5 +105,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: v2.0 roadmap created (Phases 5–10). Next: plan Phase 5 via /gsd:plan-phase 5.
-Resume file: .planning/ROADMAP.md
+Stopped at: Completed 05-02-PLAN.md (kohya_ss install + accelerate MPS config). Next: 05-03-PLAN.md.
+Resume file: .planning/phases/05-environment-validation/05-03-PLAN.md
