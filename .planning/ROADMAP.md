@@ -55,7 +55,13 @@ Plans:
   2. Each caption file follows the format: `[trigger_word], [framing], [pose/action], [background type]`
   3. The dataset directory includes horizontally-flipped versions of each training image (automated augmentation applied)
   4. A sibling regularization directory contains 100–200 images generated from the base SD 1.5 model with a generic anime character prompt and no LoRA
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Build crop script with dry-run mode; produce 18 preview crops from reference sheets
+- [ ] 06-02-PLAN.md — Human crop review checkpoint; finalize training images, write captions, generate flips
+- [ ] 06-03-PLAN.md — Build regularization generator script; run 100-image ComfyUI batch
+- [ ] 06-04-PLAN.md — Dataset validation script + human final verification
 
 ### Phase 7: ComfyUI + Express Integration
 **Goal**: The end-to-end generation loop works: `pnpm stage:generate -- --comfyui -c 1 --page 1` submits a job, polls the Express service, and produces a correctly-named image in `output/ch-01/raw/` — with the Gemini API mode still intact and the overlay/assemble stages consuming the output unchanged.
@@ -112,7 +118,7 @@ Plans:
 | 3. Image Generation Workflow | v1.0 | 3/3 | Complete | 2026-02-19 |
 | 4. Assembly and Publish | v1.0 | 2/2 | Complete | 2026-02-19 |
 | 5. Environment Validation | v2.0 | Complete    | 2026-02-19 | 2026-02-19 |
-| 6. Spyke Dataset Preparation | v2.0 | 0/? | Not started | - |
+| 6. Spyke Dataset Preparation | v2.0 | 0/4 | Planning done | - |
 | 7. ComfyUI + Express Integration | v2.0 | 0/? | Not started | - |
 | 8. Spyke LoRA Training | v2.0 | 0/? | Not started | - |
 | 9. LoRA Integration + Reproducibility | v2.0 | 0/? | Not started | - |
