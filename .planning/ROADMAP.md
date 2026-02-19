@@ -10,7 +10,7 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Foundation** - TypeScript pipeline infrastructure, CLI, and directory conventions
+- [x] **Phase 1: Foundation** - TypeScript pipeline infrastructure, CLI, and directory conventions
 - [ ] **Phase 2: Scripts, Characters, and Prompts** - Manga script generation, character fingerprint system, and Jinja2-style prompt templates
 - [ ] **Phase 3: Image Generation Workflow** - Manual and API Gemini workflows with naming conventions and prompt-to-image tracking
 - [ ] **Phase 4: Assembly and Publish** - Dialogue overlay, vertical Webtoon strip assembly, and Canvas-ready output
@@ -26,7 +26,10 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
   2. Each pipeline stage can be invoked independently via CLI flags (e.g., `npm run stage:script`)
   3. Pipeline reads from `01_bible/` and `03_manga/` but writes only to `output/`
   4. All work exists on a feature branch, never committed to main
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [x] 01-01-PLAN.md — Pipeline project setup with CLI, stage stubs, types, path resolution, and tests
 
 ### Phase 2: Scripts, Characters, and Prompts
 **Goal**: Any Plasma chapter can be converted to a panel-by-panel manga script with validated prompts that lock character visuals verbatim
@@ -38,7 +41,14 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
   3. Each character has a locked prompt fingerprint in structured YAML/JSON that the template system injects verbatim into every prompt
   4. Running the prompt generator for a chapter produces one Gemini-optimized prompt per page with style guide prefix and character blocks embedded — no manual copy-pasting of character descriptions required
   5. Updating a character fingerprint in one place propagates to all prompts on the next generation run
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [x] 02-01-PLAN.md — Install dependencies, expand types, create Zod validation schemas
+- [x] 02-02-PLAN.md — Build markdown script parser and wire into script stage
+- [x] 02-03-PLAN.md — Create character YAML fingerprints, registry, and CLI subcommand
+- [x] 02-04-PLAN.md — Build Nunjucks template engine and prompt generator stage
+- [ ] 02-05-PLAN.md — Build per-panel QC checklist for character verification
 
 ### Phase 3: Image Generation Workflow
 **Goal**: Prompts flow to Gemini (manually or via API) and resulting images are organized with full traceability from prompt to approved file
@@ -67,7 +77,7 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
-| 2. Scripts, Characters, and Prompts | 0/TBD | Not started | - |
+| 1. Foundation | 1/1 | Complete | 2026-02-18 |
+| 2. Scripts, Characters, and Prompts | 4/5 | In Progress | - |
 | 3. Image Generation Workflow | 0/TBD | Not started | - |
 | 4. Assembly and Publish | 0/TBD | Not started | - |

@@ -1,0 +1,10 @@
+# Style guide prefix — verbatim, included at the top of every prompt
+# Source: 03_manga/prompts/pages-01-to-15.md
+# DO NOT paraphrase — this exact text produces consistent Gemini output
+style_prefix: "Colored manga page, cel-shaded, clean linework, vibrant colors, dynamic panel layout."
+
+# Art style settings
+setting: "Year 3031, sci-fi London — vertical tower city above ocean, hover vehicles, holographic tech"
+
+# Weapon rendering note
+weapon_glow: "All Plasma weapons emit a faint blue/white energy glow along their cutting edges"

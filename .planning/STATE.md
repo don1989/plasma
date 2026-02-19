@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** Phase 1 — Foundation
+**Current focus:** Phase 2 — Scripts, Characters & Prompts
 
 ## Current Position
 
-Phase: 1 of 4 (Foundation)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-18 — Roadmap created
+Phase: 2 of 4 (Scripts, Characters & Prompts)
+Plan: 4 of 5 in current phase
+Status: Executing Phase 2
+Last activity: 2026-02-19 — Completed 02-04-PLAN.md (prompt template engine and generator)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [########--] 80% (Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 5
+- Average duration: 6.4 min
+- Total execution time: 0.53 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 1. Foundation | 1 | 4 min | 4 min |
+| 2. Scripts/Characters | 4 | 28 min | 7.0 min |
 
 **Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: 01-01 (4 min), 02-01 (7 min), 02-03 (5 min), 02-02 (8 min), 02-04 (8 min)
+- Trend: Steady
 
 *Updated after each plan completion*
 
@@ -46,6 +47,25 @@ Recent decisions affecting current work:
 - [Init]: All pipeline code lives in `pipeline/` directory, decoupled from story content
 - [Init]: Text in panels is always programmatic overlay — never baked into AI-generated art
 - [Init]: Manual Gemini workflow (copy-paste) is a first-class path; API automation is upgrade, not prerequisite
+- [01-01]: Commander v14 for CLI (zero deps, native TS types, subcommand-per-stage pattern)
+- [01-01]: assertSourceDir throws on missing dirs (fail fast with descriptive errors)
+- [01-01]: output/ at project root as sibling to 01_bible/, not inside pipeline/
+- [01-01]: pnpm.onlyBuiltDependencies for Sharp/esbuild native build approval
+- [02-01]: z.string() for shotType (not enum) — scripts have compound types like "Wide (Action)"
+- [02-01]: Warning-level panel count check instead of hard rejection — action montages break 4-7 range
+- [02-01]: Zod v4 .check() API with input field for custom refinement issues
+- [02-01]: Schema + z.infer type co-export pattern for all schema files
+- [02-02]: 28 page headings in chapter-01-script.md (not 29) — double-page spread 25-26 has single heading
+- [02-02]: MDAST paragraph child walking for field extraction — remark merges consecutive lines into single paragraph
+- [02-02]: Dialogue list items split on Strong field labels to separate dialogue from trailing SFX/Notes
+- [02-02]: Off-panel speech is type 'speech' — off-panel is position modifier, not dialogue type
+- [02-03]: Removed CharacterRegistry type alias, replaced by CharacterRegistry class with richer functionality
+- [02-03]: CLI ref-sheet uses string concatenation (not Nunjucks) for immediate utility before template engine
+- [02-03]: Character fingerprints sourced verbatim from tested prompts in 03_manga/prompts/
+- [02-04]: Establishing shot detection limited to page 1 Wide shots + pages with establishing/panorama keywords
+- [02-04]: Narrator excluded from character extraction -- narration boxes have no visual character to fingerprint
+- [02-04]: Character fingerprints deduplicated by id per panel -- prevents duplicates from name+alias matches
+- [02-04]: Layout description uses count-based text (vertical layout for 2-3, layout for 4+) matching hand-written style
 
 ### Pending Todos
 
@@ -58,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-18
-Stopped at: Roadmap created, requirements mapped to 4 phases
-Resume file: None
+Last session: 2026-02-19
+Stopped at: Completed 02-04-PLAN.md (prompt template engine and generator). Phase 2 plans 1-4 of 5 done.
+Resume file: .planning/phases/02-scripts-characters-and-prompts/02-04-SUMMARY.md

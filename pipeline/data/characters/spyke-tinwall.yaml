@@ -1,0 +1,43 @@
+id: spyke-tinwall
+name: Spyke Tinwall
+aliases: ["Spyke", "SPYKE", "Redhead"]
+
+# Verbatim prompt fingerprint — DO NOT paraphrase or rearrange
+# Source: 03_manga/prompts/pages-01-to-15.md Character Quick Reference
+fingerprint: |
+  Spyke (age 21) — spiky ginger hair (tips reach traps), red bandana,
+  green eyes, white knee-length cloak (sleeves cut, dojo emblem on back,
+  pattern along bottom hem), red fingerless glove on left hand with red
+  bracer on left wrist, armoured full-fingered glove on right hand,
+  red-accented belt, metal knee pauldron on right knee, massive broadsword
+  on back, patterned katana at left hip, black combat clothing under
+  the cloak
+
+reference_sheet_prompt: |
+  Colored manga character reference sheet, Spyke Tinwall. Clean linework,
+  cel-shaded, vibrant colors, high-resolution, white background.
+  Character: Spyke Tinwall, male, age 21, slim but strong athletic build,
+  lean muscle definition.
+  Hair: Ginger/copper-red hair, messy and layered, length stopping at the
+  bottom of the neck (not touching shoulders). Wears a bright red bandana
+  tied around the forehead with tails trailing into the hair.
+  Eyes: Sharp green eyes.
+  Outfit: Black fitted t-shirt worn underneath a White Sleeveless Cloak.
+  Cloak Details: The white cloak has a clean hem featuring a black geometric
+  pattern running along the bottom edge and a distinct black insignia in
+  the center of the back.
+  Arms (Asymmetrical): Right Arm: Red fingerless glove that covers the hand
+  only and stops at the wrist. Left Arm: Red metallic armored bracer/gauntlet
+  that covers the hand and extends up the forearm.
+  Legs: Black combat pants with reinforced knees. Right Knee: A metal knee
+  pauldron.
+  Feet: Dark combat boots.
+  Weapons: Back: Massive Plasma Broadsword. Side: Katana sheathed at left hip.
+
+palette:
+  primary: ["red (bandana, glove, bracer)", "white (cloak)", "black (combat clothing)"]
+  accent: ["ginger (hair)", "green (eyes)", "grey/metallic (broadsword, knee pauldron)"]
+
+variants:
+  adrenaline_mode: "eyes turn red, art style becomes sharper/more intense, heavier inks"
+  demon_active: "left eye turns purple/black sclera, arm may transform green/purple"

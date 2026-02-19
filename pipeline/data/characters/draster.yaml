@@ -1,0 +1,41 @@
+id: draster
+name: Draster
+aliases: ["Draster", "DRASTER"]
+
+# Verbatim prompt fingerprint — DO NOT paraphrase or rearrange
+# Source: 03_manga/prompts/pages-01-to-15.md Character Quick Reference
+fingerprint: |
+  Draster — dark brown skin, black and silver hair, soft brown eyes,
+  navy jacket-style suit-robe, leather Plasma Gloves on both hands,
+  hands often in pockets
+
+reference_sheet_prompt: |
+  Colored manga character reference sheet, clean linework, cel-shaded,
+  vibrant colors, white background, multiple views (front, 3/4, side,
+  back), expression sheet below.
+  Character: Draster, male, age 22, dark brown skin, slim build, composed
+  and intellectual posture, hands often resting in pockets.
+  Hair: Black and silver hair — primarily black with natural silver/grey
+  streaks or highlights woven through. Short-to-medium length, neatly kept
+  but with some natural texture and volume.
+  Eyes: Soft warm brown eyes, gentle and perceptive, giving him a calm and
+  thoughtful appearance.
+  Clothing: An all-in-one suit-robe hybrid — imagine a navy blue naval-style
+  jacket that extends into a long robe-like lower half reaching to about
+  mid-calf. The jacket portion is structured and buttoned with a high collar,
+  military-inspired cut with clean lines. The lower portion flows more
+  loosely like a robe or long coat. Dark navy is the dominant color with
+  subtle silver trim or piping along the edges and seams. Dark pants and
+  dark boots visible beneath the suit-robe.
+  Weapons and Gear: Leather Plasma Gloves on both hands — fitted leather
+  gloves that cover the full hand and wrist, dark brown or black leather
+  with subtle elemental pattern engravings etched into the surface. The
+  gloves emit a faint glow when activated for combat casting.
+
+palette:
+  primary: ["navy (suit-robe)", "dark brown (skin)", "black (pants, boots)"]
+  accent: ["silver (hair highlights, glove accents, trim)", "brown (eyes, leather gloves)"]
+
+variants:
+  combat_casting: "gloves glowing with bright elemental energy, blue-white Plasma light from both hands, eyes sharp"
+  relaxed: "hands in pockets, calm expression, unhurried stance"

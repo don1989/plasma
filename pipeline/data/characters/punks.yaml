@@ -1,0 +1,42 @@
+id: punks
+name: Punks
+aliases: ["Punk 1", "PUNK 1", "Punk 2", "PUNK 2", "Punk 3", "PUNK 3", "Punks"]
+
+# Verbatim prompt fingerprint — DO NOT paraphrase or rearrange
+# Source: 03_manga/prompts/character-sheets.md Punks group sheet
+fingerprint: |
+  Three young male street thugs/punks, generic antagonist designs, cocky
+  and aggressive body language, all dressed in black streetwear/punk fashion.
+  Punk Leader (center, tallest): black leather jacket, broad-shouldered,
+  muscular, scar on face, short sword at hip.
+  Punk 2 (left, medium build): black hoodie with sleeves torn off, beanie,
+  short sword at hip.
+  Punk 3 (right, smallest): black t-shirt with torn collar, studded
+  wristbands, short sword at hip.
+
+reference_sheet_prompt: |
+  Colored manga character reference sheet, clean linework, cel-shaded,
+  vibrant colors, white background. Group character sheet for three street
+  punk thugs shown together.
+  Characters: Three young male street thugs/punks, generic antagonist
+  designs, cocky and aggressive body language. All dressed in black
+  streetwear/punk fashion.
+  Punk Leader (center, tallest): The biggest and tallest, broad-shouldered,
+  muscular build, intimidating. Black leather jacket, dark tank top, black
+  ripped jeans, heavy boots, chain accessories. A scar on his face. Short
+  sword at hip.
+  Punk 2 (left, medium build): Lean and wiry. Black hoodie with sleeves
+  torn off, dark cargo pants, combat boots, fingerless gloves. Beanie on
+  head. Short sword at hip.
+  Punk 3 (right, smallest): Shortest and scrappiest. Black t-shirt with
+  torn collar, black skinny jeans, sneakers, studded wristbands. Messy
+  unkempt hair. Short sword at hip.
+  Group arrangement: All three standing together in a line.
+
+palette:
+  primary: ["black (all clothing)", "dark grey (accessories)"]
+  accent: ["silver (chains, studs)", "dark red (scars, accents)"]
+
+variants:
+  defeated: "sprawled on ground, swords knocked away, groaning"
+  aggressive: "fanned out in fighting positions, swords drawn"

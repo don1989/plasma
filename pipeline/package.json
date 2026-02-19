@@ -1,0 +1,41 @@
+{
+  "name": "plasma-pipeline",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "stage:script": "tsx src/cli.ts script",
+    "stage:prompt": "tsx src/cli.ts prompt",
+    "stage:generate": "tsx src/cli.ts generate",
+    "stage:overlay": "tsx src/cli.ts overlay",
+    "stage:assemble": "tsx src/cli.ts assemble"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "nunjucks": "^3.2.4",
+    "remark-parse": "^11.0.0",
+    "sharp": "^0.34.5",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0",
+    "yaml": "^2.8.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^20.0.0",
+    "@types/nunjucks": "^3.2.6",
+    "tsx": "^4.21.0",
+    "typescript": "~5.7.0",
+    "vitest": "^4.0.18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  }
+}

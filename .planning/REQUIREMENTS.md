@@ -9,17 +9,17 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Scripting
 
-- [ ] **SCRP-01**: Pipeline can convert a prose story chapter into a structured panel-by-panel manga script following manga-script.md rules
-- [ ] **SCRP-02**: Generated scripts include shot types, panel composition notes, dialogue, and SFX per panel
-- [ ] **SCRP-03**: Script validation checks panel counts (4-7 per page), pacing rules, and required shot types
+- [x] **SCRP-01**: Pipeline can convert a prose story chapter into a structured panel-by-panel manga script following manga-script.md rules
+- [x] **SCRP-02**: Generated scripts include shot types, panel composition notes, dialogue, and SFX per panel
+- [x] **SCRP-03**: Script validation checks panel counts (4-7 per page), pacing rules, and required shot types
 
 ### Prompt Engineering
 
-- [ ] **PRMT-01**: Pipeline generates Gemini-optimized art prompts from manga scripts, one prompt per page
-- [ ] **PRMT-02**: Every prompt embeds the full character visual description inline (prompt fingerprint system)
-- [ ] **PRMT-03**: Style guide prefix is locked verbatim and included in every prompt automatically
-- [ ] **PRMT-04**: Jinja2-style template library manages character blocks, style prefix, and setting descriptions
-- [ ] **PRMT-05**: Templates can be updated in one place and propagate to all generated prompts
+- [x] **PRMT-01**: Pipeline generates Gemini-optimized art prompts from manga scripts, one prompt per page
+- [x] **PRMT-02**: Every prompt embeds the full character visual description inline (prompt fingerprint system)
+- [x] **PRMT-03**: Style guide prefix is locked verbatim and included in every prompt automatically
+- [x] **PRMT-04**: Jinja2-style template library manages character blocks, style prefix, and setting descriptions
+- [x] **PRMT-05**: Templates can be updated in one place and propagate to all generated prompts
 
 ### Image Generation
 
@@ -30,10 +30,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Character Consistency
 
-- [ ] **CHAR-01**: Locked prompt fingerprint exists for each character — tested and validated description block
-- [ ] **CHAR-02**: Per-panel QC checklist compares generated panels against character reference sheets
-- [ ] **CHAR-03**: New character introduction workflow generates reference sheets before chapter prompts
-- [ ] **CHAR-04**: Character reference data stored in structured format (YAML/JSON) for template injection
+- [x] **CHAR-01**: Locked prompt fingerprint exists for each character — tested and validated description block
+- [x] **CHAR-02**: Per-panel QC checklist compares generated panels against character reference sheets
+- [x] **CHAR-03**: New character introduction workflow generates reference sheets before chapter prompts
+- [x] **CHAR-04**: Character reference data stored in structured format (YAML/JSON) for template injection
 
 ### Dialogue & Text
 
@@ -49,11 +49,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFR-01**: All pipeline code lives in a separate `pipeline/` directory, decoupled from story content
-- [ ] **INFR-02**: Pipeline is built in TypeScript with Sharp for image processing
-- [ ] **INFR-03**: Pipeline reads from existing story directories (01_bible/, 03_manga/) but never writes to them
-- [ ] **INFR-04**: CLI interface allows running each pipeline stage independently
-- [ ] **INFR-05**: All work committed to feature branches, never directly to main
+- [x] **INFR-01**: All pipeline code lives in a separate `pipeline/` directory, decoupled from story content
+- [x] **INFR-02**: Pipeline is built in TypeScript with Sharp for image processing
+- [x] **INFR-03**: Pipeline reads from existing story directories (01_bible/, 03_manga/) but never writes to them
+- [x] **INFR-04**: CLI interface allows running each pipeline stage independently
+- [x] **INFR-05**: All work committed to feature branches, never directly to main
 
 ## v2 Requirements
 
@@ -97,33 +97,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCRP-01 | Phase 2 | Pending |
-| SCRP-02 | Phase 2 | Pending |
-| SCRP-03 | Phase 2 | Pending |
-| PRMT-01 | Phase 2 | Pending |
-| PRMT-02 | Phase 2 | Pending |
-| PRMT-03 | Phase 2 | Pending |
-| PRMT-04 | Phase 2 | Pending |
-| PRMT-05 | Phase 2 | Pending |
+| SCRP-01 | Phase 2 | Complete |
+| SCRP-02 | Phase 2 | Complete |
+| SCRP-03 | Phase 2 | Complete |
+| PRMT-01 | Phase 2 | Complete |
+| PRMT-02 | Phase 2 | Complete |
+| PRMT-03 | Phase 2 | Complete |
+| PRMT-04 | Phase 2 | Complete |
+| PRMT-05 | Phase 2 | Complete |
 | IGEN-01 | Phase 3 | Pending |
 | IGEN-02 | Phase 3 | Pending |
 | IGEN-03 | Phase 3 | Pending |
 | IGEN-04 | Phase 3 | Pending |
-| CHAR-01 | Phase 2 | Pending |
-| CHAR-02 | Phase 2 | Pending |
-| CHAR-03 | Phase 2 | Pending |
-| CHAR-04 | Phase 2 | Pending |
+| CHAR-01 | Phase 2 | Complete |
+| CHAR-02 | Phase 2 | Complete |
+| CHAR-03 | Phase 2 | Complete |
+| CHAR-04 | Phase 2 | Complete |
 | TEXT-01 | Phase 4 | Pending |
 | TEXT-02 | Phase 4 | Pending |
 | ASSM-01 | Phase 4 | Pending |
 | ASSM-02 | Phase 4 | Pending |
 | ASSM-03 | Phase 4 | Pending |
 | ASSM-04 | Phase 4 | Pending |
-| INFR-01 | Phase 1 | Pending |
-| INFR-02 | Phase 1 | Pending |
-| INFR-03 | Phase 1 | Pending |
-| INFR-04 | Phase 1 | Pending |
-| INFR-05 | Phase 1 | Pending |
+| INFR-01 | Phase 1 | Complete |
+| INFR-02 | Phase 1 | Complete |
+| INFR-03 | Phase 1 | Complete |
+| INFR-04 | Phase 1 | Complete |
+| INFR-05 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 27 total
@@ -132,4 +132,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after roadmap creation — all 27 requirements mapped*
+*Last updated: 2026-02-19 after 02-04 completion — PRMT-01 through PRMT-05 marked complete*

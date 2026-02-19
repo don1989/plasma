@@ -1,0 +1,39 @@
+id: june-kamara
+name: June Kamara
+aliases: ["June", "JUNE", "June Kamara"]
+
+# Verbatim prompt fingerprint — DO NOT paraphrase or rearrange
+# Source: 03_manga/prompts/pages-01-to-15.md Character Quick Reference
+fingerprint: |
+  June — blonde hair, sporty blue top, short shorts over black tights,
+  shoulder pad armor, shortsword at hip, pistol holster on right thigh,
+  magician glove on left hand, Plasma shoes
+
+reference_sheet_prompt: |
+  Colored manga character reference sheet, clean linework, cel-shaded,
+  vibrant colors, white background, 4 multiple views (front, 3/4, side,
+  back), expression sheet below with the various facial expressions.
+  Character: June Kamara, female, age 20, white skin, sporty build, but
+  not too big, confident posture with energy and movement in her stance.
+  Featuring studded earrings and a studded belly button piercing.
+  Hair: Blonde hair, medium length, worn down normally but tied back in a
+  practical ponytail or bun for combat. Show both hairstyles on the sheet
+  (one full-body with hair down, one with hair tied back).
+  Eyes: Bright, expressive eyes with a warm and lively look.
+  Clothing: A vested sporty crop top in dark pink tones, with a big bust.
+  One single shoulder pauldron on her LEFT shoulder. Dark pink medium shorts
+  (athletic style) - shorts are flowy, but have undershorts which are tight
+  to the skin. Wearing a big brown belt, with black tights covering her
+  entire legs. Overall color scheme is pink, whites, and light tones with
+  gold/blonde hair as an accent.
+  Weapons and Gear: (1) A shortsword in a sheath strictly on her LEFT hip.
+  (2) Magician gloves on both hands. (3) A pistol holster strapped to her
+  right thigh containing a compact handgun. (4) Plasma-imbued shoes.
+
+palette:
+  primary: ["dark pink (top, shorts, shoes)", "white (accents)", "black (tights, belt)"]
+  accent: ["gold/blonde (hair)", "brown (belt)", "blue-white (Plasma shoe glow)"]
+
+variants:
+  hair_down: "blonde hair worn loose, casual appearance"
+  combat_ready: "hair tied back in ponytail, weapons drawn, focused expression"
