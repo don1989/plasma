@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 3 of 4 (Image Generation Workflow)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing Phase 3
-Last activity: 2026-02-19 — Completed 03-01-PLAN.md (generation domain foundation)
+Last activity: 2026-02-19 — Completed 03-02-PLAN.md (manual Gemini workflow)
 
-Progress: [###-------] 33% (Phase 3)
+Progress: [######----] 67% (Phase 3)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 5.8 min
-- Total execution time: 0.58 hours
+- Total plans completed: 7
+- Average duration: 5.7 min
+- Total execution time: 0.67 hours
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [###-------] 33% (Phase 3)
 |-------|-------|-------|----------|
 | 1. Foundation | 1 | 4 min | 4 min |
 | 2. Scripts/Characters | 4 | 28 min | 7.0 min |
-| 3. Image Generation | 1 | 3 min | 3.0 min |
+| 3. Image Generation | 2 | 8 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (7 min), 02-03 (5 min), 02-02 (8 min), 02-04 (8 min), 03-01 (3 min)
+- Last 5 plans: 02-03 (5 min), 02-02 (8 min), 02-04 (8 min), 03-01 (3 min), 03-02 (5 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -70,6 +70,10 @@ Recent decisions affecting current work:
 - [03-01]: readdirSync for nextVersion scan -- synchronous is fine for small directories, avoids async complexity
 - [03-01]: generation-log.json filename for manifest -- descriptive, avoids collision with other chapter metadata
 - [03-01]: getApprovedEntry returns latest by timestamp when multiple approved -- supports re-approval workflow
+- [03-02]: mode defaults to 'manual' when omitted -- manual is the first-class workflow path
+- [03-02]: importImage copies (never moves) source files -- user's original is always preserved
+- [03-02]: approveImage enforces single-approved-per-page -- approving v2 automatically unapproves v1
+- [03-02]: JPEG extension normalized to jpg in filenames -- consistency with common convention
 
 ### Pending Todos
 
@@ -83,5 +87,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 03-01-PLAN.md (generation domain foundation). Phase 3 plan 1 of 3 done.
-Resume file: .planning/phases/03-image-generation-workflow/03-01-SUMMARY.md
+Stopped at: Completed 03-02-PLAN.md (manual Gemini workflow). Phase 3 plan 2 of 3 done.
+Resume file: .planning/phases/03-image-generation-workflow/03-02-SUMMARY.md
