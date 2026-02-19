@@ -220,7 +220,7 @@ describe('runGenerate - approve mode', () => {
   });
 });
 
-describe('runGenerate - API mode', () => {
+describe('runGenerate - API mode (basic)', () => {
   let tempDir: string;
 
   beforeEach(async () => {
@@ -229,7 +229,11 @@ describe('runGenerate - API mode', () => {
       `gen-api-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     const chapterDir = join(tempDir, 'ch-01');
-    mkdirSync(chapterDir, { recursive: true });
+    const promptsDir = join(chapterDir, 'prompts');
+    mkdirSync(promptsDir, { recursive: true });
+
+    // Create a prompt file so the prompts-dir check passes
+    writeFileSync(join(promptsDir, 'page-01.txt'), 'Test prompt');
 
     const pathsMod = await import('../../src/config/paths.js');
     vi.spyOn(pathsMod.PATHS, 'chapterOutput').mockReturnValue({
@@ -238,31 +242,34 @@ describe('runGenerate - API mode', () => {
       processed: join(chapterDir, 'processed'),
       lettered: join(chapterDir, 'lettered'),
       webtoon: join(chapterDir, 'webtoon'),
-      prompts: join(chapterDir, 'prompts'),
+      prompts: promptsDir,
+    });
+
+    // Point pipelineRoot to temp dir so no real .env is found
+    Object.defineProperty(pathsMod.PATHS, 'pipelineRoot', {
+      value: tempDir,
+      writable: true,
+      configurable: true,
     });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    delete process.env['GEMINI_API_KEY'];
     if (existsSync(tempDir)) {
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
-  it('returns not-yet-implemented message for API mode', async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  it('returns failure with clear error when API key is not set', async () => {
+    delete process.env['GEMINI_API_KEY'];
 
     const result = await runGenerate({
       chapter: 1,
       mode: 'api',
     });
 
-    expect(result.success).toBe(true);
-    expect(result.outputFiles).toHaveLength(0);
-
-    const logCalls = consoleSpy.mock.calls.map((c) => c[0]);
-    expect(logCalls.some((msg) => typeof msg === 'string' && msg.includes('API mode not yet implemented'))).toBe(true);
-
-    consoleSpy.mockRestore();
+    expect(result.success).toBe(false);
+    expect(result.errors[0]).toContain('GEMINI_API_KEY is not set');
   });
 });
