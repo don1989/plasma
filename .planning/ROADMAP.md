@@ -34,11 +34,17 @@
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05
 **Success Criteria** (what must be TRUE):
   1. A 512×512, 20-step test generation via the ComfyUI browser UI completes in under 2 minutes using Anything V5 and Euler a sampler
-  2. `GET /health` on the ComfyUI server returns a 200 OK response (confirming the server is listening at `http://127.0.0.1:8188`)
+  2. The ComfyUI server is reachable and returns valid JSON at `http://127.0.0.1:8188/system_stats` (NOTE: ComfyUI has no /health endpoint — /system_stats is the correct health check, confirmed by research)
   3. ComfyUI-Manager and ComfyUI-ControlNet-Aux nodes are installed and visible in the ComfyUI node list
   4. `control_v11p_sd15_openpose.pth` is present in `~/tools/ComfyUI/models/controlnet/`
-  5. kohya_ss venv activates without errors and `accelerate config` reports MPS as the compute device
-**Plans**: TBD
+  5. kohya_ss venv activates without errors and `accelerate config` reports `mixed_precision: no` (NOTE: MPS does not support fp16 mixed precision in training — `mixed_precision: no` is correct, confirmed by research)
+**Plans**: 4 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Install ComfyUI venv + PyTorch 2.5.1 MPS + ComfyUI-Manager
+- [ ] 05-02-PLAN.md — Install kohya_ss venv + configure accelerate (mixed_precision: no)
+- [ ] 05-03-PLAN.md — Download Anything V5 + ControlNet model + ControlNet-Aux extension
+- [ ] 05-04-PLAN.md — Launch ComfyUI, verify /system_stats MPS, run INFRA-04 benchmark
 
 ### Phase 6: Spyke Dataset Preparation
 **Goal**: A 15–20 image Spyke training dataset with paired caption files and a regularization set of 100–200 images exists on disk — all prerequisites for LoRA training are satisfied before any training is attempted.
@@ -105,7 +111,7 @@
 | 2. Scripts, Characters, and Prompts | v1.0 | 5/5 | Complete | 2026-02-19 |
 | 3. Image Generation Workflow | v1.0 | 3/3 | Complete | 2026-02-19 |
 | 4. Assembly and Publish | v1.0 | 2/2 | Complete | 2026-02-19 |
-| 5. Environment Validation | v2.0 | 0/? | Not started | - |
+| 5. Environment Validation | v2.0 | 0/4 | Planned | - |
 | 6. Spyke Dataset Preparation | v2.0 | 0/? | Not started | - |
 | 7. ComfyUI + Express Integration | v2.0 | 0/? | Not started | - |
 | 8. Spyke LoRA Training | v2.0 | 0/? | Not started | - |
