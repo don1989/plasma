@@ -62,3 +62,59 @@ export const DEFAULT_OVERLAY_CONFIG: OverlayConfig = {
   sfxFontSize: 22,
   sfxColor: '#CC0000',
 };
+
+// ---------------------------------------------------------------------------
+// Assembly types (used by the Webtoon strip assembly stage)
+// ---------------------------------------------------------------------------
+
+/** Configuration for the Webtoon assembly stage. */
+export interface AssemblyConfig {
+  /** Strip width in pixels. */
+  width: number;
+  /** Height of black gutter between panels in pixels. */
+  gutterHeight: number;
+  /** Gutter fill color (RGBA). */
+  gutterColor: { r: number; g: number; b: number; alpha: number };
+  /** Target slice height for Webtoon strips in pixels. */
+  sliceHeight: number;
+  /** JPEG quality (1-100, mozjpeg). */
+  jpegQuality: number;
+  /** Output image format. */
+  format: 'jpeg' | 'png';
+}
+
+/** Default Webtoon Canvas output configuration. */
+export const WEBTOON_CONFIG: AssemblyConfig = {
+  width: 800,
+  gutterHeight: 10,
+  gutterColor: { r: 0, g: 0, b: 0, alpha: 1 },
+  sliceHeight: 1280,
+  jpegQuality: 90,
+  format: 'jpeg',
+};
+
+/** Metadata for a single panel image used in assembly. */
+export interface PanelMetadata {
+  /** Absolute path to the panel image file. */
+  path: string;
+  /** Original image width in pixels. */
+  width: number;
+  /** Original image height in pixels. */
+  height: number;
+  /** Page number in the chapter. */
+  pageNumber: number;
+  /** Whether this is a splash page (full-page art). */
+  isSplash: boolean;
+  /** Whether this is a double-spread page. */
+  isDoubleSpread: boolean;
+}
+
+/** Result from assembling panels into a vertical strip. */
+export interface AssemblyResult {
+  /** The composited vertical strip as a raw PNG buffer. */
+  stripBuffer: Buffer;
+  /** Total height of the composited strip in pixels. */
+  totalHeight: number;
+  /** Number of panels composited. */
+  panelCount: number;
+}
