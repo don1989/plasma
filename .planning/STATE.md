@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Phase 7: ComfyUI + Express Integration
+**Current focus:** v2.0 — Phase 8: Spyke LoRA Training
 
 ## Current Position
 
-Phase: 7 — ComfyUI + Express Integration
-Plan: 3 of 3 complete (07-03 done — generate.ts CLI wiring, full end-to-end loop)
-Status: Phase Complete (all 3 plans done — Phase 8 LoRA dataset next)
-Last activity: 2026-02-19 — Completed 07-03 (--comfyui flag, ComfyUI mode branch, approve-and-copy, slot-fill JSON fix)
+Phase: 8 — Spyke LoRA Training
+Plan: 0 of 3 (planning complete — ready to execute)
+Status: Phase Planned (3 plans: 08-01 submodule fix + smoke test, 08-02 full training, 08-03 checkpoint selection)
+Last activity: 2026-02-19 — Phase 8 planned (research + 3 plans + verification passed)
 
 Progress: [########__] ~80% (v2.0 Phase 7 complete — 3/3 plans done)
 
