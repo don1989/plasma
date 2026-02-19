@@ -73,7 +73,12 @@ Plans:
   3. `POST /jobs` with `resolution.width > 512` or `resolution.height > 768` returns HTTP 400
   4. `POST /jobs` with a valid payload establishes a WebSocket connection before posting the workflow, and job completion is detected via that WebSocket (no polling)
   5. The overlay and assemble stages run on a ComfyUI-generated image for chapter 1 without modification
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Install deps + scaffold Express service: types, job-store, slot-fill, router (validation), service entry point, workflow templates
+- [ ] 07-02-PLAN.md — Implement ComfyUI WebSocket client + wire into router POST /jobs async handler
+- [ ] 07-03-PLAN.md — Pipeline integration: --comfyui CLI flag, generate.ts ComfyUI branch, approve-and-copy promotion
 
 ### Phase 8: Spyke LoRA Training
 **Goal**: A trained Spyke LoRA `.safetensors` file is placed in `~/tools/ComfyUI/models/loras/`, with the best-generalizing checkpoint selected and MPS confirmed active during training — the core v2.0 character consistency deliverable.
@@ -119,7 +124,7 @@ Plans:
 | 4. Assembly and Publish | v1.0 | 2/2 | Complete | 2026-02-19 |
 | 5. Environment Validation | v2.0 | Complete    | 2026-02-19 | 2026-02-19 |
 | 6. Spyke Dataset Preparation | 1/4 | In Progress|  | - |
-| 7. ComfyUI + Express Integration | v2.0 | 0/? | Not started | - |
+| 7. ComfyUI + Express Integration | v2.0 | 0/3 | Not started | - |
 | 8. Spyke LoRA Training | v2.0 | 0/? | Not started | - |
 | 9. LoRA Integration + Reproducibility | v2.0 | 0/? | Not started | - |
 | 10. ControlNet OpenPose | v2.0 | 0/? | Not started | - |
