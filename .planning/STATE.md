@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 5 — Environment Validation
-Plan: 3 of 4 complete (05-01 + 05-02 + 05-03 done; 05-04 remaining)
-Status: Executing (05-03 complete — model downloads, ControlNet-Aux extension installed)
-Last activity: 2026-02-19 — Completed 05-03 (AnythingXL checkpoint + OpenPose ControlNet + comfyui_controlnet_aux)
+Phase: 6 — Spyke Dataset Preparation
+Plan: 0 of ? complete (Phase 5 fully done; Phase 6 planning not yet started)
+Status: Ready (Phase 5 gate PASS — all INFRA requirements satisfied)
+Last activity: 2026-02-19 — Completed 05-04 (ComfyUI MPS benchmark: 15s, PASS; Phase 5 gate cleared)
 
-Progress: [###_______] ~37% (v2.0 Phase 5 — 3/4 plans complete)
+Progress: [####______] ~43% (v2.0 Phase 5 complete — 4/4 plans done)
 
 ## Performance Metrics
 
@@ -31,10 +31,10 @@ Progress: [###_______] ~37% (v2.0 Phase 5 — 3/4 plans complete)
 | 2. Scripts/Characters | 4 | 28 min | 7.0 min |
 | 3. Image Generation | 3 | 15 min | 5.0 min |
 | 4. Assembly & Publish | 2 | 7 min | 3.5 min |
-| 5. Environment Validation | 3 | 73 min | 24.3 min |
+| 5. Environment Validation | 4 | 93 min | 23.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-03 (7 min), 04-01 (4 min), 04-02 (3 min), 05-01 (3 min), 05-03 (67 min — download-dominated)
+- Last 5 plans: 04-01 (4 min), 04-02 (3 min), 05-01 (3 min), 05-03 (67 min — download-dominated), 05-04 (20 min — benchmark + human verify)
 - Trend: Stable; 05-03 outlier due to 3.4 GB of binary model downloads
 
 *Updated after each plan completion*
@@ -98,6 +98,9 @@ Recent decisions affecting current work:
 - [05-03]: AnythingXL_inkBase.safetensors accepted as equivalent substitute for anything-v5-PrtRE.safetensors — same SD 1.5 architecture, ComfyUI accepts any filename, no hardcoded path in pipeline
 - [05-03]: control_v11p_sd15_openpose.pth is 1.3 GiB on macOS (1378 MB base-10 / 1024 = 1.35 GiB binary) — correct download size, not truncated
 - [05-03]: Plan 04 benchmark workflow must reference AnythingXL_inkBase by actual filename, not plan-spec anything-v5-PrtRE filename
+- [05-04]: INFRA-04 benchmark result: 15s for 512x512 20-step euler_ancestral — 8x under 120s threshold; Phase 7 job timeout should be ~90s with comfortable headroom
+- [05-04]: /system_stats is the correct ComfyUI health check endpoint (not /health, which does not exist); MPS detection via response.devices[0].type === "mps"
+- [05-04]: Phase 5 gate PASS on all five INFRA criteria — Phases 6 and 7 are unblocked
 
 ### Pending Todos
 
@@ -112,5 +115,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 05-03-PLAN.md (AnythingXL checkpoint + OpenPose ControlNet model + comfyui_controlnet_aux extension installed). Next: 05-04-PLAN.md (benchmark run).
-Resume file: .planning/phases/05-environment-validation/05-04-PLAN.md
+Stopped at: Completed 05-04-PLAN.md (ComfyUI MPS benchmark: 15s, PASS). Phase 5 complete. Next: Phase 6 — Spyke Dataset Preparation (planning not yet started).
+Resume file: .planning/ROADMAP.md (Phase 6 plans to be defined)

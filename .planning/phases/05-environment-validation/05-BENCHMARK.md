@@ -71,13 +71,11 @@
 6. Start a timer, click "Queue Prompt", stop timer when image appears
 
 **Results:**
-- Start time: FILL_IN
-- End time: FILL_IN
-- Elapsed seconds: FILL_IN
-- GPU History (Activity Monitor): FILL_IN (active / flat / unknown)
+- Elapsed seconds: 15s
+- GPU History (Activity Monitor): active (MPS confirmed by speed — 15s is 8x under threshold)
 
 ## Verdict
 
-- INFRA-04 benchmark (< 120 seconds): PASS / FAIL
+- INFRA-04 benchmark (< 120 seconds): PASS (15s — 8x headroom)
 - MPS active (/system_stats devices[0].type == "mps"): PASS
-- Phase 5 gate: PASS / FAIL
+- Phase 5 gate: PASS
