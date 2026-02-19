@@ -134,12 +134,42 @@ program
   .command('overlay')
   .description('Overlay dialogue text onto panel images')
   .requiredOption('-c, --chapter <number>', 'Chapter number')
+  .option('--page <number>', 'Overlay a single page')
+  .option('--pages <range>', 'Page range to overlay (e.g., "1-5" or "3,7,12")')
   .option('-v, --verbose', 'Enable verbose logging')
   .option('--dry-run', 'Show what would be done without doing it')
   .action(async (options) => {
+    // Parse --pages range: support "1-5" (range) and "3,7,12" (comma-separated)
+    let pages: number[] | undefined;
+    if (options.pages) {
+      const raw = options.pages as string;
+      if (raw.includes('-')) {
+        const [startStr, endStr] = raw.split('-');
+        const start = parseInt(startStr!);
+        const end = parseInt(endStr!);
+        if (isNaN(start) || isNaN(end) || start > end) {
+          console.error(`Invalid page range: ${raw}`);
+          process.exit(1);
+        }
+        pages = [];
+        for (let i = start; i <= end; i++) pages.push(i);
+      } else {
+        pages = raw.split(',').map((s) => {
+          const n = parseInt(s.trim());
+          if (isNaN(n)) {
+            console.error(`Invalid page number: ${s}`);
+            process.exit(1);
+          }
+          return n;
+        });
+      }
+    }
+
     const { runOverlay } = await import('./stages/overlay.js');
     const result = await runOverlay({
       chapter: parseInt(options.chapter),
+      page: options.page ? parseInt(options.page) : undefined,
+      pages,
       verbose: options.verbose,
       dryRun: options.dryRun,
     });
