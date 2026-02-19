@@ -42,9 +42,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Assembly & Output
 
-- [ ] **ASSM-01**: Pipeline assembles panels into vertical-scroll Webtoon strips (800px wide)
-- [ ] **ASSM-02**: Output is Webtoon Canvas-compatible (JPG/PNG at correct dimensions)
-- [ ] **ASSM-03**: Splash pages and double-spreads handled with appropriate aspect ratio assembly
+- [x] **ASSM-01**: Pipeline assembles panels into vertical-scroll Webtoon strips (800px wide)
+- [x] **ASSM-02**: Output is Webtoon Canvas-compatible (JPG/PNG at correct dimensions)
+- [x] **ASSM-03**: Splash pages and double-spreads handled with appropriate aspect ratio assembly
 - [x] **ASSM-04**: Intermediate artifacts preserved at each stage (raw/, processed/, lettered/, webtoon/)
 
 ### Infrastructure
@@ -115,9 +115,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAR-04 | Phase 2 | Complete |
 | TEXT-01 | Phase 4 | Complete |
 | TEXT-02 | Phase 4 | Complete |
-| ASSM-01 | Phase 4 | Pending |
-| ASSM-02 | Phase 4 | Pending |
-| ASSM-03 | Phase 4 | Pending |
+| ASSM-01 | Phase 4 | Complete |
+| ASSM-02 | Phase 4 | Complete |
+| ASSM-03 | Phase 4 | Complete |
 | ASSM-04 | Phase 4 | Complete |
 | INFR-01 | Phase 1 | Complete |
 | INFR-02 | Phase 1 | Complete |
