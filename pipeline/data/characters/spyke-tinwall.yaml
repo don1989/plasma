@@ -3,40 +3,130 @@ name: Spyke Tinwall
 aliases: ["Spyke", "SPYKE", "Redhead"]
 
 # Verbatim prompt fingerprint — DO NOT paraphrase or rearrange
-# Source: 03_manga/prompts/pages-01-to-15.md Character Quick Reference
 fingerprint: |
-  Spyke (age 21) — spiky ginger hair (tips reach traps), red bandana,
-  green eyes, white knee-length cloak (sleeves cut, dojo emblem on back,
-  pattern along bottom hem), red fingerless glove on left hand with red
-  bracer on left wrist, armoured full-fingered glove on right hand,
-  red-accented belt, metal knee pauldron on right knee, massive broadsword
-  on back, patterned katana at left hip, black combat clothing under
-  the cloak
+  Spyke (age 21) — cold neutral expression (NEVER smiling, flat face),
+  ginger hair (STRAIGHT and layered, length between traps and shoulders,
+  NOT touching shoulders, NOT spiky), red bandana tied around forehead,
+  sharp green eyes, black fitted t-shirt under white knee-length cloak
+  (sleeves crudely cut off at shoulder — raw frayed edges NOT clean
+  hems; arms fully bare; dojo emblem on back; black geometric pattern
+  along bottom hem), red-accented belt,
+  ARMS (as seen by viewer, character facing forward):
+  arm on LEFT of image: red fingerless glove on hand only, bare forearm;
+  arm on RIGHT of image: red metallic armored bracer — covers hand +
+  forearm ONLY, stops exactly at elbow, upper arm completely bare;
+  ONLY the arm on the RIGHT of the image has the bracer,
+  LEGS: black combat pants,
+  knee on RIGHT of image: large hexagonal metal knee pauldron;
+  knee on LEFT of image: completely bare — NO pad, NO pauldron at all,
+  BACK: massive plasma broadsword in enormous sheath (sheath is half
+  body height, wide enough for a broadsword — NOT a thin katana sheath);
+  blade is wide + thick, tapers symmetrically toward middle; dark grey;
+  HARNESS: thick brown leather X-harness — main strap runs over RIGHT
+  shoulder, diagonally down across chest to LEFT waist, then back across
+  body and up to RIGHT shoulder forming a clear X; secondary support strap
+  runs from center of sheath at back, around to RIGHT waist, connecting to
+  center of sheath at front — both straps worn ON TOP of cloak, visible in
+  all views including BACK VIEW where sheath is prominently shown,
+  LEFT HIP: patterned katana sheathed on belt, visible in all views
 
 reference_sheet_prompt: |
   Colored manga character reference sheet, Spyke Tinwall. Clean linework,
   cel-shaded, vibrant colors, high-resolution, white background.
-  Character: Spyke Tinwall, male, age 21, slim but strong athletic build,
-  lean muscle definition.
-  Hair: Ginger/copper-red hair, messy and layered, length stopping at the
-  bottom of the neck (not touching shoulders). Wears a bright red bandana
-  tied around the forehead with tails trailing into the hair.
-  Eyes: Sharp green eyes.
-  Outfit: Black fitted t-shirt worn underneath a White Sleeveless Cloak.
-  Cloak Details: The white cloak has a clean hem featuring a black geometric
-  pattern running along the bottom edge and a distinct black insignia in
-  the center of the back.
-  Arms (Asymmetrical): Right Arm: Red fingerless glove that covers the hand
-  only and stops at the wrist. Left Arm: Red metallic armored bracer/gauntlet
-  that covers the hand and extends up the forearm.
-  Legs: Black combat pants with reinforced knees. Right Knee: A metal knee
-  pauldron.
-  Feet: Dark combat boots.
-  Weapons: Back: Massive Plasma Broadsword. Side: Katana sheathed at left hip.
+  Four full-body views: Front, 3/4 Angle, Side Profile, Back.
+  EXPRESSION: cold, flat, neutral — NEVER smiling, NOT friendly.
+  CHARACTER: male, age 21, slim but strong athletic build, lean muscle.
+  HAIR: Ginger/copper-red, STRAIGHT and layered, length between traps and
+  shoulders — does NOT touch shoulders, NOT spiky, NOT messy, NOT long.
+  BANDANA: bright red bandana worn ONLY as a forehead strip — like a
+  headband sitting at the hairline. It does NOT wrap around the skull,
+  does NOT cover the top or back of the head. Only the forehead-width
+  strip is visible, with short tails tucking into the hair at the sides.
+  EYES: sharp green.
+  TORSO: black fitted t-shirt under a white knee-length cloak. The cloak
+  originally had sleeves — they were CRUDELY CUT OFF at the shoulder,
+  leaving raw frayed edges at the shoulder holes. Arms are completely
+  bare. Cloak has a black geometric pattern along the bottom hem and a
+  distinct black dojo insignia on the center of the back.
+  BELT: red-accented belt at waist.
+  ARMS (ASYMMETRICAL — must be correct in ALL four views):
+  - Character's RIGHT arm (LEFT side of image in front view): red
+    fingerless glove on the hand only, stops at the wrist. Forearm and
+    upper arm completely bare.
+  - Character's LEFT arm (RIGHT side of image in front view): red
+    metallic armored bracer/gauntlet that covers the hand and forearm
+    ONLY — it ends exactly at the ELBOW JOINT and goes no further.
+    The upper arm from elbow to shoulder is bare skin. The bracer does
+    NOT extend above the elbow under any circumstances.
+  - Only ONE arm has the bracer. The back view must also show only one
+    arm with the bracer.
+  LEGS: black combat pants. Dark combat boots.
+  - Character's LEFT knee (RIGHT side of image): LARGE hexagonal metal
+    knee pauldron — hexagonal shape, covers the entire knee cap, bigger
+    than the knee itself so it clearly stands out.
+  - Character's RIGHT knee (LEFT side of image): completely bare. No
+    pad, no pauldron at all.
+  BROADSWORD (back-mounted — CRITICAL — must show in ALL four views):
+  - MASSIVE weapon — blade alone is roughly HALF his full body height.
+    The blade is WIDE (broadsword width, NOT a thin katana blade). Wide,
+    thick, heavy. Width clearly visible. Maintain this EXACT blade design
+    consistently across all views — same width, same symmetrical taper,
+    same dark grey/metallic color.
+  - Design: hilt flows into blade, tapers symmetrically narrower toward
+    the middle then back out. Dark grey/metallic.
+  - Carried in an ENORMOUS sheath on his back. The sheath is BIG —
+    large enough to contain the full broadsword, visibly wide and long.
+  - ANGLE: the sheath sits diagonally — hilt sticks up over his RIGHT
+    shoulder so he can reach back with his right hand to draw it. The
+    sheathed blade runs diagonally across his back, tip pointing toward
+    his lower LEFT side.
+  - HARNESS (thick brown leather — CRITICAL — visible in ALL four views):
+    * MAIN STRAP: starts at the RIGHT shoulder, crosses diagonally down
+      across the front of his body to his LEFT waist, then continues back
+      across the body and up to the RIGHT shoulder — forming a clear
+      diagonal X shape across his chest (viewed from front) and back.
+    * SECONDARY SUPPORT STRAP: runs from the center of the sheath at the
+      BACK, around his body to the RIGHT side of his waist, then connects
+      to the center of the sheath at the FRONT — stabilising the bottom
+      of the sheath horizontally.
+    * Both straps are thick, brown leather, worn ON TOP of the white cloak.
+    * Clearly visible in FRONT, 3/4, SIDE, and BACK views.
+  - BACK VIEW: the broadsword sheath DOMINATES the back view — enormous,
+    wide, running diagonally from upper-right to lower-left. The thick
+    brown leather harness straps are clearly visible crossing his back.
+  KATANA (character's LEFT hip — RIGHT side of image in front view):
+  - Patterned katana in a sheath, attached horizontally to his belt on
+    his LEFT hip (RIGHT side of image in front view — NOT the left side
+    of the image).
+  - Visible in all four views.
+  CONSISTENCY — these elements must match EXACTLY across all four views:
+  - Cloak dojo insignia: same shape, same position on center of the back
+    panel — reproduce it identically in 3/4 and back views.
+  - Bottom hem geometric pattern: same pattern, same scale, same style
+    across all views.
+  - Broadsword blade: same wide, symmetrically-tapering dark grey blade
+    in every view — do not narrow or change the shape between views.
+  - Brown leather harness: same routing, same thickness in all four views.
+  VIEW REQUIREMENTS — each view must look genuinely different:
+  - FRONT VIEW: facing directly toward viewer, full symmetrical front.
+  - 3/4 ANGLE VIEW: body turned approximately 45 degrees, showing depth
+    and perspective. The face turns slightly. The sword hilt and back
+    sheath begin to be visible. Clear spatial depth, NOT a flat front view.
+  - SIDE PROFILE VIEW: exactly 90 degrees sideways — pure silhouette
+    from the side. The broadsword sheath protrudes prominently behind
+    him. Completely different from the front — only one arm visible,
+    side of face only, full depth of sheath visible.
+  - BACK VIEW: facing directly away from viewer. The ENORMOUS broadsword
+    sheath DOMINATES this view — wide, long, running diagonally from
+    upper-right to lower-left on his back. The thick brown leather
+    harness straps are clearly visible crossing his back in an X. The
+    secondary support strap runs horizontally around to his right waist.
+    The dojo insignia is clearly visible on the center back of the cloak.
+    This must look completely different from the front.
 
 palette:
   primary: ["red (bandana, glove, bracer)", "white (cloak)", "black (combat clothing)"]
-  accent: ["ginger (hair)", "green (eyes)", "grey/metallic (broadsword, knee pauldron)"]
+  accent: ["ginger (hair)", "green (eyes)", "grey/metallic (broadsword, left knee pauldron)"]
 
 variants:
   adrenaline_mode: "eyes turn red, art style becomes sharper/more intense, heavier inks"

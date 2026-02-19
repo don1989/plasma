@@ -2,27 +2,44 @@
 
 ## What This Is
 
-A production pipeline that converts Plasma story chapters into Webtoon-style digital manga, end to end. Takes written narrative chapters and outputs fully assembled vertical-scroll manga pages with art generated via Gemini and dialogue overlaid — repeatable for each chapter as the story grows.
+A production pipeline that converts Plasma story chapters into Webtoon-style digital manga, end to end. Takes written narrative chapters and outputs fully assembled vertical-scroll manga pages with art generated via AI image generation and dialogue overlaid programmatically — repeatable for each chapter as the story grows.
+
+v1.0 delivered the full Gemini-based pipeline: script parsing → character fingerprints → prompt generation → image generation (manual + API) → dialogue overlay → Webtoon assembly. The pipeline is now pivoting to a local ComfyUI + LoRA stack (v2.0) for deterministic, GPU-accelerated generation with true character consistency via fine-tuning.
 
 ## Core Value
 
 A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
 
+## Current State (v1.0 Shipped)
+
+- **Pipeline:** TypeScript, ~28,500 LOC, 135 files
+- **Stack:** Node.js + Commander CLI, Sharp (image processing), Nunjucks (templates), `@google/genai` SDK
+- **Stages built:** script → prompt → generate → overlay → assemble
+- **Chapter 1:** 28 prompts generated; manual + API image generation working; dialogue overlay + Webtoon assembly working
+- **Character system:** 5 characters with locked YAML fingerprints; image-to-image reference support added
+- **Known limitation:** Gemini text-to-image has poor asymmetric detail consistency (knee pads, bracers flip sides despite explicit prompting)
+
 ## Requirements
 
-### Validated
+### Validated (v1.0)
 
-(None yet — ship to validate)
+- ✓ Panel-by-panel manga scripts generated from story chapters — v1.0
+- ✓ Gemini-optimized art prompts generated from scripts (per panel/page) — v1.0
+- ✓ Character visual fingerprint system with verbatim prompt injection — v1.0
+- ✓ Art images generated via Gemini (manual copy-paste + API workflows) — v1.0
+- ✓ Dialogue and SFX integrated via programmatic overlay (SVG balloons) — v1.0
+- ✓ Vertical-scroll Webtoon assembly from individual panels — v1.0
+- ✓ Pipeline handles new chapters as story continues — v1.0
 
-### Active
+### Active (v2.0)
 
-- [ ] Panel-by-panel manga scripts generated from story chapters
-- [ ] Gemini-optimized art prompts generated from scripts (per panel/page)
-- [ ] Character visual consistency maintained across generated panels
-- [ ] Art images generated via Gemini (manual copy-paste workflow initially)
-- [ ] Dialogue and SFX integrated onto manga pages (approach TBD — baked-in vs overlay)
-- [ ] Vertical-scroll Webtoon assembly from individual panels
-- [ ] Pipeline handles new chapters as story continues being written
+- [ ] Local image generation via ComfyUI (Metal/MPS on M1 Pro) — no cloud dependency
+- [ ] LoRA training on character reference images for pixel-accurate consistency
+- [ ] img2img workflow with base image + ControlNet OpenPose pose conditioning
+- [ ] Seed locking for reproducible outputs
+- [ ] Model preset switching: "anime" vs "realistic" via checkpoint selection
+- [ ] HTTP API service (Express) wrapping ComfyUI with job management
+- [ ] TS service exposes: POST /train-lora, POST /generate, GET /jobs/:id, GET /health
 
 ### Out of Scope
 
@@ -31,50 +48,46 @@ A repeatable system that transforms any Plasma story chapter into publish-ready 
 - Print-ready formatting — digital-first (Webtoon vertical scroll only)
 - Hiring/managing human artists — AI generation only
 - Animation or motion manga — static panels
+- SDXL/Flux locally — M1 Pro memory constraints; upgrade path documented only
 
 ## Context
 
 The Plasma universe is a deeply developed story set in 3031 on flooded Earth and alien planet Terra. 15 chapters are written (~5000 lines), with the story ongoing. The story bible, character profiles, glossary, and lore consistency rules are all established.
 
-**Existing manga work:**
-- Chapter 1 is already scripted panel-by-panel (03_manga/chapter-01-script.md)
-- Character reference sheets with AI art prompts exist for Spyke, June, Draster, Hood/Morkain, and Punks (03_manga/prompts/character-sheets.md)
-- 8 concept art images generated: Spyke (4 variants), June (3 variants), Draster (1 variant)
-- Manga scripting rules and visual style guide established (03_manga/manga-script.md)
-- Dialogue voice profiles for 15+ characters (03_manga/dialogue-pass.md)
-- Page prompts for Ch.1 pages 1-29 already exist (03_manga/prompts/)
+**v1.0 delivered:**
+- Full TypeScript pipeline: 5 CLI stages, 135 files, ~28,500 LOC
+- Chapter 1: 28 art prompts, Gemini API image generation working with `--reference` image-to-image
+- 5 character YAML fingerprints (Spyke, June, Draster, Hood/Morkain, Punks)
+- Dialogue overlay (SVG balloons) + Webtoon strip assembler (mozjpeg 800×1280px)
 
-**Art generation tool:** Gemini with Pro account. API access status unknown — pipeline should work with manual prompt execution (copy-paste to Gemini web UI) and support API automation as an upgrade path.
+**v2.0 pivot motivation:**
+- Gemini has no fine-tuning → asymmetric character details (knee pads, bracers) flip sides despite explicit prompting
+- Local ComfyUI + LoRA = train on Spyke_Final.png → deterministic character consistency
+- Lock seed + ControlNet = reproducible pose-anchored panels
+- No per-call API cost for 28 pages × multiple iterations
 
-**Target format:** Webtoon-style vertical scroll optimized for phone/digital reading. One panel flows into the next vertically.
-
-**Text/dialogue challenge:** AI-generated text in images is often garbled. Research needed to determine best approach — generating text as part of the image vs. programmatic overlay after generation.
-
-**Visual identity (from existing character sheets):**
-- Colored manga, cel-shaded, clean linework, vibrant colors
-- Spyke: Reds, white cloak, ginger hair, green eyes
-- June: Dark pinks, whites, blonde hair
-- Draster: Navy suit-robe, silver-streaked black hair, dark brown skin
-- Morkain: Black cloak, dark presence
-- Terra environment: Blue grass, pink sky, blue-leafed trees
+**Hardware:** MacBook Pro 16" 2021, M1 Pro, 16GB RAM
 
 ## Constraints
 
-- **Art Tool**: Gemini Pro — pipeline must produce prompts optimized for Gemini's image generation capabilities and limitations
-- **Workflow**: Manual Gemini interaction initially (copy-paste prompts) — design for automation upgrade later
-- **Consistency**: Characters must be recognizable across panels — this is the hardest problem in AI manga generation
-- **Format**: Webtoon vertical scroll — panels designed for top-to-bottom reading, not traditional page layouts
-- **Existing Content**: Must respect and build on existing manga scripts, character sheets, and style guides in the repo
-- **Ongoing Story**: Pipeline must be reusable — not a one-off conversion of 15 chapters
+- **Local-first:** M1 Pro 16GB — default 512×512 or 512×768, batch size 1, steps 20-30
+- **SD 1.5 only for training:** SDXL training not feasible locally
+- **Format:** Webtoon vertical scroll — 800px wide, vertical stacking
+- **Existing pipeline:** v2.0 replaces generate stage; overlay + assemble stages reused
+- **Ongoing Story:** Pipeline must be reusable across all chapters
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Gemini for art generation | User has Pro account, already generated character refs with it | — Pending |
-| Webtoon vertical scroll format | Digital-first release, phone-optimized reading | — Pending |
-| Pipeline-first approach | Build the system before producing chapters — ensures repeatability | — Pending |
-| Text overlay approach | Baked-in vs programmatic overlay — needs research | — Pending |
+| TypeScript pipeline (not Python/Rust) | Familiarity, strong tooling, Sharp for image processing | ✓ Good — delivered in 3 days |
+| Programmatic text overlay | AI-generated text is garbled/unreliable | ✓ Good — SVG balloons work well |
+| Manual Gemini workflow as first-class path | De-risked API dependency for initial build | ✓ Good — both paths worked |
+| Intermediate artifacts at each stage | Enables re-running any stage without losing work | ✓ Good — raw/processed/lettered/webtoon |
+| Character fingerprint verbatim injection | Paraphrasing causes style drift in Gemini | ✓ Good — consistent style, not consistent geometry |
+| Gemini for art generation | Pro account available, fast to start | ⚠️ Revisit — poor asymmetric detail consistency; pivoting to ComfyUI+LoRA |
+| Text overlay (not baked-in) | Gemini garbles text in images | ✓ Good — confirmed correct approach |
+| ComfyUI + kohya_ss for v2.0 | Local inference, LoRA fine-tuning, ControlNet, seed lock | — Pending (v2.0) |
 
 ---
-*Last updated: 2026-02-18 after initialization*
+*Last updated: 2026-02-19 after v1.0 milestone — pivoting to v2.0 ComfyUI+LoRA pipeline*

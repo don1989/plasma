@@ -15,16 +15,18 @@
 import type { StageOptions, StageResult } from '../types/pipeline.js';
 import type { GenerationLogEntry } from '../types/generation.js';
 import { PATHS } from '../config/paths.js';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { importImage, approveImage } from '../generation/image-import.js';
 import { loadManifest, addEntry, hashPrompt } from '../generation/manifest.js';
 import { panelImageFilename, nextVersion } from '../generation/naming.js';
 import { ensureDir } from '../utils/fs.js';
+import { loadEnvFile } from '../utils/env.js';
 import {
   validateApiKey,
   generateImage,
+  generateImageWithReference,
   saveGeneratedImage,
   sleep,
 } from '../generation/gemini-client.js';
@@ -33,37 +35,6 @@ import {
   DEFAULT_RATE_LIMIT_DELAY_MS,
 } from '../config/defaults.js';
 
-/**
- * Load environment variables from a .env file without adding dotenv as a dependency.
- *
- * Parses KEY=value pairs, skipping comments and empty lines.
- * Returns an empty object if the file doesn't exist.
- *
- * @param envPath - Absolute path to the .env file
- * @returns Parsed key-value pairs
- */
-function loadEnvFile(envPath: string): Record<string, string> {
-  if (!existsSync(envPath)) return {};
-
-  const content = readFileSync(envPath, 'utf-8');
-  const result: Record<string, string> = {};
-
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    const eqIndex = trimmed.indexOf('=');
-    if (eqIndex === -1) continue;
-
-    const key = trimmed.slice(0, eqIndex).trim();
-    const value = trimmed.slice(eqIndex + 1).trim();
-    if (key) {
-      result[key] = value;
-    }
-  }
-
-  return result;
-}
 
 /**
  * Options for the generate stage, extending base stage options.
@@ -83,6 +54,8 @@ export interface GenerateOptions extends StageOptions {
   approve?: string;
   /** Notes for this generation (stored in manifest). */
   notes?: string;
+  /** Path to a character reference image to pass to Gemini for visual consistency. */
+  referencePath?: string;
 }
 
 /**
@@ -355,12 +328,19 @@ export async function runGenerate(options: GenerateOptions): Promise<StageResult
             `[generate] Page ${pageNum} (v${version}) -- calling Gemini API...`,
           );
 
-          // Call Gemini API
-          const result = await generateImage({
-            prompt: promptText,
-            model: options.model,
-            apiKey,
-          });
+          // Call Gemini API — with reference image if provided
+          const result = options.referencePath
+            ? await generateImageWithReference({
+                prompt: promptText,
+                referenceImagePath: options.referencePath,
+                model: options.model,
+                apiKey,
+              })
+            : await generateImage({
+                prompt: promptText,
+                model: options.model,
+                apiKey,
+              });
 
           // Save image
           await saveGeneratedImage(result, destPath);
