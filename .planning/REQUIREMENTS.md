@@ -25,8 +25,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **IGEN-01**: Pipeline supports manual Gemini workflow (copy-paste prompts, organize downloaded images)
 - [ ] **IGEN-02**: Pipeline supports automated Gemini API workflow via @google/generative-ai SDK
-- [ ] **IGEN-03**: Panel images follow naming convention: ch01_p003_v1.png (chapter, page, version)
-- [ ] **IGEN-04**: Prompt-to-image tracking records which prompt produced which approved image
+- [x] **IGEN-03**: Panel images follow naming convention: ch01_p003_v1.png (chapter, page, version)
+- [x] **IGEN-04**: Prompt-to-image tracking records which prompt produced which approved image
 
 ### Character Consistency
 
@@ -107,8 +107,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRMT-05 | Phase 2 | Complete |
 | IGEN-01 | Phase 3 | Pending |
 | IGEN-02 | Phase 3 | Pending |
-| IGEN-03 | Phase 3 | Pending |
-| IGEN-04 | Phase 3 | Pending |
+| IGEN-03 | Phase 3 | Complete |
+| IGEN-04 | Phase 3 | Complete |
 | CHAR-01 | Phase 2 | Complete |
 | CHAR-02 | Phase 2 | Complete |
 | CHAR-03 | Phase 2 | Complete |
