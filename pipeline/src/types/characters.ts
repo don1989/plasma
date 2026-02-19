@@ -28,7 +28,7 @@ export interface CharacterFingerprint {
 }
 
 /**
- * A registry mapping character ids and aliases to their fingerprints.
- * Keys are lowercase for case-insensitive lookup.
+ * The CharacterRegistry class (in src/characters/registry.ts) replaces
+ * the previous Map type alias with a full-featured class providing
+ * case-insensitive lookup, validation, and convenience methods.
  */
-export type CharacterRegistry = Map<string, CharacterFingerprint>;

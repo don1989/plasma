@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { Command } from 'commander';
+import { parse as parseYaml } from 'yaml';
+
+import { PATHS } from './config/paths.js';
 
 const program = new Command();
 
@@ -105,6 +109,80 @@ program
       process.exit(1);
     }
     console.log(`Completed in ${result.duration}ms. Files: ${result.outputFiles.length}`);
+  });
+
+// ---------------------------------------------------------------------------
+// Character subcommands (lightweight CLI utilities, not pipeline stages)
+// ---------------------------------------------------------------------------
+
+const character = program
+  .command('character')
+  .description('Character fingerprint utilities');
+
+character
+  .command('list')
+  .description('List all registered characters')
+  .action(async () => {
+    const { loadCharacterRegistry } = await import('./characters/registry.js');
+    const registry = await loadCharacterRegistry();
+    const characters = registry.getAll();
+
+    if (characters.length === 0) {
+      console.log('No characters found.');
+      return;
+    }
+
+    console.log(`\nCharacters (${characters.length}):\n`);
+    for (const char of characters) {
+      const fp = char.fingerprint.trim();
+      const preview = fp.length > 50 ? fp.slice(0, 50) + '...' : fp;
+      console.log(`  ${char.id}`);
+      console.log(`    Name:      ${char.name}`);
+      console.log(`    Aliases:   ${char.aliases.length}`);
+      console.log(`    Fingerprint: ${preview}`);
+      console.log('');
+    }
+  });
+
+character
+  .command('add')
+  .description('Scaffold a new character YAML file')
+  .argument('<name>', 'Character display name')
+  .action(async (name: string) => {
+    const { scaffoldCharacterYaml } = await import('./characters/registry.js');
+    const filePath = await scaffoldCharacterYaml(name);
+    console.log(`Created: ${filePath}`);
+    console.log('Remember to fill in the fingerprint field with the tested visual description.');
+  });
+
+character
+  .command('ref-sheet')
+  .description('Output a complete reference sheet prompt for a character')
+  .argument('<name>', 'Character name or alias')
+  .action(async (name: string) => {
+    const { loadCharacterRegistry } = await import('./characters/registry.js');
+    const registry = await loadCharacterRegistry();
+
+    const refPrompt = registry.getReferenceSheetPrompt(name);
+    if (!refPrompt) {
+      console.error(`Character "${name}" has no reference_sheet_prompt field.`);
+      process.exit(1);
+    }
+
+    // Read style prefix from style-guide.yaml
+    const styleRaw = readFileSync(PATHS.styleGuide, 'utf-8');
+    const styleData = parseYaml(styleRaw) as { style_prefix?: string };
+    const stylePrefix = styleData.style_prefix ?? '';
+
+    // Assemble the full prompt
+    const fullPrompt = `${stylePrefix}
+
+${refPrompt.trim()}
+
+Layout:
+Main Row: Four full-body views: Front View, 3/4 Angle View, Side Profile View, Back View.`;
+
+    console.log(fullPrompt);
   });
 
 program.parse();
