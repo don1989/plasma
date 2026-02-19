@@ -12,26 +12,26 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 Phase: 2 of 4 (Scripts, Characters & Prompts)
 Plan: 3 of 5 in current phase
 Status: Executing Phase 2
-Last activity: 2026-02-19 — Completed 02-03-PLAN.md (character fingerprints and registry)
+Last activity: 2026-02-19 — Completed 02-02-PLAN.md (script parser and stage)
 
 Progress: [######----] 60% (Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5.3 min
-- Total execution time: 0.27 hours
+- Total plans completed: 4
+- Average duration: 6.0 min
+- Total execution time: 0.40 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Foundation | 1 | 4 min | 4 min |
-| 2. Scripts/Characters | 2 | 12 min | 6 min |
+| 2. Scripts/Characters | 3 | 20 min | 6.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4 min), 02-01 (7 min), 02-03 (5 min)
+- Last 5 plans: 01-01 (4 min), 02-01 (7 min), 02-03 (5 min), 02-02 (8 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -55,6 +55,10 @@ Recent decisions affecting current work:
 - [02-01]: Warning-level panel count check instead of hard rejection — action montages break 4-7 range
 - [02-01]: Zod v4 .check() API with input field for custom refinement issues
 - [02-01]: Schema + z.infer type co-export pattern for all schema files
+- [02-02]: 28 page headings in chapter-01-script.md (not 29) — double-page spread 25-26 has single heading
+- [02-02]: MDAST paragraph child walking for field extraction — remark merges consecutive lines into single paragraph
+- [02-02]: Dialogue list items split on Strong field labels to separate dialogue from trailing SFX/Notes
+- [02-02]: Off-panel speech is type 'speech' — off-panel is position modifier, not dialogue type
 - [02-03]: Removed CharacterRegistry type alias, replaced by CharacterRegistry class with richer functionality
 - [02-03]: CLI ref-sheet uses string concatenation (not Nunjucks) for immediate utility before template engine
 - [02-03]: Character fingerprints sourced verbatim from tested prompts in 03_manga/prompts/
@@ -71,5 +75,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 02-03-PLAN.md (character fingerprints and registry). Phase 2 plan 3 of 5 done.
-Resume file: .planning/phases/02-scripts-characters-and-prompts/02-03-SUMMARY.md
+Stopped at: Completed 02-02-PLAN.md (script parser and stage). Phase 2 plans 1-3 of 5 done.
+Resume file: .planning/phases/02-scripts-characters-and-prompts/02-02-SUMMARY.md

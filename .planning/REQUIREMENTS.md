@@ -9,7 +9,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Scripting
 
-- [ ] **SCRP-01**: Pipeline can convert a prose story chapter into a structured panel-by-panel manga script following manga-script.md rules
+- [x] **SCRP-01**: Pipeline can convert a prose story chapter into a structured panel-by-panel manga script following manga-script.md rules
 - [x] **SCRP-02**: Generated scripts include shot types, panel composition notes, dialogue, and SFX per panel
 - [x] **SCRP-03**: Script validation checks panel counts (4-7 per page), pacing rules, and required shot types
 
@@ -97,7 +97,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCRP-01 | Phase 2 | Pending |
+| SCRP-01 | Phase 2 | Complete |
 | SCRP-02 | Phase 2 | Complete |
 | SCRP-03 | Phase 2 | Complete |
 | PRMT-01 | Phase 2 | Pending |
