@@ -69,6 +69,7 @@ program
   .option('--page <number>', 'Page number (used with --import)')
   .option('--pages <range>', 'Page range to display/generate (e.g., "1-5" or "3,7,12")')
   .option('--model <name>', 'Gemini model override')
+  .option('--reference <path>', 'Character reference image for visual consistency (use with --api)')
   .option('--approve <file>', 'Mark an image version as approved (e.g., ch01_p003_v1.png)')
   .option('--notes <text>', 'Notes for this generation (stored in manifest)')
   .option('-v, --verbose', 'Enable verbose logging')
@@ -123,6 +124,15 @@ program
       }
     }
 
+    // Validate: --reference file must exist
+    if (options.reference) {
+      const { existsSync } = await import('node:fs');
+      if (!existsSync(options.reference)) {
+        console.error(`Error: Reference file not found: ${options.reference}`);
+        process.exit(1);
+      }
+    }
+
     const { runGenerate } = await import('./stages/generate.js');
     const result = await runGenerate({
       chapter: parseInt(options.chapter),
@@ -131,6 +141,7 @@ program
       page: options.page ? parseInt(options.page) : undefined,
       pages,
       model: options.model,
+      referencePath: options.reference,
       approve: options.approve,
       notes: options.notes,
       verbose: options.verbose,
@@ -322,6 +333,79 @@ Layout:
 Main Row: Four full-body views: Front View, 3/4 Angle View, Side Profile View, Back View.`;
 
     console.log(fullPrompt);
+  });
+
+character
+  .command('generate-ref')
+  .description('Generate a reference sheet image via Gemini API (supports reference image input)')
+  .argument('<name>', 'Character name or alias')
+  .option('--reference <path>', 'Path to an existing image to use as visual reference')
+  .option('--model <name>', 'Gemini model override')
+  .option('--version <number>', 'Output version number (default: auto-increment)', '0')
+  .action(async (name: string, options) => {
+    const { loadCharacterRegistry } = await import('./characters/registry.js');
+    const { validateApiKey, generateImage, generateImageWithReference, saveGeneratedImage } =
+      await import('./generation/gemini-client.js');
+    const { existsSync, readdirSync } = await import('node:fs');
+    const { mkdir } = await import('node:fs/promises');
+    const path = await import('node:path');
+
+    // Load API key — read .env if not already in environment
+    const { loadEnvFile } = await import('./utils/env.js');
+    const env = loadEnvFile(`${PATHS.pipelineRoot}/.env`);
+    const apiKey = validateApiKey(process.env['GEMINI_API_KEY'] ?? env['GEMINI_API_KEY']);
+
+    // Load registry and get ref sheet prompt
+    const registry = await loadCharacterRegistry();
+    if (!registry.has(name)) {
+      console.error(`Character "${name}" not found.`);
+      process.exit(1);
+    }
+    const char = registry.get(name)!;
+    const refPrompt = registry.getReferenceSheetPrompt(name);
+    if (!refPrompt) {
+      console.error(`Character "${name}" has no reference_sheet_prompt field.`);
+      process.exit(1);
+    }
+
+    // Build full prompt (no style prefix for ref sheets — they have their own framing)
+    const fullPrompt = `${refPrompt.trim()}
+
+Layout:
+Main Row: Four full-body views: Front View, 3/4 Angle View, Side Profile View, Back View.`;
+
+    // Validate reference image if provided
+    if (options.reference && !existsSync(options.reference)) {
+      console.error(`Reference image not found: ${options.reference}`);
+      process.exit(1);
+    }
+
+    // Determine output version
+    const outDir = PATHS.characterOutput(char.id);
+    await mkdir(outDir, { recursive: true });
+    let version = parseInt(options.version);
+    if (version === 0) {
+      const existing = existsSync(outDir)
+        ? readdirSync(outDir).filter((f) => f.startsWith('ref-sheet-v')).length
+        : 0;
+      version = existing + 1;
+    }
+    const outPath = path.join(outDir, `ref-sheet-v${version}.png`);
+
+    console.log(`Generating reference sheet for ${char.name} (v${version})...`);
+    if (options.reference) console.log(`Using reference image: ${options.reference}`);
+
+    const result = options.reference
+      ? await generateImageWithReference({
+          prompt: fullPrompt,
+          referenceImagePath: options.reference,
+          model: options.model,
+          apiKey,
+        })
+      : await generateImage({ prompt: fullPrompt, model: options.model, apiKey });
+
+    await saveGeneratedImage(result, outPath);
+    console.log(`Saved: ${outPath}`);
   });
 
 // Strip a lone '--' at argv[2] that pnpm injects when using `pnpm dev -- <subcommand> args`.

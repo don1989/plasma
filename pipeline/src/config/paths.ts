@@ -39,6 +39,10 @@ export const PATHS = {
   /** Style guide configuration. */
   styleGuide: path.join(PIPELINE_ROOT, 'data', 'config', 'style-guide.yaml'),
 
+  /** Character reference sheet output directory. */
+  characterOutput: (characterId: string) =>
+    path.join(PROJECT_ROOT, 'output', 'characters', characterId),
+
   /** Chapter-specific output paths. */
   chapterOutput: (chapter: number) => {
     const chNum = String(chapter).padStart(2, '0');

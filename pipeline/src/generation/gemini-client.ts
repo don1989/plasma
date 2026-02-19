@@ -7,7 +7,8 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import { extname } from 'node:path';
 import { DEFAULT_GEMINI_MODEL } from '../config/defaults.js';
 
 /** Result of a Gemini image generation call. */
@@ -70,6 +71,69 @@ export async function generateImage(opts: {
   throw new Error(
     'No image data in Gemini response. The model may not support image generation with the current API key tier.',
   );
+}
+
+/**
+ * Generate an image using the Gemini API with a reference image for style/character consistency.
+ * Sends the reference image alongside the text prompt so Gemini can use it as visual context.
+ * Uses the File API for large images (>10MB) to avoid inline data limits.
+ */
+export async function generateImageWithReference(opts: {
+  prompt: string;
+  referenceImagePath: string;
+  model?: string;
+  apiKey: string;
+}): Promise<GeminiImageResult> {
+  const ai = new GoogleGenAI({ apiKey: opts.apiKey });
+  const imageBuffer = await readFile(opts.referenceImagePath);
+  const mimeType = getImageMimeType(opts.referenceImagePath);
+
+  let imagePart: Record<string, unknown>;
+
+  if (imageBuffer.byteLength > 10 * 1024 * 1024) {
+    // Large image: upload via File API first
+    const blob = new Blob([imageBuffer], { type: mimeType });
+    const uploadResult = await ai.files.upload({ file: blob, config: { mimeType } });
+    if (!uploadResult.uri) throw new Error('File upload failed: no URI returned');
+    imagePart = { fileData: { fileUri: uploadResult.uri, mimeType } };
+  } else {
+    // Small image: send inline
+    imagePart = { inlineData: { data: imageBuffer.toString('base64'), mimeType } };
+  }
+
+  const response = await ai.models.generateContent({
+    model: opts.model ?? DEFAULT_GEMINI_MODEL,
+    contents: [{ role: 'user', parts: [imagePart, { text: opts.prompt }] }],
+    config: { responseModalities: ['TEXT', 'IMAGE'] },
+  });
+
+  const parts = response.candidates?.[0]?.content?.parts;
+  if (parts) {
+    for (const part of parts) {
+      if (part.inlineData?.data) {
+        return {
+          imageBuffer: Buffer.from(part.inlineData.data, 'base64'),
+          mimeType: part.inlineData.mimeType ?? 'image/png',
+        };
+      }
+    }
+  }
+
+  throw new Error(
+    'No image data in Gemini response. The model may not support image generation with the current API key tier.',
+  );
+}
+
+function getImageMimeType(filePath: string): string {
+  const ext = extname(filePath).toLowerCase();
+  const map: Record<string, string> = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+    '.gif': 'image/gif',
+  };
+  return map[ext] ?? 'image/png';
 }
 
 /**

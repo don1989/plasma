@@ -2,19 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-18)
+See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** Phase 4 — Assembly and Publish
+**Current focus:** v2.0 — Planning next milestone (ComfyUI + LoRA local pipeline)
 
 ## Current Position
 
-Phase: 4 of 4 (Assembly and Publish)
-Plan: 2 of 2 in current phase
-Status: Complete
-Last activity: 2026-02-19 — Completed 04-02-PLAN.md (Webtoon assembly stage)
+Milestone v1.0 complete. Between milestones.
+Last activity: 2026-02-19 — Archived v1.0 milestone. Pivoting to v2.0 local ComfyUI + LoRA pipeline.
 
-Progress: [##########] 100% (Phase 4 Complete)
+Progress: [##########] v1.0 Complete — starting v2.0
 
 ## Performance Metrics
 
