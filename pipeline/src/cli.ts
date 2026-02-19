@@ -55,12 +55,71 @@ program
   .command('generate')
   .description('Generate panel images using Gemini AI')
   .requiredOption('-c, --chapter <number>', 'Chapter number')
+  .option('--manual', 'Manual workflow: display prompts for copy-paste')
+  .option('--api', 'Automated workflow: call Gemini API directly')
+  .option('--import <path>', 'Import a downloaded image (use with --page)')
+  .option('--page <number>', 'Page number (used with --import)')
+  .option('--pages <range>', 'Page range to display/generate (e.g., "1-5" or "3,7,12")')
+  .option('--model <name>', 'Gemini model override')
+  .option('--approve <file>', 'Mark an image version as approved (e.g., ch01_p003_v1.png)')
+  .option('--notes <text>', 'Notes for this generation (stored in manifest)')
   .option('-v, --verbose', 'Enable verbose logging')
   .option('--dry-run', 'Show what would be done without doing it')
   .action(async (options) => {
+    // Parse --pages range: support "1-5" (range) and "3,7,12" (comma-separated)
+    let pages: number[] | undefined;
+    if (options.pages) {
+      const raw = options.pages as string;
+      if (raw.includes('-')) {
+        const [startStr, endStr] = raw.split('-');
+        const start = parseInt(startStr!);
+        const end = parseInt(endStr!);
+        if (isNaN(start) || isNaN(end) || start > end) {
+          console.error(`Invalid page range: ${raw}`);
+          process.exit(1);
+        }
+        pages = [];
+        for (let i = start; i <= end; i++) pages.push(i);
+      } else {
+        pages = raw.split(',').map((s) => {
+          const n = parseInt(s.trim());
+          if (isNaN(n)) {
+            console.error(`Invalid page number: ${s}`);
+            process.exit(1);
+          }
+          return n;
+        });
+      }
+    }
+
+    // Determine mode: --api overrides, otherwise default to 'manual'
+    const mode: 'manual' | 'api' = options.api ? 'api' : 'manual';
+
+    // Validate: --import requires --page
+    if (options.import && !options.page) {
+      console.error('Error: --import requires --page. Specify which page this image belongs to.');
+      process.exit(1);
+    }
+
+    // Validate: --import file must exist
+    if (options.import) {
+      const { existsSync } = await import('node:fs');
+      if (!existsSync(options.import)) {
+        console.error(`Error: Import file not found: ${options.import}`);
+        process.exit(1);
+      }
+    }
+
     const { runGenerate } = await import('./stages/generate.js');
     const result = await runGenerate({
       chapter: parseInt(options.chapter),
+      mode,
+      importPath: options.import,
+      page: options.page ? parseInt(options.page) : undefined,
+      pages,
+      model: options.model,
+      approve: options.approve,
+      notes: options.notes,
       verbose: options.verbose,
       dryRun: options.dryRun,
     });
