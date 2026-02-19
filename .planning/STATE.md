@@ -9,10 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Milestone v1.0 complete. Between milestones.
-Last activity: 2026-02-19 — Archived v1.0 milestone. Pivoting to v2.0 local ComfyUI + LoRA pipeline.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v2.0
+Last activity: 2026-02-19 — Milestone v2.0 started — Local ComfyUI + LoRA Pipeline
 
-Progress: [##########] v1.0 Complete — starting v2.0
+Progress: [__________] 0% (v2.0 Phase 5+ — not yet planned)
 
 ## Performance Metrics
 
