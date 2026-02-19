@@ -14,10 +14,14 @@ program
 program
   .command('script')
   .description('Convert a story chapter into a manga script')
-  .requiredOption('-c, --chapter <number>', 'Chapter number')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
   .option('-v, --verbose', 'Enable verbose logging')
   .option('--dry-run', 'Show what would be done without doing it')
   .action(async (options) => {
+    if (!options.chapter) {
+      console.error("error: required option '-c, --chapter <number>' not specified");
+      process.exit(1);
+    }
     const { runScript } = await import('./stages/script.js');
     const result = await runScript({
       chapter: parseInt(options.chapter),
@@ -34,10 +38,14 @@ program
 program
   .command('prompt')
   .description('Generate Gemini art prompts from a manga script')
-  .requiredOption('-c, --chapter <number>', 'Chapter number')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
   .option('-v, --verbose', 'Enable verbose logging')
   .option('--dry-run', 'Show what would be done without doing it')
   .action(async (options) => {
+    if (!options.chapter) {
+      console.error("error: required option '-c, --chapter <number>' not specified");
+      process.exit(1);
+    }
     const { runPrompt } = await import('./stages/prompt.js');
     const result = await runPrompt({
       chapter: parseInt(options.chapter),
@@ -54,7 +62,7 @@ program
 program
   .command('generate')
   .description('Generate panel images using Gemini AI')
-  .requiredOption('-c, --chapter <number>', 'Chapter number')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
   .option('--manual', 'Manual workflow: display prompts for copy-paste')
   .option('--api', 'Automated workflow: call Gemini API directly')
   .option('--import <path>', 'Import a downloaded image (use with --page)')
@@ -95,6 +103,11 @@ program
     // Determine mode: --api overrides, otherwise default to 'manual'
     const mode: 'manual' | 'api' = options.api ? 'api' : 'manual';
 
+    if (!options.chapter) {
+      console.error("error: required option '-c, --chapter <number>' not specified");
+      process.exit(1);
+    }
+
     // Validate: --import requires --page
     if (options.import && !options.page) {
       console.error('Error: --import requires --page. Specify which page this image belongs to.');
@@ -133,12 +146,16 @@ program
 program
   .command('overlay')
   .description('Overlay dialogue text onto panel images')
-  .requiredOption('-c, --chapter <number>', 'Chapter number')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
   .option('--page <number>', 'Overlay a single page')
   .option('--pages <range>', 'Page range to overlay (e.g., "1-5" or "3,7,12")')
   .option('-v, --verbose', 'Enable verbose logging')
   .option('--dry-run', 'Show what would be done without doing it')
   .action(async (options) => {
+    if (!options.chapter) {
+      console.error("error: required option '-c, --chapter <number>' not specified");
+      process.exit(1);
+    }
     // Parse --pages range: support "1-5" (range) and "3,7,12" (comma-separated)
     let pages: number[] | undefined;
     if (options.pages) {
@@ -183,13 +200,17 @@ program
 program
   .command('assemble')
   .description('Assemble lettered panels into Webtoon vertical strips')
-  .requiredOption('-c, --chapter <number>', 'Chapter number')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
   .option('--format <type>', 'Output format (jpeg or png)', 'jpeg')
   .option('--quality <number>', 'JPEG quality 1-100 (default: 90)', '90')
   .option('--gutter <number>', 'Gutter height in pixels (default: 10)', '10')
   .option('-v, --verbose', 'Enable verbose logging')
   .option('--dry-run', 'Show what would be done without doing it')
   .action(async (options) => {
+    if (!options.chapter) {
+      console.error("error: required option '-c, --chapter <number>' not specified");
+      process.exit(1);
+    }
     // Validate format
     const format = options.format as string;
     if (format !== 'jpeg' && format !== 'png') {
@@ -303,4 +324,7 @@ Main Row: Four full-body views: Front View, 3/4 Angle View, Side Profile View, B
     console.log(fullPrompt);
   });
 
-program.parse();
+// Strip a lone '--' at argv[2] that pnpm injects when using `pnpm dev -- <subcommand> args`.
+// This lets `pnpm dev -- overlay -c 1` work identically to `pnpm stage:overlay -c 1`.
+const argv = process.argv[2] === '--' ? [...process.argv.slice(0, 2), ...process.argv.slice(3)] : process.argv;
+program.parse(argv);
