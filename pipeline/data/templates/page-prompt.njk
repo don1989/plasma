@@ -1,0 +1,26 @@
+{% include "partials/style-prefix.njk" %}
+{% if has_establishing_shot %}
+
+{% include "partials/setting-description.njk" %}
+{% endif %}
+
+{{ panel_count }}-panel {{ layout_description }}.
+{% for panel in panels %}
+
+PANEL {{ panel.panelNumber }} ({{ panel.shotType | upper }}{% if panel.position %} — {{ panel.position }}{% endif %}): {{ panel.action }}
+{% for char in panel.character_fingerprints %}
+Character: {{ char }}
+{% endfor %}
+{% if panel.dialogue_lines | length %}
+{% for line in panel.dialogue_lines %}
+{% if line.type == 'thought' %}Thought bubble: {{ line.character }}: "{{ line.line }}"
+{% elif line.type == 'narration' %}Narration box: "{{ line.line }}"
+{% else %}Speech balloon: {{ line.character }}: "{{ line.line }}"
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if panel.sfx %}Stylized SFX text integrated into the panel: "{{ panel.sfx }}"
+{% endif %}
+{% if panel.notes %}{{ panel.notes }}
+{% endif %}
+{% endfor %}
