@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 7 — ComfyUI + Express Integration
-Plan: 2 of 3 complete (07-02 done — ComfyUI WebSocket client + job dispatch)
-Status: In Progress (Plan 03 ready — generate.ts CLI wiring)
-Last activity: 2026-02-19 — Completed 07-02 (comfyui-client.ts, updated router, end-to-end verified)
+Plan: 3 of 3 complete (07-03 done — generate.ts CLI wiring, full end-to-end loop)
+Status: Phase Complete (all 3 plans done — Phase 8 LoRA dataset next)
+Last activity: 2026-02-19 — Completed 07-03 (--comfyui flag, ComfyUI mode branch, approve-and-copy, slot-fill JSON fix)
 
-Progress: [#######___] ~62% (v2.0 Phase 7 in progress — 2/3 plans done)
+Progress: [########__] ~80% (v2.0 Phase 7 complete — 3/3 plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 10.1 min (skewed by 67-min 05-03 download-heavy plan)
+- Total plans completed: 13
+- Average duration: 9.8 min (skewed by 67-min 05-03 download-heavy plan)
 - Total execution time: 1.95 hours
 
 **By Phase:**
@@ -33,10 +33,10 @@ Progress: [#######___] ~62% (v2.0 Phase 7 in progress — 2/3 plans done)
 | 4. Assembly & Publish | 2 | 7 min | 3.5 min |
 | 5. Environment Validation | 4 | 93 min | 23.3 min |
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
-| 7. ComfyUI + Express | 2 | 8 min | 4.0 min |
+| 7. ComfyUI + Express | 3 | 16 min | 5.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-01 (3 min — crop script), 07-01 (3 min — Express scaffold), 07-02 (5 min — WebSocket client + job dispatch)
+- Last 5 plans: 07-01 (3 min — Express scaffold), 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring)
 - Trend: Stable at 3-5 min for integration plans
 
 *Updated after each plan completion*
@@ -115,6 +115,11 @@ Recent decisions affecting current work:
 - [07-02]: lora_name hardcoded to empty string in Phase 7 — Phase 9 wires real LoRA name into this slot
 - [07-02]: chapter/page added as optional fields to jobRequestSchema — Plan 03 CLI will populate these
 - [07-02]: End-to-end verified: POST /jobs -> WS open -> 20-step generation -> ch01_p001_v1.png (544KB) at output/ch-01/raw/comfyui/
+- [07-03]: No default generate mode — --comfyui, --api, or --manual must be explicit; bare -c 1 exits with clear error
+- [07-03]: Version counter scans both raw/ and raw/comfyui/ — max() ensures no filename collision on approve-and-copy promote
+- [07-03]: JSON.stringify(s).slice(1,-1) in slotFill for all string tokens — handles newlines, em-dashes, control chars that break raw JSON template injection
+- [07-03]: approve-and-copy is lazy post-approve check: approveImage() sets flag, then generate.ts loads manifest, detects source=comfyui, copies file
+- [07-03]: argv stripping extended to handle '--' at argv[3] for pnpm stage:* scripts (was only argv[2] for pnpm dev)
 
 ### Pending Todos
 
@@ -130,5 +135,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-02-PLAN.md (ComfyUI WebSocket client + job dispatch — end-to-end verified).
-Resume file: .planning/phases/07-comfyui-express-integration/07-03-PLAN.md (generate.ts CLI wiring)
+Stopped at: Completed 07-03-PLAN.md (generate.ts CLI wiring — full ComfyUI end-to-end loop verified).
+Resume file: .planning/phases/08-lora-training/ (Phase 8 LoRA dataset prep and training)
