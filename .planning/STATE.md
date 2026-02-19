@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 5 — Environment Validation
-Plan: 2 of 4 complete
-Status: Executing (05-02 complete — kohya_ss installed and accelerate MPS configured)
-Last activity: 2026-02-19 — Completed 05-02 (kohya_ss + accelerate MPS config)
+Plan: 2 of 4 complete (05-01 + 05-02 done; 05-03 + 05-04 remaining)
+Status: Executing (05-01 and 05-02 complete — ComfyUI and kohya_ss installed with MPS)
+Last activity: 2026-02-19 — Completed 05-01 (ComfyUI + PyTorch MPS + ComfyUI-Manager)
 
 Progress: [##________] ~25% (v2.0 Phase 5 — 2/4 plans complete)
 
@@ -87,6 +87,9 @@ Recent decisions affecting current work:
 - [v2.0 Roadmap]: Phase 10 (ControlNet) depends on Phase 7 (Express service) and Phase 5 (OpenPose model) — can run in parallel with Phase 8/9
 - [v2.0 Roadmap]: GEN-04 split across Phase 7 (template + slot definition) and Phase 9 (LoRA wired into slot after training)
 - [v2.0 Roadmap]: Reproducibility defined as visually consistent same-character same-pose, not pixel-identical — MPS non-determinism is a hardware fact
+- [05-01]: PyTorch 2.5.1 installed from cpu index URL (arm64 MPS wheel) — NOT nightly; 2.5.1 stable is confirmed working, nightly introduces breakage risk
+- [05-01]: ComfyUI-Manager cloned before first launch — Manager is detected at startup, not dynamically loaded
+- [05-01]: models/controlnet/ created in plan 01 so plan 03 curl only needs to drop the file
 - [05-02]: Do not use requirements_macos_arm64.txt — references torch==2.8.0.* nightly (broken, GitHub issue #3281); manual pip install is correct path
 - [05-02]: accelerate mixed_precision must be 'no' — fp16 triggers ValueError on MPS (PyTorch AMP autocast does not support mps+fp16)
 - [05-02]: write_basic_config() sets use_cpu: true by default; manual YAML override needed to enforce use_cpu: false per spec
@@ -105,5 +108,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 05-02-PLAN.md (kohya_ss install + accelerate MPS config). Next: 05-03-PLAN.md.
+Stopped at: Completed 05-01-PLAN.md (ComfyUI + PyTorch 2.5.1 MPS + ComfyUI-Manager installed). Next: 05-03-PLAN.md (Plans 01 and 02 are both done).
 Resume file: .planning/phases/05-environment-validation/05-03-PLAN.md
