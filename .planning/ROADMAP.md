@@ -130,6 +130,6 @@ Plans:
 | 5. Environment Validation | v2.0 | Complete    | 2026-02-19 | 2026-02-19 |
 | 6. Spyke Dataset Preparation | 1/4 | In Progress|  | - |
 | 7. ComfyUI + Express Integration | 3/3 | Complete    | 2026-02-19 | - |
-| 8. Spyke LoRA Training | v2.0 | 0/3 | Not started | - |
+| 8. Spyke LoRA Training | 1/3 | In Progress|  | - |
 | 9. LoRA Integration + Reproducibility | v2.0 | 0/? | Not started | - |
 | 10. ControlNet OpenPose | v2.0 | 0/? | Not started | - |

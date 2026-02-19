@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 8 — Spyke LoRA Training
-Plan: 0 of 3 (planning complete — ready to execute)
-Status: Phase Planned (3 plans: 08-01 submodule fix + smoke test, 08-02 full training, 08-03 checkpoint selection)
-Last activity: 2026-02-19 — Phase 8 planned (research + 3 plans + verification passed)
+Plan: 1 of 3 (08-01 complete — environment validated, full training run ready)
+Status: In Progress (1/3 plans done: 08-01 submodule fix + smoke test complete)
+Last activity: 2026-02-19 — 08-01 complete: sd-scripts submodule fixed, dataset TOML written, MPS confirmed, 5-step smoke test passed (LORA-04 satisfied)
 
-Progress: [########__] ~80% (v2.0 Phase 7 complete — 3/3 plans done)
+Progress: [########__] ~82% (v2.0 Phase 8 in progress — 08-01 done)
 
 ## Performance Metrics
 
@@ -120,6 +120,11 @@ Recent decisions affecting current work:
 - [07-03]: JSON.stringify(s).slice(1,-1) in slotFill for all string tokens — handles newlines, em-dashes, control chars that break raw JSON template injection
 - [07-03]: approve-and-copy is lazy post-approve check: approveImage() sets flag, then generate.ts loads manifest, detects source=comfyui, copies file
 - [07-03]: argv stripping extended to handle '--' at argv[3] for pnpm stage:* scripts (was only argv[2] for pnpm dev)
+- [08-01]: sd-scripts submodule was empty on this machine — git submodule update --init --recursive from ~/tools/kohya_ss is required before any training command
+- [08-01]: Missing Python deps (imagesize, rich, sentencepiece, altair, lion-pytorch, schedulefree, pytorch-optimizer, prodigy-plus-schedule-free, prodigyopt) must be pip-installed into kohya_ss venv; requirements.txt alone is insufficient on Apple Silicon
+- [08-01]: flip_aug excluded from dataset TOML by design — Spyke's costume asymmetry makes horizontal flip destructive to character consistency
+- [08-01]: Full training command flags locked and validated by smoke test: --no_half_vae --mixed_precision=no --optimizer_type=AdamW --network_dim=32 --network_alpha=16
+- [08-01]: Smoke test pattern: always run --max_train_steps=5 before full run to validate environment in 30-90s vs 70+ minutes
 
 ### Pending Todos
 
@@ -130,10 +135,10 @@ None.
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
 - Phase 5 gate cleared — ComfyUI running, MPS confirmed, health check works (Phase 7 unblocked)
 - Phase 6 gates Phase 8 — dataset minimum (15-20 images) must be met before any training is attempted; skipping this is the highest-probability failure mode
-- Phase 8 blocker: ~/tools/kohya_ss/sd-scripts/ is empty — run `cd ~/tools/kohya_ss && git submodule update --init --recursive` before Phase 8 begins
+- Phase 8: sd-scripts submodule fixed (08-01 complete) — 08-02 full training run is next; kohya_ss venv Python deps also installed
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-03-PLAN.md (generate.ts CLI wiring — full ComfyUI end-to-end loop verified).
-Resume file: .planning/phases/08-lora-training/ (Phase 8 LoRA dataset prep and training)
+Stopped at: Completed 08-01-PLAN.md (sd-scripts submodule fix + dataset TOML + 5-step smoke test — LORA-04 satisfied).
+Resume file: .planning/phases/08-spyke-lora-training/08-02-PLAN.md (full 920-step LoRA training run)
