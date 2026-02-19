@@ -89,7 +89,12 @@ Plans:
   2. Training completes targeting 800–1200 steps with checkpoints saved every 200 steps; at least one intermediate checkpoint file exists in the output directory
   3. The selected production LoRA `.safetensors` file is present in `~/tools/ComfyUI/models/loras/`
   4. A test generation with the selected LoRA loaded shows Spyke's asymmetric details (right bracer, left knee pauldron, ginger hair, white cloak) rendered consistently across two different pose prompts
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Fix sd-scripts submodule + write dataset TOML + MPS device check + 5-step smoke test
+- [ ] 08-02-PLAN.md — Full 920-step training run (4 epochs, save every 200 steps)
+- [ ] 08-03-PLAN.md — Test all 5 checkpoints in ComfyUI, select best-generalizing, deploy to loras/
 
 ### Phase 9: LoRA Integration + Reproducibility
 **Goal**: The trained Spyke LoRA is wired into the Express service workflow templates with full parameter traceability, and 3 same-seed generations confirm visually consistent reproducibility — all 6 milestone acceptance criteria pass.
@@ -125,6 +130,6 @@ Plans:
 | 5. Environment Validation | v2.0 | Complete    | 2026-02-19 | 2026-02-19 |
 | 6. Spyke Dataset Preparation | 1/4 | In Progress|  | - |
 | 7. ComfyUI + Express Integration | 3/3 | Complete    | 2026-02-19 | - |
-| 8. Spyke LoRA Training | v2.0 | 0/? | Not started | - |
+| 8. Spyke LoRA Training | v2.0 | 0/3 | Not started | - |
 | 9. LoRA Integration + Reproducibility | v2.0 | 0/? | Not started | - |
 | 10. ControlNet OpenPose | v2.0 | 0/? | Not started | - |
