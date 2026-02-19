@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 5 — Environment Validation
-Plan: 2 of 4 complete (05-01 + 05-02 done; 05-03 + 05-04 remaining)
-Status: Executing (05-01 and 05-02 complete — ComfyUI and kohya_ss installed with MPS)
-Last activity: 2026-02-19 — Completed 05-01 (ComfyUI + PyTorch MPS + ComfyUI-Manager)
+Plan: 3 of 4 complete (05-01 + 05-02 + 05-03 done; 05-04 remaining)
+Status: Executing (05-03 complete — model downloads, ControlNet-Aux extension installed)
+Last activity: 2026-02-19 — Completed 05-03 (AnythingXL checkpoint + OpenPose ControlNet + comfyui_controlnet_aux)
 
-Progress: [##________] ~25% (v2.0 Phase 5 — 2/4 plans complete)
+Progress: [###_______] ~37% (v2.0 Phase 5 — 3/4 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 5.4 min
-- Total execution time: 0.90 hours
+- Total plans completed: 11
+- Average duration: 10.5 min (skewed by 67-min 05-03 download-heavy plan)
+- Total execution time: 1.90 hours
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [##________] ~25% (v2.0 Phase 5 — 2/4 plans complete)
 | 2. Scripts/Characters | 4 | 28 min | 7.0 min |
 | 3. Image Generation | 3 | 15 min | 5.0 min |
 | 4. Assembly & Publish | 2 | 7 min | 3.5 min |
+| 5. Environment Validation | 3 | 73 min | 24.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (3 min), 03-02 (5 min), 03-03 (7 min), 04-01 (4 min), 05-02 (3 min)
-- Trend: Steady
+- Last 5 plans: 03-03 (7 min), 04-01 (4 min), 04-02 (3 min), 05-01 (3 min), 05-03 (67 min — download-dominated)
+- Trend: Stable; 05-03 outlier due to 3.4 GB of binary model downloads
 
 *Updated after each plan completion*
 
@@ -94,6 +95,9 @@ Recent decisions affecting current work:
 - [05-02]: accelerate mixed_precision must be 'no' — fp16 triggers ValueError on MPS (PyTorch AMP autocast does not support mps+fp16)
 - [05-02]: write_basic_config() sets use_cpu: true by default; manual YAML override needed to enforce use_cpu: false per spec
 - [05-02]: Omit bitsandbytes, xformers, triton from kohya_ss install — CUDA/Linux-only, incompatible with Apple Silicon
+- [05-03]: AnythingXL_inkBase.safetensors accepted as equivalent substitute for anything-v5-PrtRE.safetensors — same SD 1.5 architecture, ComfyUI accepts any filename, no hardcoded path in pipeline
+- [05-03]: control_v11p_sd15_openpose.pth is 1.3 GiB on macOS (1378 MB base-10 / 1024 = 1.35 GiB binary) — correct download size, not truncated
+- [05-03]: Plan 04 benchmark workflow must reference AnythingXL_inkBase by actual filename, not plan-spec anything-v5-PrtRE filename
 
 ### Pending Todos
 
@@ -108,5 +112,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 05-01-PLAN.md (ComfyUI + PyTorch 2.5.1 MPS + ComfyUI-Manager installed). Next: 05-03-PLAN.md (Plans 01 and 02 are both done).
-Resume file: .planning/phases/05-environment-validation/05-03-PLAN.md
+Stopped at: Completed 05-03-PLAN.md (AnythingXL checkpoint + OpenPose ControlNet model + comfyui_controlnet_aux extension installed). Next: 05-04-PLAN.md (benchmark run).
+Resume file: .planning/phases/05-environment-validation/05-04-PLAN.md

@@ -127,6 +127,14 @@ None - no external service configuration required for this plan.
 - **Phase 8 (LoRA Training) prerequisite met:** Environment is validated; training can be attempted once the dataset (Phase 6 gate) is ready
 - **No blockers:** All smoke tests pass, device: mps confirmed
 
+## Self-Check: PASSED
+
+- FOUND: ~/tools/kohya_ss/venv/bin/python
+- FOUND: ~/.cache/huggingface/accelerate/default_config.yaml (mixed_precision: 'no', use_cpu: false)
+- FOUND: ~/tools/kohya_ss/ (git clone)
+- FOUND: .planning/phases/05-environment-validation/05-02-SUMMARY.md
+- FOUND: commit 6ac3adf (docs(05-02): complete kohya_ss install and accelerate MPS config plan)
+
 ---
 *Phase: 05-environment-validation*
 *Completed: 2026-02-19*
