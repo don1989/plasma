@@ -170,14 +170,14 @@ The milestone is complete when ALL of the following are true:
 | DATA-02 | Phase 6 | Pending |
 | DATA-03 | Phase 6 | Pending |
 | DATA-04 | Phase 6 | Complete |
-| GEN-01 | Phase 7 | Pending |
-| GEN-02 | Phase 7 | Pending |
-| GEN-03 | Phase 7 | Pending |
-| GEN-04 | Phase 7 (template + slot definition) / Phase 9 (LoRA wired into slot) | Pending |
-| GEN-05 | Phase 7 | Pending |
-| PIPE-01 | Phase 7 | Pending |
-| PIPE-02 | Phase 7 | Pending |
-| PIPE-03 | Phase 7 | Pending |
+| GEN-01 | Phase 7 | Complete |
+| GEN-02 | Phase 7 | Complete |
+| GEN-03 | Phase 7 | Complete |
+| GEN-04 | Phase 7 (template + slot definition) / Phase 9 (LoRA wired into slot) | Complete |
+| GEN-05 | Phase 7 | Complete |
+| PIPE-01 | Phase 7 | Complete |
+| PIPE-02 | Phase 7 | Complete |
+| PIPE-03 | Phase 7 | Complete |
 | LORA-01 | Phase 8 | Pending |
 | LORA-02 | Phase 8 | Pending |
 | LORA-03 | Phase 8 | Pending |

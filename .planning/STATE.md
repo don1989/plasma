@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Phase 6: Spyke Dataset Preparation
+**Current focus:** v2.0 — Phase 7: ComfyUI + Express Integration
 
 ## Current Position
 
-Phase: 6 — Spyke Dataset Preparation
-Plan: 1 of 4 complete (06-01 done — crop script + 19 preview PNGs; user review needed before Plan 02)
-Status: In Progress (Plan 02 unblocked pending user visual review of preview crops)
-Last activity: 2026-02-19 — Completed 06-01 (Spyke crop script, dataset scaffold, 19 preview PNGs)
+Phase: 7 — ComfyUI + Express Integration
+Plan: 3 of 3 complete (07-03 done — generate.ts CLI wiring, full end-to-end loop)
+Status: Phase Complete (all 3 plans done — Phase 8 LoRA dataset next)
+Last activity: 2026-02-19 — Completed 07-03 (--comfyui flag, ComfyUI mode branch, approve-and-copy, slot-fill JSON fix)
 
-Progress: [#####_____] ~47% (v2.0 Phase 6 in progress — 1/4 plans done)
+Progress: [########__] ~80% (v2.0 Phase 7 complete — 3/3 plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 10.1 min (skewed by 67-min 05-03 download-heavy plan)
+- Total plans completed: 13
+- Average duration: 9.8 min (skewed by 67-min 05-03 download-heavy plan)
 - Total execution time: 1.95 hours
 
 **By Phase:**
@@ -33,10 +33,11 @@ Progress: [#####_____] ~47% (v2.0 Phase 6 in progress — 1/4 plans done)
 | 4. Assembly & Publish | 2 | 7 min | 3.5 min |
 | 5. Environment Validation | 4 | 93 min | 23.3 min |
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
+| 7. ComfyUI + Express | 3 | 16 min | 5.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (3 min), 05-01 (3 min), 05-03 (67 min — download-dominated), 05-04 (20 min — benchmark + human verify), 06-01 (3 min — crop script)
-- Trend: Stable; 05-03 outlier due to 3.4 GB of binary model downloads
+- Last 5 plans: 07-01 (3 min — Express scaffold), 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring)
+- Trend: Stable at 3-5 min for integration plans
 
 *Updated after each plan completion*
 
@@ -106,6 +107,19 @@ Recent decisions affecting current work:
 - [Phase 06]: crop-spyke.ts dry-run writes to preview/ subdir — protects final output, allows safe inspection
 - [Phase 06]: ref-sheet _back crop left coord corrected from 790 to 784 (1024px image; 790+240=1030 out of bounds)
 - [Phase 06]: spyke_final_calm crop is SPECULATIVE — must be visually confirmed or excluded at Plan 02 review checkpoint
+- [07-01]: Zod v4 ZodError uses .issues not .errors — updated router.ts error extraction with optional chaining
+- [07-01]: POST /jobs returns 202 immediately; fire-and-forget setImmediate stub for Plan 02 WebSocket dispatch
+- [07-01]: SAVE_NODE_ID = '7' in txt2img-lora.json (SaveImage node) — needed by comfyui-client.ts in Plan 02
+- [07-01]: mps: true hardcoded in /health response — confirmed by Phase 5 benchmark (MPS active on this machine)
+- [07-02]: slotFill() called with lowercase keys — plan spec used uppercase which silently no-ops all token replacements
+- [07-02]: lora_name hardcoded to empty string in Phase 7 — Phase 9 wires real LoRA name into this slot
+- [07-02]: chapter/page added as optional fields to jobRequestSchema — Plan 03 CLI will populate these
+- [07-02]: End-to-end verified: POST /jobs -> WS open -> 20-step generation -> ch01_p001_v1.png (544KB) at output/ch-01/raw/comfyui/
+- [07-03]: No default generate mode — --comfyui, --api, or --manual must be explicit; bare -c 1 exits with clear error
+- [07-03]: Version counter scans both raw/ and raw/comfyui/ — max() ensures no filename collision on approve-and-copy promote
+- [07-03]: JSON.stringify(s).slice(1,-1) in slotFill for all string tokens — handles newlines, em-dashes, control chars that break raw JSON template injection
+- [07-03]: approve-and-copy is lazy post-approve check: approveImage() sets flag, then generate.ts loads manifest, detects source=comfyui, copies file
+- [07-03]: argv stripping extended to handle '--' at argv[3] for pnpm stage:* scripts (was only argv[2] for pnpm dev)
 
 ### Pending Todos
 
@@ -114,12 +128,12 @@ None.
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
-- Phase 5 gates Phase 7 and Phase 10 — ComfyUI must be running and benchmarked before integration work begins
+- Phase 5 gate cleared — ComfyUI running, MPS confirmed, health check works (Phase 7 unblocked)
 - Phase 6 gates Phase 8 — dataset minimum (15-20 images) must be met before any training is attempted; skipping this is the highest-probability failure mode
 - Phase 8 blocker: ~/tools/kohya_ss/sd-scripts/ is empty — run `cd ~/tools/kohya_ss && git submodule update --init --recursive` before Phase 8 begins
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 06-01-PLAN.md (Spyke crop script + dataset scaffold; 19 preview PNGs generated in dataset/spyke/train/10_spyke_plasma_v1/preview/). User must visually review previews before Plan 02.
-Resume file: .planning/phases/06-spyke-dataset-preparation/06-02-PLAN.md (flip augmentation + caption .txt files — after user reviews preview crops)
+Stopped at: Completed 07-03-PLAN.md (generate.ts CLI wiring — full ComfyUI end-to-end loop verified).
+Resume file: .planning/phases/08-lora-training/ (Phase 8 LoRA dataset prep and training)

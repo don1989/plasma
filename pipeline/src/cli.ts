@@ -64,7 +64,8 @@ program
   .description('Generate panel images using Gemini AI')
   .option('-c, --chapter <number>', 'Chapter number (required)')
   .option('--manual', 'Manual workflow: display prompts for copy-paste')
-  .option('--api', 'Automated workflow: call Gemini API directly')
+  .option('--api', 'Automated workflow: call Gemini API directly (--gemini)')
+  .option('--comfyui', 'Automated workflow: call ComfyUI via Express service')
   .option('--import <path>', 'Import a downloaded image (use with --page)')
   .option('--page <number>', 'Page number (used with --import)')
   .option('--pages <range>', 'Page range to display/generate (e.g., "1-5" or "3,7,12")')
@@ -101,8 +102,12 @@ program
       }
     }
 
-    // Determine mode: --api overrides, otherwise default to 'manual'
-    const mode: 'manual' | 'api' = options.api ? 'api' : 'manual';
+    // Require explicit mode flag — no silent default
+    if (!options.manual && !options.api && !options.comfyui && !options.import && !options.approve) {
+      console.error('Error: specify --comfyui, --gemini (--api), or --manual explicitly');
+      process.exit(1);
+    }
+    const mode: 'manual' | 'api' | 'comfyui' = options.comfyui ? 'comfyui' : options.api ? 'api' : 'manual';
 
     if (!options.chapter) {
       console.error("error: required option '-c, --chapter <number>' not specified");
@@ -131,6 +136,12 @@ program
         console.error(`Error: Reference file not found: ${options.reference}`);
         process.exit(1);
       }
+    }
+
+    // Validate: --comfyui requires --page
+    if (options.comfyui && !options.page) {
+      console.error('Error: --comfyui requires --page. Specify which page to generate.');
+      process.exit(1);
     }
 
     const { runGenerate } = await import('./stages/generate.js');
@@ -408,7 +419,13 @@ Main Row: Four full-body views: Front View, 3/4 Angle View, Side Profile View, B
     console.log(`Saved: ${outPath}`);
   });
 
-// Strip a lone '--' at argv[2] that pnpm injects when using `pnpm dev -- <subcommand> args`.
-// This lets `pnpm dev -- overlay -c 1` work identically to `pnpm stage:overlay -c 1`.
-const argv = process.argv[2] === '--' ? [...process.argv.slice(0, 2), ...process.argv.slice(3)] : process.argv;
+// Strip a lone '--' injected by pnpm:
+//   argv[2] === '--': `pnpm dev -- overlay -c 1`
+//   argv[3] === '--': `pnpm stage:generate -- -c 1` (subcommand already fixed in script, pnpm appends '--' before user args)
+let argv = process.argv;
+if (argv[2] === '--') {
+  argv = [...argv.slice(0, 2), ...argv.slice(3)];
+} else if (argv[3] === '--') {
+  argv = [...argv.slice(0, 3), ...argv.slice(4)];
+}
 program.parse(argv);

@@ -40,8 +40,8 @@ import {
  * Options for the generate stage, extending base stage options.
  */
 export interface GenerateOptions extends StageOptions {
-  /** Workflow mode: manual (copy-paste) or api (automated). Defaults to 'manual'. */
-  mode?: 'manual' | 'api';
+  /** Workflow mode: manual (copy-paste), api (automated Gemini), or comfyui. No default — must be explicit. */
+  mode?: 'manual' | 'api' | 'comfyui';
   /** Path to a downloaded image to import (use with --page). */
   importPath?: string;
   /** Page number for single-page operations. */
@@ -56,6 +56,27 @@ export interface GenerateOptions extends StageOptions {
   notes?: string;
   /** Path to a character reference image to pass to Gemini for visual consistency. */
   referencePath?: string;
+}
+
+/**
+ * Verify the Express/ComfyUI bridge service is reachable before submitting jobs.
+ *
+ * @param port - Port the service listens on (default: 3000)
+ * @throws Error with actionable message if service is not running
+ */
+async function checkServiceRunning(port: number = 3000): Promise<void> {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/health`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) {
+      throw new Error(`Service returned ${res.status}`);
+    }
+  } catch {
+    throw new Error(
+      `Express service not running at port ${port} — run \`pnpm start:service\` first`,
+    );
+  }
 }
 
 /**
@@ -76,6 +97,18 @@ export async function runGenerate(options: GenerateOptions): Promise<StageResult
         imageFile: options.approve,
         chapterDir: chapterPaths.root,
       });
+
+      // Approve-and-copy for ComfyUI-sourced images (PIPE-03)
+      // Load manifest to check source; if comfyui, promote from raw/comfyui/ to raw/
+      const manifest = await loadManifest(chapterPaths.root, options.chapter);
+      const entry = manifest.entries.find(e => e.imageFile === options.approve);
+      if (entry?.source === 'comfyui' && entry.sourcePath) {
+        const { copyFile } = await import('node:fs/promises');
+        const destPath = path.join(chapterPaths.raw, options.approve);
+        await copyFile(entry.sourcePath, destPath);
+        console.log(`[generate] Promoted ComfyUI image: ${options.approve} -> raw/`);
+      }
+
       console.log(`[generate] Approved: ${options.approve}`);
       return {
         stage: 'generate',
@@ -446,12 +479,187 @@ export async function runGenerate(options: GenerateOptions): Promise<StageResult
     };
   }
 
+  // --- ComfyUI mode (via Express service) ---
+  if (mode === 'comfyui') {
+    const page = options.page;
+    if (page == null) {
+      return {
+        stage: 'generate',
+        success: false,
+        outputFiles: [],
+        errors: ['ComfyUI mode requires --page option.'],
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // 1. Fail fast if service not running
+    try {
+      await checkServiceRunning();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return {
+        stage: 'generate',
+        success: false,
+        outputFiles: [],
+        errors: [msg],
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // 2. Read prompt file (reuse existing prompt stage output)
+    const promptsDir = chapterPaths.prompts;
+    const promptFilename = `page-${String(page).padStart(2, '0')}.txt`;
+    const promptFilePath = path.join(promptsDir, promptFilename);
+    if (!existsSync(promptFilePath)) {
+      return {
+        stage: 'generate',
+        success: false,
+        outputFiles: [],
+        errors: [`Prompt file not found: ${promptFilePath}. Run the prompt stage first.`],
+        duration: Date.now() - startTime,
+      };
+    }
+    const promptText = await readFile(promptFilePath, 'utf-8');
+
+    // 3. Ensure comfyui subdir exists
+    const comfyuiDir = chapterPaths.comfyuiRaw;
+    await ensureDir(comfyuiDir);
+
+    // 4. Determine version — scan BOTH raw/ and raw/comfyui/ to avoid filename collisions.
+    // ComfyUI images are named in the shared ch01_pNNN_vN namespace so that after
+    // approve-and-copy the promoted file never overwrites an existing raw/ file.
+    const versionInRaw = nextVersion(chapterPaths.raw, options.chapter, page);
+    const versionInComfyui = nextVersion(comfyuiDir, options.chapter, page);
+    const version = Math.max(versionInRaw, versionInComfyui);
+    const imageFile = panelImageFilename(options.chapter, page, version);
+
+    console.log(`[generate] ComfyUI mode -- Chapter ${options.chapter}, Page ${page}, Version ${version}`);
+
+    // 5. Submit job to Express service (POST /jobs)
+    let jobId: string;
+    try {
+      const jobRes = await fetch('http://127.0.0.1:3000/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt_text: promptText,
+          resolution: { width: 512, height: 768 },
+          chapter: options.chapter,
+          page,
+          seed: Math.floor(Math.random() * 2_147_483_647),
+        }),
+      });
+      if (!jobRes.ok) {
+        const errBody = await jobRes.json() as { error: string };
+        throw new Error(`POST /jobs failed: ${jobRes.status} — ${errBody.error}`);
+      }
+      const { jobId: id } = await jobRes.json() as { jobId: string };
+      jobId = id;
+      console.log(`[generate] Job submitted: ${jobId}`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return {
+        stage: 'generate',
+        success: false,
+        outputFiles: [],
+        errors: [`ComfyUI job submission failed: ${msg}`],
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // 6. Poll GET /jobs/:id until complete or timeout
+    // Polling interval: 2s. Total timeout: 95s (slightly over service's 90s to surface service error).
+    const POLL_INTERVAL_MS = 2000;
+    const POLL_TIMEOUT_MS = 95_000;
+    const pollStart = Date.now();
+
+    interface JobStatusResponse {
+      jobId: string;
+      status: 'queued' | 'running' | 'complete' | 'failed';
+      imageFile?: string;
+      imagePath?: string;
+      error?: string;
+    }
+
+    let finalJobState: JobStatusResponse | null = null;
+    while (Date.now() - pollStart < POLL_TIMEOUT_MS) {
+      await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+      try {
+        const statusRes = await fetch(`http://127.0.0.1:3000/jobs/${jobId}`);
+        const jobState = await statusRes.json() as JobStatusResponse;
+        console.log(`[generate] Job ${jobId} status: ${jobState.status}`);
+
+        if (jobState.status === 'complete') {
+          finalJobState = jobState;
+          break;
+        }
+        if (jobState.status === 'failed') {
+          return {
+            stage: 'generate',
+            success: false,
+            outputFiles: [],
+            errors: [`ComfyUI job failed: ${jobState.error ?? 'unknown error'}`],
+            duration: Date.now() - startTime,
+          };
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        return {
+          stage: 'generate',
+          success: false,
+          outputFiles: [],
+          errors: [`Service connection lost during polling: ${msg}`],
+          duration: Date.now() - startTime,
+        };
+      }
+    }
+
+    if (!finalJobState) {
+      return {
+        stage: 'generate',
+        success: false,
+        outputFiles: [],
+        errors: ['ComfyUI job timed out after 95s. Run `pnpm start:service` and retry.'],
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // 7. Record in manifest (imagePath from service points to raw/comfyui/ file)
+    const imagePath = finalJobState.imagePath ?? path.join(comfyuiDir, imageFile);
+    const manifest = await loadManifest(chapterPaths.root, options.chapter);
+    const logEntry: GenerationLogEntry = {
+      imageFile,
+      promptFile: path.join('prompts', promptFilename),
+      promptHash: hashPrompt(promptText),
+      model: 'comfyui',
+      timestamp: new Date().toISOString(),
+      version,
+      approved: false,
+      promptText,
+      source: 'comfyui',
+      sourcePath: imagePath,
+    };
+    await addEntry(chapterPaths.root, manifest, logEntry);
+
+    const chNum = String(options.chapter).padStart(2, '0');
+    console.log(`[generate] ComfyUI image saved to: output/ch-${chNum}/raw/comfyui/${imageFile}`);
+    console.log(`[generate] To approve and promote: pnpm stage:generate -- --approve ${imageFile} -c ${options.chapter}`);
+
+    return {
+      stage: 'generate',
+      success: true,
+      outputFiles: [imagePath],
+      errors: [],
+      duration: Date.now() - startTime,
+    };
+  }
+
   // Fallback (should not be reached)
   return {
     stage: 'generate',
     success: false,
     outputFiles: [],
-    errors: ['Unknown generate mode. Use --manual or --api.'],
+    errors: ['Unknown generate mode. Use --comfyui, --api, or --manual.'],
     duration: Date.now() - startTime,
   };
 }
