@@ -74,7 +74,11 @@ Plans:
   2. Running the assembler produces a vertical-scroll Webtoon strip at 800px wide, Webtoon Canvas-compatible (JPG/PNG at correct dimensions)
   3. Splash pages and double-spreads are assembled with correct aspect ratios — not treated as standard panels
   4. Intermediate artifacts exist in separate directories (`raw/`, `processed/`, `lettered/`, `webtoon/`) and no stage overwrites upstream output
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Dialogue overlay stage with SVG balloons, SFX, and text measurement
+- [ ] 04-02-PLAN.md — Webtoon assembly stage with vertical stacking, strip slicing, and Canvas output
 
 ## Progress
 
@@ -85,4 +89,4 @@ Plans:
 | 1. Foundation | 1/1 | Complete | 2026-02-18 |
 | 2. Scripts, Characters, and Prompts | 4/5 | In Progress | - |
 | 3. Image Generation Workflow | 3/3 | Complete    | 2026-02-19 |
-| 4. Assembly and Publish | 0/TBD | Not started | - |
+| 4. Assembly and Publish | 0/2 | Not started | - |
