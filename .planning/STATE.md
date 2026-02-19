@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 7 — ComfyUI + Express Integration
-Plan: 1 of 3 complete (07-01 done — Express service scaffold, validation, workflow templates)
-Status: In Progress (Plan 02 ready — wire ComfyUI WebSocket client into job handler)
-Last activity: 2026-02-19 — Completed 07-01 (Express service, router, job-store, slot-fill, workflow templates)
+Plan: 2 of 3 complete (07-02 done — ComfyUI WebSocket client + job dispatch)
+Status: In Progress (Plan 03 ready — generate.ts CLI wiring)
+Last activity: 2026-02-19 — Completed 07-02 (comfyui-client.ts, updated router, end-to-end verified)
 
-Progress: [######____] ~52% (v2.0 Phase 7 in progress — 1/3 plans done)
+Progress: [#######___] ~62% (v2.0 Phase 7 in progress — 2/3 plans done)
 
 ## Performance Metrics
 
@@ -33,11 +33,11 @@ Progress: [######____] ~52% (v2.0 Phase 7 in progress — 1/3 plans done)
 | 4. Assembly & Publish | 2 | 7 min | 3.5 min |
 | 5. Environment Validation | 4 | 93 min | 23.3 min |
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
-| 7. ComfyUI + Express | 1 | 3 min | 3.0 min |
+| 7. ComfyUI + Express | 2 | 8 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-04 (20 min — benchmark + human verify), 06-01 (3 min — crop script), 07-01 (3 min — Express scaffold)
-- Trend: Stable at 3 min for scaffolding plans
+- Last 5 plans: 06-01 (3 min — crop script), 07-01 (3 min — Express scaffold), 07-02 (5 min — WebSocket client + job dispatch)
+- Trend: Stable at 3-5 min for integration plans
 
 *Updated after each plan completion*
 
@@ -111,6 +111,10 @@ Recent decisions affecting current work:
 - [07-01]: POST /jobs returns 202 immediately; fire-and-forget setImmediate stub for Plan 02 WebSocket dispatch
 - [07-01]: SAVE_NODE_ID = '7' in txt2img-lora.json (SaveImage node) — needed by comfyui-client.ts in Plan 02
 - [07-01]: mps: true hardcoded in /health response — confirmed by Phase 5 benchmark (MPS active on this machine)
+- [07-02]: slotFill() called with lowercase keys — plan spec used uppercase which silently no-ops all token replacements
+- [07-02]: lora_name hardcoded to empty string in Phase 7 — Phase 9 wires real LoRA name into this slot
+- [07-02]: chapter/page added as optional fields to jobRequestSchema — Plan 03 CLI will populate these
+- [07-02]: End-to-end verified: POST /jobs -> WS open -> 20-step generation -> ch01_p001_v1.png (544KB) at output/ch-01/raw/comfyui/
 
 ### Pending Todos
 
@@ -126,5 +130,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-01-PLAN.md (Express service scaffold — router, job-store, slot-fill, workflow templates).
-Resume file: .planning/phases/07-comfyui-express-integration/07-02-PLAN.md (ComfyUI WebSocket client + job dispatch)
+Stopped at: Completed 07-02-PLAN.md (ComfyUI WebSocket client + job dispatch — end-to-end verified).
+Resume file: .planning/phases/07-comfyui-express-integration/07-03-PLAN.md (generate.ts CLI wiring)

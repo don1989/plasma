@@ -124,7 +124,7 @@ Plans:
 | 4. Assembly and Publish | v1.0 | 2/2 | Complete | 2026-02-19 |
 | 5. Environment Validation | v2.0 | Complete    | 2026-02-19 | 2026-02-19 |
 | 6. Spyke Dataset Preparation | 1/4 | In Progress|  | - |
-| 7. ComfyUI + Express Integration | 1/3 | In Progress|  | - |
+| 7. ComfyUI + Express Integration | 2/3 | In Progress|  | - |
 | 8. Spyke LoRA Training | v2.0 | 0/? | Not started | - |
 | 9. LoRA Integration + Reproducibility | v2.0 | 0/? | Not started | - |
 | 10. ControlNet OpenPose | v2.0 | 0/? | Not started | - |
