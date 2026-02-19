@@ -1,263 +1,202 @@
-# Project Research Summary
+# Research Summary: Plasma Pipeline v2.0
 
-**Project:** Plasma — AI-Powered Manga Production Pipeline
-**Domain:** Webtoon-format digital comics using Gemini image generation
-**Researched:** 2026-02-18
-**Confidence:** MEDIUM
+**Project:** Plasma Manga Pipeline — v2.0 Local ComfyUI + LoRA milestone
+**Domain:** Local AI image generation service integrated into TypeScript manga production pipeline
+**Researched:** 2026-02-19
+**Confidence:** MEDIUM overall — core architecture is HIGH confidence; Apple Silicon MPS behavior and kohya_ss install specifics are MEDIUM; all speed benchmarks are LOW until calibrated on hardware
 
-## Executive Summary
+---
 
-Plasma is a 15-chapter Webtoon comic with existing story prose, a world bible, and character designs. The goal is a repeatable production pipeline that transforms story chapters into publishable Webtoon episodes using Gemini for panel art generation. This is a structured transformation chain — not a platform or product — with six discrete stages: script generation, prompt generation, image generation (Gemini), post-processing, dialogue overlay, and vertical assembly. Research confirms this approach is sound, that the existing project artifacts (chapter-01-script.md, character sheets, 29 page prompts) are already validated input for the pipeline, and that the remaining engineering work is well-scoped Python tooling around Pillow and the Gemini API.
+## Key Takeaways
 
-The recommended approach is to build the pipeline in the same order as data flows through it, but validate before automating. Chapter 1 pages 1-29 already exist in prompt form; completing prompts for pages 30-48 and then generating all panels manually is the correct first milestone. This generates real output to QC, proves the visual style is achievable, and de-risks the pipeline before any tooling is built. Programmatic stages (post-processing, dialogue overlay, assembly) can then be built using the Chapter 1 images as test data. Gemini API automation is explicitly Phase 4, not Phase 1 — the manual workflow is a feature, not a limitation.
+1. **The pivot is sound but has a hard dependency ordering.** You cannot generate a useful panel until the Spyke LoRA exists. You cannot train the LoRA until you have a dataset. Dataset prep must be the first non-infrastructure work item — not an afterthought.
 
-The dominant risks are character drift across panels, garbled AI-rendered text, and manual workflow version chaos. All three are preventable at low cost if addressed before production begins: locked character prompt fingerprints, a decision to never bake dialogue into AI art (always programmatic overlay), and a naming convention enforced from the first generated panel. Failing to address these in Phase 1 creates exponentially more expensive rework when discovered after a full chapter is assembled.
+2. **M1 Pro 16GB sets hard limits that must be encoded as requirements, not discovered during development.** Max resolution 512x768. Training batch size 1. One ControlNet model at a time. No simultaneous training + generation. These are not suggestions; violating them causes OOM kills with hours of lost work.
+
+3. **Seed locking on MPS provides visual consistency, not pixel-identical reproducibility.** The requirement for "reproducible panels" must be defined as "visually consistent same-character same-pose output," not bit-exact identity. This is a deliberate requirement scoping decision, not a bug.
+
+4. **The Express service is an optional sidecar, not a rewrite.** The architecture adds a new `comfyui` mode to `generate.ts` alongside existing `manual` and `api` modes. All downstream stages (overlay, assemble) are unchanged. This limits risk and keeps rollback to removing one mode branch.
+
+5. **ControlNet is a differentiator, not a blocker.** The critical path for v2.0 is: ComfyUI server + SD 1.5 checkpoint + Spyke LoRA + txt2img workflow + Express job API + output file integration. ControlNet OpenPose is on a parallel track and can be implemented after the core loop produces working output.
+
+6. **kohya_ss on Apple Silicon requires deliberate setup.** The standard install script targets CUDA/Linux. You must explicitly skip `bitsandbytes`, `xformers`, and `triton`; configure `accelerate` for MPS; and use `AdamW` (not `AdamW8bit`). Use Python 3.11.9 (already active) and pin PyTorch at 2.5.1 (already installed).
+
+7. **Workflow JSON templates are the single source of truth for generation parameters.** The Express service slot-fills 5 injectable fields into static JSON templates exported from the ComfyUI GUI. This is more robust than assembling workflow JSON programmatically from scratch and makes the parameter contract explicit.
 
 ---
 
 ## Key Findings
 
-### Recommended Stack
+### Stack (from STACK.md)
 
-The pipeline is a Python-first toolchain. Python 3.11 (already on system), Pillow 11.2.1 (already installed), and the `google-generativeai` SDK are the core. Jinja2 handles prompt templating to prevent the copy-paste errors that come from maintaining 48 per-panel prompts manually. Click provides a clean CLI so each pipeline stage is independently invokable. `python-dotenv` handles the Gemini API key from Day 1. No JavaScript, no custom ML training, no Stable Diffusion — the project constraint is Gemini and that is the correct constraint.
+The new npm dependency surface is minimal: one package (`@stable-canvas/comfyui-client` v1.5.9 — zero transitive deps, ESM, TypeScript types, verified on npm registry). All other TypeScript dependencies already exist. Python infrastructure (PyTorch 2.5.1, accelerate, diffusers, transformers) is already globally installed on the machine with MPS confirmed working.
 
-Note: Gemini image generation via the `google-generativeai` SDK (model name referenced in repo as "Nano Banana" — consistent with Gemini 2.0 Flash Experimental) is MEDIUM confidence. API access status for image generation is unconfirmed. The pipeline must be designed so manual image generation (copy-paste to Gemini web UI) is a fully functional path — API automation is a drop-in upgrade, not a prerequisite.
+- **ComfyUI** — local SD 1.5 inference server, runs as Python sidecar, communicates with TypeScript pipeline over HTTP + WebSocket. Install at `~/tools/ComfyUI`, outside the repo.
+- **kohya_ss** — LoRA training toolkit. Install at `~/tools/kohya_ss`, separate Python venv. Training only, not inference.
+- **`@stable-canvas/comfyui-client`** — TypeScript wrapper around ComfyUI's REST + WebSocket API. Zero deps, ESM-native. Replaces writing WebSocket reconnect logic from scratch.
+- **Anything V5 anime checkpoint** — primary SD 1.5 base model. Correct aesthetic match for Plasma's manga style. Realistic Vision V6.0 as backup for background/reference art.
+- **ControlNet SD 1.5 OpenPose** — `control_v11p_sd15_openpose.pth` (~1.4GB). Only install OpenPose for v2.0; Canny/Depth are optional expansions.
 
-**Core technologies:**
-- Python 3.11.9: Pipeline scripting — already installed via pyenv
-- Pillow 11.2.1: Image manipulation, text overlay, vertical strip assembly — already installed
-- google-generativeai (>=0.8): Gemini API client for Stage 3 automation — install when API access confirmed
-- Jinja2 3.x: Prompt template engine — prevents copy-paste errors across 48-panel chapter prompts
-- Click 8.x: CLI for pipeline stages — makes each stage independently runnable
-- PyYAML / TOML: Character reference and chapter config storage
-- python-dotenv 1.x: API key management — required from Day 1, not later
+**Version locks that matter:** PyTorch 2.5.1 (do not upgrade — MPS breaking changes between minor versions). Python 3.11.9 (kohya_ss has Python 3.12 issues). `--force-fp16` on ComfyUI launch (required for 16GB headroom). VAE precision: U-Net in fp16, VAE in fp32 — this split must be explicit in workflow templates.
 
-**What NOT to use:** Wand/ImageMagick (C dependency breaks on macOS), Stable Diffusion (wrong project), any tool that isn't scriptable and repeatable.
+**Disk budget:** ~7GB minimum (ComfyUI + one checkpoint + OpenPose ControlNet + VAE), ~10GB full setup.
 
-### Expected Features
+### Features (from FEATURES.md)
 
-The pipeline's features are defined by the 6-stage data flow. Every table-stakes feature is a stage or a prerequisite to a stage. All 8 table-stakes features must be complete for Chapter 1 to be publishable.
+**Table stakes — the pipeline produces nothing without these:**
+- ComfyUI server running on M1 Pro (Metal/MPS) with SD 1.5 checkpoint loaded
+- txt2img workflow JSON wired through Express service job API
+- Spyke dataset prepared (crop + augment `Spyke_Final.png` to 6-12 crops, supplement with Gemini-generated references to reach 15-20 images) and LoRA trained
+- Full parameter manifest per generated image: seed, sampler, scheduler, steps, CFG, loraId, controlnetStrength, workflow JSON
+- Output files landing in `output/ch-XX/raw/` with existing naming convention so overlay and assemble stages work unchanged
 
-**Must have (table stakes — v1, Chapter 1):**
-- Manga script generation from prose — already exists for Ch.1; must be templated for Ch.2+
-- Art prompt generation per panel — 29 of 48 Ch.1 prompts exist; need pages 30-48
-- Character reference sheet prompts — exist for Ch.1 cast (Spyke, June, Draster, Hood, Punks)
-- Style guide embedded in every prompt — exists; must be locked verbatim and never paraphrased
-- Dialogue/SFX text overlay — CRITICAL PATH DECISION: programmatic Pillow overlay (never AI-rendered text)
-- Panel vertical strip assembly — 800px wide Webtoon format, Python/Pillow stitching
-- Panel QC / consistency review checklist — per-panel approval gate before assembly
-- Output format compatible with Webtoon Canvas — JPG/PNG at correct dimensions
+**Differentiators — what justifies the Gemini pivot:**
+- LoRA character consistency (Spyke's asymmetric gloves, cloak length, ginger hair become deterministic)
+- Seed locking for composition reproducibility (any approved panel can be re-generated with the same parameters)
+- ControlNet OpenPose for pose-anchored composition across sequential panels
+- No per-call API cost after hardware investment
 
-**Should have (competitive — v1.x, pipeline systematization):**
-- Prompt template library — character blocks and style prefixes as Jinja2 templates, not copy-paste
-- New character introduction workflow — structured process for Ch.2+ characters (Jairek, Hector, Micki, etc.)
-- Batch prompt generation — full chapter in one pass
-- Splash/spread handling — distinct assembly logic for full-page and double-page spreads (Ch.1 p.23, p.25-26)
-- Narrative-to-script validation — check script conforms to manga-script.md rules before prompt generation
-- Visual continuity checking — structured review against reference sheets
+**Deferred to v2.1:**
+- June/Draster LoRAs (no clean reference images exist; training on Gemini-generated concept art would encode the drift, not the canon design)
+- Multi-LoRA stacking beyond Spyke
+- Real-time WebSocket progress streaming in CLI
+- Model preset switching (commit to one checkpoint first, add switching after the core loop is stable)
+- SDXL/Flux models (M1 Pro 16GB cannot train SDXL LoRAs; document as future hardware upgrade path)
 
-**Defer (v2+):**
-- Gemini API integration — replace copy-paste with API calls; needs confirmed API access first
-- Visual continuity automation — AI-assisted panel vs. reference sheet comparison
-- SFX visual design system — curated manga-style SFX font library
-- Dialogue balloon placement map — per-panel balloon position in script
+**Anti-features to explicitly exclude from scope:**
+- Parallel batch generation (ComfyUI processes jobs serially on M1 Pro; parallel submission just queues them)
+- Automated pose skeleton synthesis (keep pose reference images manual for v2.0)
+- ComfyUI web UI as runtime path (GUI is for designing and exporting workflow templates only)
 
-**Anti-features to reject explicitly:**
-- Fully automated end-to-end generation (no review loops = garbage output)
-- AI-rendered dialogue text in panels (garbled, always)
-- Custom model training for character consistency (months of ML work, out of scope)
-- Print-ready formatting (stated out of scope in PROJECT.md)
-- Animation / interactive branching (separate future projects)
+### Architecture (from ARCHITECTURE.md)
 
-### Architecture Approach
+The architecture adds an Express sidecar service (`pipeline/service/`) between the TypeScript pipeline CLI and ComfyUI. The pipeline's `generate.ts` gains a third mode (`comfyui`) that calls the Express service via HTTP and polls for completion. The Express service manages ComfyUI API interaction, workflow template injection, job state, and kohya_ss process spawning. The Gemini API mode is NOT removed.
 
-The pipeline is a linear transformation chain. Each stage reads from the previous stage's output folder and writes to its own output folder. No stage knows about stages beyond its immediate I/O boundary. This makes every stage independently testable, replaceable (e.g., swap Gemini for a different generator), and rerunnable without touching upstream artifacts. Human review gates sit between Stage 3→4 (image QC) and Stage 4→5 (dialogue placement approval). All intermediate artifacts are preserved — raw images are never overwritten by processed images.
+**New components (all in `pipeline/service/`):**
+1. `index.ts` — Express app bootstrap, port 3000
+2. `routes/jobs.ts` — `POST /jobs`, `GET /jobs/:id`
+3. `routes/loras.ts` — `POST /loras/train`, `GET /loras/:id/status`
+4. `job-manager.ts` — in-memory Map, serial queue, single active job (no Redis needed for a local dev tool)
+5. `comfyui/http-client.ts` + `ws-client.ts` — thin wrappers over ComfyUI REST + WebSocket
+6. `workflows/loader.ts` + `injector.ts` + JSON templates — `txt2img-lora.json`, `img2img-lora-controlnet.json`
+7. `training/kohya-runner.ts` — child_process.spawn wrapper for kohya_ss, log streaming, OOM kill detection
 
-The critical architectural decision already validated by the existing prompts: each Gemini call generates one full page (multi-panel), not individual panels. This preserves panel-to-panel composition coherence within a page. Individual panel generation is reserved for splash pages and hero character shots.
+**Modified components (additive only):**
+- `pipeline/src/stages/generate.ts` — new `mode === 'comfyui'` branch; `manual` and `api` branches unchanged
+- `pipeline/src/cli.ts` — new `--comfyui` flag + `train-lora` subcommand
+- `pipeline/src/types/generation.ts` — new `generationBackend` field on `GenerationLogEntry`
 
-Dialogue is extracted from the script into a structured `dialogue_map.json` per chapter, then programmatically overlaid in Stage 5 using Pillow/ImageDraw. This decouples text editing from art regeneration.
+**Key env vars:** `COMFYUI_URL`, `COMFYUI_DIR` (required — no default; all model/output paths derived from this), `EXPRESS_PORT`, `KOHYA_SCRIPT`, `KOHYA_PYTHON`.
 
-**Major pipeline stages:**
-1. Script Generator — story prose + bible → panel-by-panel manga script (Claude-assisted, using manga-script.md rules)
-2. Prompt Generator — manga script + character sheets → Gemini art prompts (Claude-assisted, Jinja2 templates)
-3. Image Generator — art prompts → raw panel images (Gemini web UI manually, or API when available)
-4. Post-Processor — raw images → cropped/resized 800px panels + human QC gate (Python/Pillow)
-5. Dialogue Overlay — processed images + dialogue_map.json → lettered panels (Python/Pillow + manga fonts)
-6. Webtoon Assembler — lettered panels → vertical Webtoon strip (Python/Pillow vertical stitch)
-
-**Recommended project structure extension:**
+**Data flow summary:**
 ```
-03_manga/pipeline/       — Python scripts for stages 4-6
-output/ch-NN/raw/        — Stage 3 output, never overwritten
-output/ch-NN/processed/  — Stage 4 output
-output/ch-NN/lettered/   — Stage 5 output
-output/ch-NN/webtoon/    — Stage 6 final deliverable
+CLI → generate.ts (mode=comfyui) → comfyui-client.ts → Express service
+    → JobManager → ComfyUI API (HTTP + WebSocket)
+    → output/ch-XX/raw/chXX_pNNN_vN.png + generation-log.json
 ```
 
-### Critical Pitfalls
+### Critical Pitfalls (from PITFALLS.md)
 
-Research identified 8 pitfalls with first-hand evidence from this repo's concept art generation history. Top 5 to address before production:
+**Critical — must be addressed in requirements or architecture before writing code:**
 
-1. **Character drift across generations** — Each Gemini call re-rolls the character from scratch. Prevention: generate and lock a tested prompt "fingerprint" per character (tested over 5+ consecutive runs against reference sheets) before any production panel generation. Never paraphrase the fingerprint. Evidence from repo: Spyke's age appeared as 16 instead of 21 in two early runs; June's prompt produced blue/teal despite specifying dark pink in 2 of 3 attempts.
+1. **Spyke dataset is below LoRA minimum.** `Spyke_Final.png` gives 1-3 rendered views. Minimum is 15-20 varied images. Plan explicit augmentation: crop the reference sheet into face/bust/full-body crops at 512px, flip horizontally, and generate 10-15 supplementary images via the v1.0 Gemini pipeline before training. Without this, the LoRA will overfit and fail on novel action poses.
 
-2. **Garbled AI text in panels** — AI image models treat text as visual texture. Readable dialogue in AI-generated panels is not reliable. Prevention: generate all panels as art-only (no dialogue in panel prompt). Overlay ALL text — dialogue, SFX, narration, captions — programmatically in Stage 5. This decision must be made before generating any production panels; reversing it requires regenerating every panel.
+2. **Unified memory OOM is the primary failure mode.** SD 1.5 inference + ControlNet simultaneously uses 8-12GB. Training uses up to 15GB. Hard-cap resolution at 512x768 and training batch size at 1; never run generation and training simultaneously; encode these as validation constraints in the API endpoint (reject requests that violate limits, don't rely on discipline).
 
-3. **Manual workflow version chaos** — Without a naming convention, 30-50 images per chapter with generic Gemini filenames make it impossible to track which prompt produced which approved image. Prevention: enforce `ch01_p003_panel2_v1.png` naming from the first generated production panel. Maintain a per-chapter prompts.md that records the exact approved prompt for each panel.
+3. **WebSocket race condition on job completion.** Connect the WebSocket with a `client_id` UUID BEFORE posting the workflow via HTTP. If you POST first, the completion event may fire before the WebSocket listener is open. This is the documented ComfyUI integration pattern and must be designed in from the start — not fixed later.
 
-4. **Style inconsistency across a chapter** — Subtle prompt variation produces visible style drift across 30+ panels. Prevention: lock one tested style prefix string verbatim and paste it into every prompt without modification. "Clean linework" and "crisp linework" produce different outputs.
+4. **fp16 NaN and VAE color bugs on MPS.** Some MPS fp16 ops produce NaN, resulting in black/gray output with no error message. VAE fp16 specifically causes washed-out color. The correct split: U-Net fp16, VAE fp32. This must be explicit in workflow templates, not inherited from ComfyUI defaults.
 
-5. **Wrong aspect ratio panels** — Gemini defaults to square/landscape output; Webtoon requires tall vertical panels at 800px wide. Prevention: determine exact per-panel resolution spec before any production generation and confirm Gemini's actual output dimensions match the spec. Discovering wrong dimensions after assembling a full chapter requires complete regeneration.
-
----
-
-## Implications for Roadmap
-
-Based on the combined research, the architecture's suggested build order maps cleanly to a 5-phase roadmap. The ordering is driven by three constraints: (1) validate generation quality before building automation, (2) address infrastructure pitfalls before production volume, (3) defer API automation until the manual pipeline is proven.
-
-### Phase 1: Foundation and Generation Validation
-
-**Rationale:** The pipeline's entire value depends on Gemini producing acceptable panel art. This must be empirically validated before building any tooling. Simultaneously, the three Phase 1 pitfalls (character drift, version chaos, aspect ratio) must be resolved before generating any production panels — fixing them retroactively is expensive. This phase has no tooling prerequisites.
-
-**Delivers:** Complete Chapter 1 raw panel images (all 48 pages), approved against character reference sheets, with locked character fingerprints and style prefix.
-
-**Addresses (from FEATURES.md):**
-- Complete art prompt generation for Ch.1 pages 30-48 (29 already exist)
-- Character reference sheet validation against concept art
-- Style guide locked as verbatim prefix
-- Webtoon output format specification confirmed
-
-**Avoids (from PITFALLS.md):**
-- Character drift (locked fingerprints tested before production)
-- Style inconsistency (style prefix locked before production)
-- Wrong aspect ratio (Webtoon spec confirmed before first panel)
-- Manual version chaos (naming convention enforced from first panel)
-
-**Research flag:** Needs phase-specific research — Gemini API image generation capabilities (aspect ratio control, available output dimensions, multimodal reference image input). Run `/gsd:research-phase` before implementation.
+5. **MPS seed non-determinism.** Seeds on MPS do not guarantee pixel-identical output the way CUDA does. Define "reproducible" in requirements as "visually consistent same-character same-pose" — not bit-exact. Store the full workflow JSON alongside every approved generation.
 
 ---
 
-### Phase 2: Assembly Tooling (Stages 4-6)
+## Critical Risks
 
-**Rationale:** Once Chapter 1 raw images are approved and in hand, Stages 4-6 can be built and tested against real data. These are deterministic Python scripts with no dependency on Gemini. Building them with real input is significantly better than building them speculatively. This phase delivers a complete publishable Chapter 1 episode.
+These risks could derail the milestone if not addressed before implementation begins:
 
-**Delivers:** Complete publishable Chapter 1 Webtoon episode — processed, lettered, assembled, Webtoon Canvas-ready.
+**Risk 1: Training never produces a usable Spyke LoRA (HIGH probability if dataset prep is skipped)**
+The project has one reference image. Training on 1-3 crops produces a LoRA that memorizes those specific pixels rather than learning Spyke's character identity. Mitigation: dataset augmentation is explicitly the first implementation work item, with a 15-20 image gate before any training is attempted.
 
-**Addresses (from FEATURES.md):**
-- Dialogue/SFX text overlay (programmatic, never AI-rendered) — CRITICAL PATH
-- Panel vertical strip assembly at Webtoon format
-- Splash/spread handling (Ch.1 p.23, p.25-26)
-- Output format compatibility with Webtoon Canvas
-- Panel QC checklist formalized
+**Risk 2: OOM kills waste multi-hour training runs (HIGH probability without hard constraints)**
+16GB unified memory is genuinely tight for SD 1.5 LoRA training. One batch-size mistake or one Chrome tab left open can kill a 4-hour run with nothing to show for it. Mitigation: encode resolution and batch size limits as validation constraints in the training API endpoint — reject non-compliant requests rather than relying on documentation.
 
-**Implements (from ARCHITECTURE.md):**
-- `post_process.py` — Stage 4: crop, resize to 800px
-- `overlay.py` — Stage 5: Pillow + manga font text overlay, dialogue_map.json input
-- `assemble.py` — Stage 6: vertical stitch into Webtoon strip
-- `dialogue_map.json` schema for Chapter 1
+**Risk 3: ComfyUI MPS performance is worse than expected (MEDIUM probability)**
+If MPS coverage has degraded or a sampler op falls back to CPU silently, 512x512 generation takes 5+ minutes instead of 45 seconds, making panel iteration painful. Mitigation: run a reference benchmark (512x512, 20 steps, Euler a, Anything V5) immediately after ComfyUI setup — before writing any pipeline integration code. Gate Phase 3 on this result.
 
-**Avoids (from PITFALLS.md):**
-- Baked-in text (programmatic overlay only)
-- Overwriting upstream artifacts (separate output directories per stage)
-- Building assembler before validating generation (Phase 1 gates this)
+**Risk 4: kohya_ss install on this specific Mac breaks in a non-obvious way (MEDIUM probability)**
+The install procedure requires manually skipping CUDA-only packages and configuring accelerate for MPS. A subtle misconfiguration (e.g., training silently falls back to CPU) produces a 10x slower run that looks like a slow MPS run. Mitigation: verify MPS is active during training by watching Activity Monitor GPU History during the first 10 steps.
 
-**Stack requirements:** Pillow 11.2.1, Python 3.11, Click 8.x, manga font files (Bangers/Wild Words/Anime Ace TTF), python-dotenv.
-
-**Research flag:** Low — Pillow text overlay and vertical assembly are well-documented. May need a quick research pass on manga-appropriate font licenses and Webtoon Canvas upload specs before finalizing output format.
+**Risk 5: v2.0 scope expands to include June/Draster LoRAs (LOW probability, HIGH impact)**
+There are no clean reference images for June or Draster. Adding those LoRAs to v2.0 would block the milestone on a separate creative task. Mitigation: explicitly scope v2.0 to Spyke LoRA only in requirements; June/Draster is a v2.1 item with a clear prerequisite (canonical reference art first).
 
 ---
 
-### Phase 3: Process Codification and Template System
+## Build Order
 
-**Rationale:** After Chapter 1 is published, the pipeline must be systematized so Chapter 2 takes less effort than Chapter 1. The manual-repetition pitfalls (copied character descriptions, copy-pasted style prefix) are replaced with a Jinja2 template system. Stages 1 and 2 are formalized as documented, reproducible Claude-assisted workflows.
+Recommended implementation sequence based on dependency analysis from ARCHITECTURE.md and pitfall analysis:
 
-**Delivers:** Template library covering all Ch.1 character blocks and style prefixes. Documented Stage 1 and Stage 2 Claude prompts with consistent I/O contracts. New character introduction workflow for Ch.2 cast (Jairek, Hector, Micki, etc.).
+**Phase 1: Environment Validation**
+Install ComfyUI, download Anything V5 checkpoint, run a 512x512 test generation via the browser UI. Run the MPS benchmark. Install ComfyUI-Manager + ComfyUI-ControlNet-Aux. This validates the entire Python/Metal stack before writing any TypeScript. Do not proceed to Phase 2 until generation is working in the browser UI and the benchmark is acceptable.
 
-**Addresses (from FEATURES.md):**
-- Prompt template library (character blocks, style guide as Jinja2 templates)
-- New character introduction workflow
-- Batch prompt generation for a full chapter in one pass
-- Narrative-to-script quality validation (lightweight check against manga-script.md rules)
-- Chapter-by-chapter repeatability
+**Phase 2: Spyke Dataset Preparation**
+Crop and augment `Spyke_Final.png` into 15-20 training images at 512px. Generate 10-15 supplementary images via the existing Gemini pipeline with varied poses/expressions. Write manual caption `.txt` files for each image (trigger word + pose + framing + background type). Generate 100-200 regularization images. This is a prerequisite for all LoRA work and gates Phase 4.
 
-**Implements (from ARCHITECTURE.md):**
-- `templates/prompt_base.j2` — Jinja2 base with character reference injection
-- `templates/character_refs.yaml` — canonical character description data
-- `config.yaml` — chapter-level configuration
-- `Makefile` — `make prompts`, `make assemble` stage shortcuts
+**Phase 3: ComfyUI + Express Integration (Core Loop)**
+Add `@stable-canvas/comfyui-client` to the pipeline. Build the Express service: ComfyUI HTTP/WS clients, workflow templates + injector, JobManager, jobs routes. Wire `generate.ts` with the `comfyui` mode. End-to-end test: `pnpm stage:generate -- --comfyui -c 1 --page 1` produces an image in `output/ch-01/raw/`.
 
-**Avoids (from PITFALLS.md):**
-- Paraphrasing the style prefix (templates enforce verbatim consistency)
-- Character fingerprint rewrite errors (canonical YAML source, not copied text)
-- Prompt complexity overload (Jinja2 templates enforce prompt structure priority order)
+At this point the pipeline works with the base SD 1.5 model. Character consistency is not yet better than Gemini — the integration plumbing is validated but the LoRA is missing.
 
-**Research flag:** Standard patterns — Jinja2 templating is well-documented. No research phase needed.
+**Phase 4: kohya_ss Installation + Spyke LoRA Training**
+Install kohya_ss in a separate Python venv. Configure accelerate for MPS. Verify MPS is active during training (Activity Monitor GPU History). Run a 50-step test to calibrate actual training speed. Train the Spyke LoRA targeting 800-1200 steps for a 15-20 image dataset. Test intermediate checkpoints; select the best-generalizing one (not necessarily the final step). This is the core v2.0 deliverable.
+
+**Phase 5: LoRA Integration + Reproducibility**
+Wire the trained Spyke LoRA into the Express service workflow templates. Implement the full generation manifest extension. Store workflow JSON alongside every approved generation. Run 3 same-seed generations and confirm "visually consistent" reproducibility. Build the `POST /train-lora` endpoint in the Express service.
+
+**Phase 6: ControlNet OpenPose (Parallel Track)**
+Download `control_v11p_sd15_openpose.pth`. Build the `img2img-lora-controlnet.json` template. Wire image upload via filesystem copy to ComfyUI's `input/` dir (simpler than `POST /upload/image`). Test with a reference panel as pose source. This track is independent and can start during Phase 3-4 or be deferred to v2.1 if timeline is tight.
 
 ---
 
-### Phase 4: API Automation (Stage 3)
+## What's Confirmed vs What Needs Verification
 
-**Rationale:** Manual copy-paste of prompts becomes the dominant bottleneck after Chapter 1 is complete. With the pipeline proven, the format validated, and the prompt templates locked, Stage 3 can be automated via the Gemini API. Rate limiting, retry logic, and cost tracking are required from the first API call — not as a later addition.
+### Confirmed (HIGH confidence — verified on this machine or stable since 2023)
 
-**Delivers:** Automated image generation — run a script with chapter and page range, receive images in the `raw/` folder without manual copy-paste.
+| Item | Evidence |
+|------|----------|
+| PyTorch 2.5.1 installed, MPS working (`mps:0` tensor ops) | Verified on machine |
+| accelerate 1.3.0, diffusers 0.32.2, transformers 4.48.1, opencv, Pillow installed | `pip show` verified |
+| `@stable-canvas/comfyui-client` v1.5.9, zero deps, ESM, typed | npm registry verified |
+| bitsandbytes and xformers are CUDA-only — must skip on Mac | Confirmed NOT installed; architecture constraint |
+| ComfyUI workflow JSON node graph format | Stable core format since 2023 |
+| KSampler seed/sampler/scheduler/steps contract for output determinism | Fundamental SD architecture |
+| LoRA minimum dataset: 15-20 images for reliable character generalization | Community consensus across multiple training guides |
+| Regularization images needed for small datasets to prevent language drift | Standard LoRA training practice |
+| WebSocket + client_id pattern for ComfyUI API | Official documented integration pattern |
+| `.safetensors` preferred over `.ckpt` (security + MPS stability) | Non-controversial, well-established |
 
-**Addresses (from FEATURES.md):**
-- Gemini API integration (listed as v2+ / P3 in features — this is the right phase)
-- Batch generation across a full chapter
-- Foundation for visual continuity automation
+### Needs Verification at Implementation Time (MEDIUM confidence)
 
-**Implements (from ARCHITECTURE.md):**
-- `generate.py` — Stage 3: reads prompt files, calls Gemini API, writes to `output/ch-NN/raw/`
-- Rate limiting with tqdm + sleep
-- API key management via python-dotenv
+| Item | How to Verify |
+|------|---------------|
+| ComfyUI install steps and current README | Check `github.com/comfyanonymous/ComfyUI` before running |
+| kohya_ss current Mac/MPS install path | Check `github.com/bmaltais/kohya_ss` — may have a Mac-specific install script now |
+| Actual generation speed on this hardware | Run benchmark: 512x512, 20 steps, Euler a, Anything V5 |
+| Actual training speed on this hardware | Run 50-step test, extrapolate with 1.4x thermal buffer |
+| ComfyUI WebSocket event names (`execution_success` vs `execution_complete`) | Check against running instance on `ws://127.0.0.1:8188/ws` |
+| ComfyUI node class names (`OpenposePreprocessor`, `LoraLoader`) | Verify via `GET /object_info` on running instance |
+| VAE fp16 behavior on PyTorch 2.5.1 MPS | Test: generate with VAE fp16 vs fp32 and compare color saturation |
+| kohya_ss progress output format for stdout parsing | Inspect actual first training run output |
+| ComfyUI-ControlNet-Aux current install method and preprocessor node names | Check current GitHub release notes |
 
-**Avoids (from PITFALLS.md):**
-- Assuming web UI and API produce identical results (must re-validate prompts on API before assuming parity)
-- Ignoring Gemini rate limits (rate limiting built in from first implementation)
-- Losing prompt-to-image traceability (API run logs the exact prompt and model version used)
+### Intentionally Out of Scope for v2.0
 
-**Stack requirements:** google-generativeai (>=0.8), tqdm 4.x, python-dotenv.
-
-**Research flag:** Needs phase-specific research — Gemini API image generation endpoint, model ID, rate limits, authentication, multimodal reference image input capability. Run `/gsd:research-phase` before implementation. Confirm API access is available and image generation quota is not restricted before scoping this phase.
-
----
-
-### Phase 5: Scale to Chapter 2 and Beyond
-
-**Rationale:** The pipeline is proven when Chapter 2 produces publishable output with less manual effort than Chapter 1. This phase runs the full automated pipeline on Chapter 2, incorporates new characters, and surfaces any remaining friction that only appears at scale.
-
-**Delivers:** Chapter 2 published on Webtoon. Validated that the pipeline scales across chapters. New character introduction workflow exercised for Ch.2 cast.
-
-**Addresses (from FEATURES.md):**
-- Chapter-by-chapter repeatability validated
-- New character introduction workflow (Jairek is Ch.2's main new character)
-- Visual continuity checking at chapter scale
-
-**Avoids (from PITFALLS.md):**
-- Prompt fatigue from generating full chapter in one session (batch in groups of 5-10 panels with review)
-- Regenerating failed panels mid-assembly after style drift (versioned style fingerprint file enforced)
-- Full-resolution storage explosion (export approved panels to optimized WebP before assembly)
-
-**Research flag:** Standard patterns — if Phase 3 templates and Phase 4 API automation are solid, this phase is execution, not research.
-
----
-
-### Phase Ordering Rationale
-
-- **Validation before automation:** Phase 1 (validate generation quality) gates Phase 4 (automate generation). Building API automation before knowing if Gemini produces acceptable art is waste.
-- **Test data for tooling:** Phase 2 (assembly tooling) requires real panel images as test input. Running Phase 2 after Phase 1 means building scripts with real data, not speculative data.
-- **Stabilize before systematizing:** Phase 3 (template system) is more effective after one full manual chapter is complete. Templates are extracted from validated prompts, not designed speculatively.
-- **Critical path item:** The dialogue overlay approach (Phase 2) must be decided and tested before Phase 1 generates all panels, because the decision affects whether panels are generated with blank balloon shapes or as pure art. This is the one cross-phase dependency that requires an early decision even before Phase 2 tooling is built.
-
-### Research Flags
-
-**Needs `/gsd:research-phase` before planning:**
-- **Phase 1:** Gemini API image generation capabilities — aspect ratio control, actual output dimensions, multimodal reference image input, model ID, API access status for image generation
-- **Phase 4:** Gemini API authentication, rate limits, image generation quota, cost model, web UI vs. API output parity
-
-**Standard patterns — skip research-phase:**
-- **Phase 2:** Pillow text overlay, vertical image stitching, ImageDraw font rendering — well-documented Python standard library usage
-- **Phase 3:** Jinja2 templating, PyYAML/TOML configuration, Makefile targets — established patterns
-- **Phase 5:** Execution of validated pipeline — no new technology
+| Item | Reason |
+|------|--------|
+| June/Draster LoRA training | No canonical reference images exist; training on Gemini concept art encodes drift |
+| SDXL/Flux models | M1 Pro 16GB cannot train SDXL LoRAs; future hardware upgrade path |
+| Cloud GPU training | Out of scope for v2.0 local-first design |
+| A1111 (Automatic1111) | Poor Apple Silicon support; ComfyUI is the correct choice |
 
 ---
 
@@ -265,51 +204,47 @@ Based on the combined research, the architecture's suggested build order maps cl
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM | Core tools (Python 3.11, Pillow 11.2.1) confirmed installed. Gemini model name ("Nano Banana") observed in repo but specific API endpoint, output dimensions, and API access status unverified. google-generativeai SDK MEDIUM confidence — verify version and image generation capability at install time. |
-| Features | HIGH (table stakes) / MEDIUM (format specs) | Table stakes features are grounded directly in existing project artifacts. Webtoon Canvas format specs (800px wide, JPG/PNG, ~20MB) based on training knowledge — must verify at creators.webtoons.com before finalizing assembly step. |
-| Architecture | MEDIUM | Architecture inferred from direct inspection of existing pipeline artifacts and domain patterns. Six-stage linear chain is sound. Dialogue map schema is original design — no external validation. Pillow API for overlay and assembly is well-documented. |
-| Pitfalls | HIGH (character/text) / MEDIUM (others) | Character drift and text-in-image pitfalls have direct first-hand evidence from this repo's concept art generation attempts (June's color errors, Spyke's age metadata errors). Other pitfalls based on training data and domain knowledge. |
+| Stack | MEDIUM-HIGH | npm packages verified against registry; Python packages verified on machine; ComfyUI/kohya_ss install steps are training data — verify at repos before executing |
+| Features | MEDIUM | Feature list and node architecture are well-understood; specific node class names must be verified against running ComfyUI instance via `/object_info` |
+| Architecture | MEDIUM-HIGH | Integration pattern is standard (Express sidecar + polling); existing pipeline codebase was directly inspected; ComfyUI API shape is well-documented |
+| Pitfalls | HIGH | Memory math is deterministic; MPS constraints are fundamental hardware limits; LoRA dataset requirements are community consensus; WebSocket race condition is the documented integration pattern |
 
-**Overall confidence:** MEDIUM
+**Overall confidence: MEDIUM.** The design is solid and the risks are well-identified. The primary uncertainty is operational: actual MPS performance and current kohya_ss install behavior on this specific machine. Both are resolved with a hardware validation phase before building integration code.
 
-### Gaps to Address
+### Gaps to Address in Requirements
 
-- **Gemini API image generation access:** PROJECT.md states API access status is unknown. Confirm before scoping Phase 4. If API image generation is not available or is restricted, Phase 4 timeline shifts significantly. This is the single largest unknown.
-
-- **Webtoon Canvas output specifications:** Width (800px) is well-established. Max file size per episode, exact supported pixel dimensions for tall strips, and whether Webtoon accepts WebP vs. PNG only — verify against official Webtoon Canvas creator documentation before finalizing the assembly step in Phase 2.
-
-- **Dialogue overlay implementation:** Two approaches remain valid (programmatic overlay on pure art panels vs. Gemini-prompted blank balloon shapes + overlay). The decision is made in principle (programmatic overlay always), but the specific implementation — SVG balloon shapes, Pillow ImageDraw rounded rectangles, or pre-designed balloon templates — needs a spike in Phase 2 before all Phase 1 panels are finalized.
-
-- **Gemini output aspect ratio control:** It is unknown whether Gemini 2.0 Flash Experimental supports specifying output dimensions or aspect ratio in the prompt or API parameters. This affects the Phase 1 format specification and whether programmatic cropping/resizing is required at Stage 4 or can be avoided.
-
-- **Ch.1 pages 30-48 prompts:** 29 of 48 Chapter 1 page prompts are written. The remaining 19 pages are required to complete Phase 1. This is a known gap, not a research question — it is scoped work.
+- **Define "reproducible"** explicitly as "visually consistent same-character same-pose" (not pixel-identical). MPS non-determinism makes pixel-identical impractical; visually consistent is sufficient for manga production.
+- **Specify the Spyke dataset minimum** (15-20 images) as a hard requirement gate before training is scheduled — not a soft guideline.
+- **Encode M1 Pro hardware limits as API constraints**: training endpoint rejects batch_size > 1; generation defaults to 512x768 max.
+- **Scope v2.0 explicitly to Spyke LoRA only**: June/Draster require canonical reference art creation first (separate creative milestone).
+- **Decide img2img base image upload method**: filesystem copy to `[COMFYUI_DIR]/input/` vs `POST /upload/image` API call — choose before designing Express service input handling.
 
 ---
 
 ## Sources
 
-### Primary (HIGH confidence)
-- `/Users/dondemetrius/Code/plasma/.planning/PROJECT.md` — pipeline stages, constraints, stated goals
-- `/Users/dondemetrius/Code/plasma/03_manga/chapter-01-script.md` — panel script structure
-- `/Users/dondemetrius/Code/plasma/03_manga/manga-script.md` — scripting rules and format
-- `/Users/dondemetrius/Code/plasma/03_manga/prompts/character-sheets.md` — character reference prompts (Spyke, June, Draster, Hood, Punks)
-- `/Users/dondemetrius/Code/plasma/03_manga/prompts/pages-01-to-15.md`, `pages-16-to-29.md` — established Gemini prompt format and page-level generation pattern
-- `/Users/dondemetrius/Code/plasma/03_manga/concept/characters/` — concept art images (direct evidence of character drift, color misinterpretation, age metadata errors)
-- `pip show pillow` — Pillow 11.2.1 confirmed installed on system
-- Python 3.11.9 — confirmed via pyenv on system
+### Verified on this machine (HIGH confidence)
+- Python 3.11.9, PyTorch 2.5.1 with MPS confirmed working (`tensor([1.], device='mps:0')`)
+- accelerate 1.3.0, diffusers 0.32.2, transformers 4.48.1, opencv-python 4.11.0.86, Pillow 11.2.1
+- `@stable-canvas/comfyui-client` v1.5.9 (npm registry — zero deps, ESM, typed)
+- `comfyui-sdk` rejected (Tencent Cloud SDK as transitive dep — confirmed via npm registry)
+- `Spyke_Final.png` at `03_manga/concept/` — single high-quality reference image confirmed by file inspection
+- Existing pipeline codebase: `generate.ts`, `gemini-client.ts`, `generation.ts` types, `cli.ts` — directly inspected for architecture fit
 
-### Secondary (MEDIUM confidence)
-- google-generativeai SDK — training data; version and image generation capability require verification at install time
-- Gemini 2.0 Flash Experimental native image generation — training data; "Nano Banana" model reference observed in repo consistent with this model
-- Webtoon format (800px wide, vertical scroll) — well-established creator guidelines, MEDIUM confidence on exact current specs
-- Pillow vertical concatenation and ImageDraw for text overlay — training data, well-documented Python library
+### Training data (MEDIUM confidence, cutoff Aug 2025)
+- ComfyUI workflow JSON node graph format and API endpoints
+- kohya_ss SD 1.5 LoRA training parameters and Mac/MPS constraints
+- ControlNet model file locations (HuggingFace `lllyasviel/ControlNet-v1-1`)
+- Anime checkpoint recommendations (Anything V5, Counterfeit V3.0)
+- Apple Silicon PyTorch MPS behavior (fp16 correctness, memory limits, thermal throttling)
+- LoRA training best practices (dataset size, captioning, regularization, overfitting detection)
 
-### Tertiary (LOW confidence — needs validation)
-- Webtoon Canvas max file size and supported format specs — training data only; must verify at creators.webtoons.com
-- Gemini API output aspect ratio specification capability — unknown; requires implementation-time research
-- Gemini API image generation quota and rate limits — unknown; requires confirmed API access to verify
-- Gemini image-to-image reference input in API — unknown; if available, significantly improves character consistency in Phase 4
+### Needs live verification (before implementation)
+- `github.com/comfyanonymous/ComfyUI` — current install steps
+- `github.com/bmaltais/kohya_ss` — current Mac/MPS install path
+- Running ComfyUI instance — WebSocket event names, node class names, API response shapes
 
 ---
-*Research completed: 2026-02-18*
+
+*Research completed: 2026-02-19*
 *Ready for roadmap: yes*

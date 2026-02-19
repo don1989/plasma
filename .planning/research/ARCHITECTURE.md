@@ -1,422 +1,614 @@
-# Architecture Research
+# Architecture Research: ComfyUI + LoRA Pipeline
 
-**Domain:** AI manga production pipeline (story-to-Webtoon)
-**Researched:** 2026-02-18
-**Confidence:** MEDIUM — Architecture inferred from existing project artifacts and domain knowledge. Web research tools unavailable; findings based on direct inspection of existing pipeline artifacts and general AI image pipeline patterns. Flag: validate image assembly tooling choices before implementation.
-
----
-
-## Standard Architecture
-
-### System Overview
-
-The pipeline is a **linear transformation chain** — each stage produces artifacts consumed by the next. No stage needs to know about stages beyond its immediate input and output. This makes the pipeline testable in isolation and replaceable at any stage (e.g., swapping Gemini for a different generator later without touching the assembler).
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                     SOURCE LAYER (Existing)                       │
-├───────────────┬──────────────────┬───────────────────────────────┤
-│  Plasma.md    │   01_bible/      │   03_manga/                   │
-│  (story)      │   (canon rules)  │   (manga-script.md,           │
-│               │                  │    dialogue-pass.md,           │
-│               │                  │    prompts/character-sheets.md)│
-└───────┬───────┴────────┬─────────┴───────────────────────────────┘
-        │                │
-        ▼                ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    STAGE 1: SCRIPT GENERATOR                      │
-│   Input:  Story chapter (Plasma.md Ch.N) + story bible           │
-│   Output: Panel-by-panel manga script                             │
-│   Tool:   Claude (structured prompt using manga-script.md rules) │
-│   Format: 03_manga/chapter-NN-script.md                          │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    STAGE 2: PROMPT GENERATOR                      │
-│   Input:  chapter-NN-script.md + character-sheets.md             │
-│   Output: Gemini-optimized art prompts, one per page             │
-│   Tool:   Claude (structured expansion of panel notes)           │
-│   Format: 03_manga/prompts/ch-NN-pages-XX-to-YY.md              │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼ (manual hand-off initially)
-┌──────────────────────────────────────────────────────────────────┐
-│                    STAGE 3: IMAGE GENERATOR                       │
-│   Input:  Art prompts (copy-pasted to Gemini / API call)         │
-│   Output: Raw PNG images, one per page                            │
-│   Tool:   Gemini (Imagen backend)                                 │
-│   Format: 03_manga/raw/ch-NN/page-XX.png                         │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    STAGE 4: POST-PROCESSOR                        │
-│   Input:  Raw page images                                         │
-│   Output: Cropped, resized, consistency-checked images           │
-│   Tool:   Python (Pillow) or manual review                        │
-│   Format: 03_manga/processed/ch-NN/page-XX.png                   │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    STAGE 5: DIALOGUE OVERLAY                      │
-│   Input:  Processed images + dialogue from script                 │
-│   Output: Images with speech balloons / text overlaid            │
-│   Tool:   Python (Pillow + font rendering) or Webtoon Studio     │
-│   Format: 03_manga/lettered/ch-NN/page-XX.png                    │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    STAGE 6: WEBTOON ASSEMBLER                     │
-│   Input:  Lettered images (all pages for chapter)                │
-│   Output: Single tall vertical-scroll image strip per chapter    │
-│   Tool:   Python (Pillow vertical stitch)                         │
-│   Format: 03_manga/output/ch-NN-webtoon.png (or series of PNGs)  │
-└──────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### Component Responsibilities
-
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| Script Generator | Convert prose narrative to structured panel scripts with shot types, dialogue, SFX, composition notes | Claude with manga-script.md as system context |
-| Prompt Generator | Expand panel scripts into self-contained Gemini art prompts with full character descriptions embedded | Claude with character-sheets.md injected |
-| Image Generator | Produce panel art from prompts | Gemini (manual copy-paste or Gemini API) |
-| Post-Processor | Resize to consistent Webtoon width (800px), crop bad generations, flag consistency failures | Python/Pillow; manual review gate |
-| Dialogue Overlay | Place speech balloons, thought bubbles, SFX text, and narration boxes onto panel images | Python/Pillow with custom font rendering; or Clip Studio/Webtoon Studio for manual phase |
-| Webtoon Assembler | Stitch individual panel images into a single vertical-scroll strip optimized for mobile reading | Python/Pillow vertical concatenation |
-
----
-
-## Recommended Project Structure
-
-This structure extends the existing repo without disrupting existing organization:
-
-```
-plasma/
-├── 01_bible/                    # Existing — canon, unchanged
-├── 02_planning/                 # Existing — outlines, unchanged
-├── 03_manga/
-│   ├── manga-script.md          # Existing — scripting rules
-│   ├── dialogue-pass.md         # Existing — voice profiles
-│   ├── chapter-01-script.md     # Existing — Ch.1 panel script
-│   ├── prompts/
-│   │   ├── character-sheets.md  # Existing — character reference prompts
-│   │   ├── pages-01-to-15.md    # Existing — Ch.1 prompts
-│   │   └── pages-16-to-29.md    # Existing — Ch.1 prompts
-│   ├── concept/                 # Existing — concept art images
-│   └── pipeline/                # NEW — pipeline tooling
-│       ├── scripts/             # Python scripts for each stage
-│       │   ├── post_process.py  # Stage 4: crop/resize
-│       │   ├── overlay.py       # Stage 5: dialogue overlay
-│       │   └── assemble.py      # Stage 6: webtoon stitch
-│       ├── fonts/               # Font files for text overlay
-│       ├── config/
-│       │   └── webtoon.json     # Target dimensions, margins, font sizes
-│       └── README.md            # Pipeline operation guide
-├── output/                      # NEW — final deliverables by chapter
-│   └── ch-01/
-│       ├── raw/                 # Stage 3 output: raw Gemini images
-│       ├── processed/           # Stage 4 output: cropped/resized
-│       ├── lettered/            # Stage 5 output: dialogue overlaid
-│       └── webtoon/             # Stage 6 output: final strip(s)
-```
-
-### Structure Rationale
-
-- **`03_manga/pipeline/`:** Keeps tooling co-located with manga production assets. The pipeline scripts are not a standalone app — they are tools serving the manga workflow.
-- **`output/ch-NN/` per chapter:** Preserves all intermediate stages. This is critical: if Stage 6 assembly fails, you have the lettered images. If Stage 5 dialogue needs a fix, you have the processed images. Never overwrite upstream stages.
-- **Flat prompt files per chapter range:** Matches existing `pages-01-to-15.md` pattern. One file per ~15 pages is manageable for manual copy-paste workflow without being overwhelming.
-
----
-
-## Architectural Patterns
-
-### Pattern 1: Self-Contained Prompts (CHARACTER EMBEDDING)
-
-**What:** Every Gemini art prompt includes the full character visual description inline, not by reference. The prompt is a standalone document readable by Gemini with no surrounding context.
-
-**When to use:** Always — for every panel prompt. Gemini has no session memory. Each generation call is stateless.
-
-**Trade-offs:** Prompts are verbose (200-400 words each). This is the correct trade-off: verbose prompts that work beat short prompts that produce inconsistent characters.
-
-**Example (from existing `pages-01-to-15.md`):**
-```
-Colored manga page, cel-shaded, clean linework, vibrant colors, dynamic panel layout.
-
-PANEL 3 (MEDIUM-WIDE — bottom right): A young man (age 21) — Spyke (spiky ginger hair
-with tips reaching his traps, red bandana tied in his hair with tails trailing, green eyes,
-white knee-length cloak with sleeves cut and a decorative pattern along the bottom hem
-flowing behind him as he runs, a dojo emblem visible on the cloak's back, red fingerless
-glove on left hand with red bracer on left wrist, armoured full-fingered steel grey glove
-on right hand...)
-```
-
-This is the pattern already established and validated in the existing repo. Build on it.
-
----
-
-### Pattern 2: One Page Per Generation Call (PAGE-LEVEL GRANULARITY)
-
-**What:** Each Gemini call generates one manga page (multi-panel layout described in the prompt). Not one panel per call, not one chapter per call.
-
-**When to use:** Default. Generating a full page produces coherent panel composition and natural panel-to-panel flow within a page. Generating individual panels loses inter-panel spatial relationships.
-
-**Trade-offs:** Some pages will have one panel that's wrong. Accept this — the regeneration cost of one bad page is lower than the complexity of stitching individually generated panels.
-
-**Exception:** Splash pages (single full-page panel) and key character reference shots may warrant individual panel calls for maximum quality.
-
----
-
-### Pattern 3: Intermediate Artifact Preservation (NEVER DESTRUCTIVE)
-
-**What:** Each pipeline stage writes to its own output folder and never overwrites upstream artifacts. Processing is always additive.
-
-**When to use:** Always. The pipeline produces expensive artifacts (AI-generated images). Overwriting `raw/` with `processed/` would destroy work that may take hours to regenerate.
-
-**Trade-offs:** More disk space. Acceptable — manga pages are typically 1-3MB PNG files. A full 15-chapter run is manageable on a modern machine.
-
-```
-output/ch-01/raw/page-01.png     → kept forever
-output/ch-01/processed/page-01.png → kept forever
-output/ch-01/lettered/page-01.png  → kept forever
-output/ch-01/webtoon/ch-01.png     → final deliverable
-```
-
----
-
-### Pattern 4: Manual Checkpoint Gates (HUMAN-IN-THE-LOOP)
-
-**What:** The pipeline has explicit human review gates between image generation (Stage 3) and post-processing (Stage 4), and between post-processing and dialogue overlay (Stage 5).
-
-**When to use:** Always in the initial manual workflow. These gates exist because AI-generated images require human judgment calls: Is this panel close enough? Does Spyke's hair look right? Is this scene too dark?
-
-**Trade-offs:** Slower throughput. This is appropriate — quality control is the hardest problem in AI manga production.
-
-**Operationally:** Implement as a simple review folder + a `manifest.json` or checklist file per chapter that tracks which pages have been approved at each stage.
+**Domain:** Local AI image generation service — ComfyUI + LoRA integration for TypeScript manga pipeline
+**Researched:** 2026-02-19
+**Confidence:** MEDIUM — ComfyUI API behaviour based on training data (cutoff Aug 2025) + direct inspection of existing pipeline codebase. WebSearch/WebFetch unavailable. Verify ComfyUI API endpoint shape at `http://127.0.0.1:8188/` before implementing.
 
 ---
 
 ## Data Flow
 
-### Full Chapter Flow (Manual Workflow)
-
 ```
-[Plasma.md Ch.N]
-      +
-[01_bible/ + manga-script.md rules]
-      |
-      ▼ Claude (Stage 1)
-[03_manga/chapter-NN-script.md]
-      |
-      ▼ Claude (Stage 2)
-[03_manga/prompts/ch-NN-pages-XX-to-YY.md]
-      |
-      ▼ MANUAL: Copy-paste to Gemini UI, save images
-[output/ch-NN/raw/page-XX.png × N pages]
-      |
-      ▼ HUMAN REVIEW GATE
-      |
-      ▼ Post-process script (Stage 4)
-[output/ch-NN/processed/page-XX.png × N pages]
-      |
-      ▼ HUMAN REVIEW GATE (approve dialogue positions)
-      |
-      ▼ Overlay script (Stage 5)
-[output/ch-NN/lettered/page-XX.png × N pages]
-      |
-      ▼ Assemble script (Stage 6)
-[output/ch-NN/webtoon/ch-NN-strip-01.png ... ch-NN-strip-K.png]
-      |
-      ▼ PUBLISH
-[Webtoon platform upload]
-```
-
-### Dialogue Data Flow (Stage 5 Detail)
-
-Dialogue does NOT live inside the AI-generated images. This is the critical decision — baking text into Gemini prompts produces garbled, unreadable, or hallucinated text. TEXT MUST BE OVERLAID PROGRAMMATICALLY.
-
-```
-[chapter-NN-script.md]
-      ↓ parse dialogue by page/panel
-[dialogue_map.json]  — {page: 01, panel: 3, speaker: "SPYKE", text: "Shit. I'm gonna be late..."}
-      +
-[output/ch-NN/processed/page-01.png]
-      |
-      ▼ overlay.py (place speech balloon SVG + text)
-[output/ch-NN/lettered/page-01.png]
+CLI (pipeline/src/cli.ts)
+    │
+    │  pnpm stage:generate -- --comfyui -c 1 --page 3
+    ▼
+generate.ts (stage)
+    │  mode = 'comfyui'
+    │  reads prompt file: output/ch-01/prompts/page-03.txt
+    │  reads base image (optional): output/ch-01/processed/ch01_p003_v1.png
+    ▼
+comfyui-client.ts  (new, replaces gemini-client.ts for this mode)
+    │  POST http://localhost:3000/jobs
+    │  body: { promptText, chapter, page, version, baseImagePath? }
+    ▼
+Express service  (pipeline/service/)
+    │
+    ├── POST /jobs  → JobManager.enqueue(job)
+    │       │
+    │       ▼  immediately returns { jobId, status: 'queued' }
+    │
+    ├── GET  /jobs/:id  → returns { status, outputPath?, error? }
+    │
+    └── JobManager (in-memory queue, single active job)
+            │
+            │  1. resolve workflow template for job type
+            │  2. inject prompt text, LoRA name, ControlNet image
+            │  3. POST http://127.0.0.1:8188/prompt  { prompt: workflowJSON, client_id }
+            │  4. listen on WebSocket ws://127.0.0.1:8188/  for execution events
+            │  5. on "executed" event: GET http://127.0.0.1:8188/view?filename=&subfolder=&type=output
+            │  6. copy image to ./outputs/images/<jobId>.png
+            │  7. write ./outputs/images/<jobId>.json  (metadata)
+            │  8. mark job complete
+            ▼
+output/ch-01/raw/ch01_p003_v2.png   (copied back by generate.ts after polling)
+output/ch-01/generation-log.json    (manifest updated by generate.ts)
 ```
 
-### API Upgrade Path (Future)
-
-When the Gemini API is integrated, Stage 3 transitions from manual to automated. The pipeline structure does not change — only the implementation of Stage 3 changes from "human copies prompt to UI" to "Python calls `google-genai` SDK with prompt string."
+**LoRA training data flow (separate from generation):**
 
 ```
-[Stage 2 output: prompt files]
-      ↓ read prompt text
-      ↓ POST to Gemini API (google-genai Python SDK)
-      ↓ receive base64 image
-      ↓ write to output/ch-NN/raw/page-XX.png
-[Same downstream stages]
+CLI
+    │  pnpm stage:train-lora -- --character kael --images ./ref-images/kael/
+    ▼
+Express service
+    │
+    ├── POST /loras/train  → spawn kohya_ss child process
+    │       │  streams stdout/stderr to ./outputs/logs/<jobId>.log
+    │       │  returns { loraJobId, status: 'training' }
+    │
+    ├── GET  /loras/:id/status  → { status, progress?, outputPath? }
+    │
+    └── kohya_ss exits → .safetensors written to ComfyUI models/loras/
+                          → POST /loras/:id complete
 ```
 
 ---
 
-## Scaling Considerations
+## New Components
 
-This is a single-author production pipeline, not a multi-user platform. Scaling considerations apply to pipeline throughput, not concurrent users.
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| Ch.1 (29 pages) | Manual workflow is fine. All stages can run sequentially in one session. No automation needed to validate quality. |
-| Ch.1-5 (~150 pages) | Manual workflow becomes painful. Stage 3 automation (Gemini API) is the first priority. Post-processing batch script becomes essential. |
-| Ch.1-15 (~750 pages) | API automation required for all scriptable stages. Consider a simple task queue (JSON file tracking page status) to track pipeline state across sessions. A dedicated pipeline runner script (`run_chapter.py`) that orchestrates all stages becomes valuable. |
-
-### Scaling Priorities
-
-1. **First bottleneck: Stage 3 (image generation).** Manual copy-paste of 29 prompts per chapter is the dominant time cost. Automate this first when Gemini API access is confirmed.
-2. **Second bottleneck: Stage 5 (dialogue overlay).** Manual balloon placement is tedious at scale. A programmatic overlay with configurable balloon positions (read from `dialogue_map.json`) is the right investment after Stage 3 automation.
-3. **Not a bottleneck: Stages 1-2.** Claude is fast. Generating the script and prompts for a chapter takes one session regardless of chapter count.
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Generate Text Inside the AI Image
-
-**What people do:** Include speech balloon text and dialogue directly in the Gemini prompt, expecting the model to render readable text inside panels.
-
-**Why it's wrong:** Gemini (Imagen) and all current diffusion-based image models cannot reliably render coherent text strings. The result is garbled, misspelled, or hallucinated text that must be manually corrected or regenerated — which costs more time than programmatic overlay.
-
-**Do this instead:** Instruct Gemini prompts to leave speech balloon areas blank or show empty balloon shapes. Extract dialogue from the script file programmatically and overlay it with Python/Pillow using a manga-appropriate font (e.g., Bangers, Wild Words, or Anime Ace). This is the industry-standard approach for AI-assisted manga production.
+| Component | Path | Responsibility |
+|-----------|------|----------------|
+| Express service entry | `pipeline/service/index.ts` | Bootstrap Express app, mount routes, start HTTP server on port 3000 |
+| Jobs router | `pipeline/service/routes/jobs.ts` | `POST /jobs`, `GET /jobs/:id` — image generation jobs |
+| LoRA router | `pipeline/service/routes/loras.ts` | `POST /loras/train`, `GET /loras/:id/status` — training jobs |
+| JobManager | `pipeline/service/job-manager.ts` | In-memory job queue, single-worker serial execution, job state map |
+| ComfyUI HTTP client | `pipeline/service/comfyui/http-client.ts` | `submitWorkflow(workflowJSON)`, `getImage(filename, subfolder, type)` wrappers around fetch |
+| ComfyUI WebSocket client | `pipeline/service/comfyui/ws-client.ts` | Connect to `ws://127.0.0.1:8188/`, emit events when jobs complete or error |
+| Workflow template loader | `pipeline/service/workflows/loader.ts` | Load JSON template files, return parsed objects for injection |
+| Workflow injector | `pipeline/service/workflows/injector.ts` | Fill node inputs (prompt, LoRA name, ControlNet image path, seed) into template object |
+| Workflow templates (JSON) | `pipeline/service/workflows/*.json` | Static workflow definitions: `txt2img-lora.json`, `img2img-lora-controlnet.json` |
+| kohya_ss runner | `pipeline/service/training/kohya-runner.ts` | `spawnTraining(config)` — child_process.spawn, log streaming, completion detection |
+| Pipeline ComfyUI client | `pipeline/src/generation/comfyui-client.ts` | Called by `generate.ts` — POSTs job to Express service, polls until done, copies image to raw/ |
 
 ---
 
-### Anti-Pattern 2: One Panel Per Generation Call
+## Modified Components
 
-**What people do:** Generate each panel individually, then stitch panels into a page layout.
+| File | Nature of Change | What Changes |
+|------|-----------------|--------------|
+| `pipeline/src/stages/generate.ts` | Additive — new mode branch | Add `mode === 'comfyui'` branch that calls `comfyui-client.ts` instead of `gemini-client.ts`. Existing `manual` and `api` branches remain untouched. |
+| `pipeline/src/cli.ts` | Additive — new flags | Add `--comfyui` flag to the `generate` command. Add new `train-lora` subcommand. |
+| `pipeline/src/types/generation.ts` | Additive — new field | Add `generationBackend: 'gemini' | 'comfyui' | 'manual'` field to `GenerationLogEntry`. Existing entries without this field are treated as `'manual'`. |
+| `pipeline/src/config/defaults.ts` | Additive — new constants | Add `DEFAULT_COMFYUI_SERVICE_URL = 'http://localhost:3000'` and `DEFAULT_COMFYUI_PORT = 8188`. |
+| `pipeline/.env` | New key added | Add `COMFYUI_SERVICE_URL=http://localhost:3000` (optional override). |
 
-**Why it's wrong:** Individual panel generation loses the page-level composition — relative sizes, panel borders, panel flow direction. Stitching individually-generated panels into a coherent page layout is significantly harder than having the model compose the full page in one generation. Panel borders and spacing become inconsistent.
-
-**Do this instead:** Describe the full page layout in one prompt (as already established in `pages-01-to-15.md`). Use panel-level generation only for splash pages or key hero shots where quality of a single panel matters more than page composition.
-
----
-
-### Anti-Pattern 3: Overwrite Upstream Artifacts
-
-**What people do:** Post-process images in-place, writing processed output back to the raw image path.
-
-**Why it's wrong:** If post-processing introduces a problem (wrong crop, bad resize), the original raw image is gone. Regenerating from Gemini costs API quota, time, and may not produce the same output. Intermediate artifacts are expensive.
-
-**Do this instead:** Always write to a new folder for each stage (`raw/`, `processed/`, `lettered/`, `webtoon/`). Disk space is cheap; AI image generation is not.
+**gemini-client.ts is NOT deleted or modified.** The Gemini API mode (`--api`) continues to work. ComfyUI is a new alternative mode, not a replacement.
 
 ---
 
-### Anti-Pattern 4: Character Sheet as Separate Reference (Not Embedded)
+## Express Service Structure
 
-**What people do:** Keep a single character reference image and instruct the model to reference it, assuming Gemini maintains visual consistency from a reference sheet.
+### Directory Layout
 
-**Why it's wrong:** Without fine-tuning or a reference image injection in every call, Gemini has no memory of previous character appearances. A character reference sheet image can be injected as a multi-modal input alongside text prompts — but this requires API access and proper implementation. Before API access, the only reliable consistency strategy is dense text description embedded in every prompt.
+```
+pipeline/service/
+├── index.ts                          # app bootstrap, listen on PORT (default 3000)
+├── routes/
+│   ├── jobs.ts                       # POST /jobs, GET /jobs/:id
+│   └── loras.ts                      # POST /loras/train, GET /loras/:id/status
+├── job-manager.ts                    # in-memory job state, serial queue
+├── comfyui/
+│   ├── http-client.ts                # thin fetch wrappers for ComfyUI REST API
+│   └── ws-client.ts                  # WebSocket client for execution events
+├── workflows/
+│   ├── loader.ts                     # read + parse JSON templates from disk
+│   ├── injector.ts                   # fill node inputs into template
+│   ├── txt2img-lora.json             # SD 1.5 text-to-image + LoRA template
+│   └── img2img-lora-controlnet.json  # SD 1.5 img2img + LoRA + ControlNet template
+├── training/
+│   └── kohya-runner.ts               # spawn kohya_ss training process
+├── outputs/                          # runtime output directory (gitignored)
+│   ├── images/                       # <jobId>.png, <jobId>.json
+│   ├── loras/                        # symlinks or copies of trained .safetensors
+│   └── logs/                         # <jobId>.log for training jobs
+└── package.json                      # separate from pipeline/ package.json
+```
 
-**Do this instead:** Embed the full character visual description text in every prompt (already done in the existing prompts). When API access is available, inject the approved concept art image alongside the text description as a multi-modal reference in each generation call.
+### Route Contracts
+
+```
+POST /jobs
+  Body: {
+    promptText: string,       // full art prompt text
+    chapter: number,
+    page: number,
+    version: number,
+    workflowType: 'txt2img-lora' | 'img2img-lora-controlnet',
+    loraName?: string,        // filename without extension, e.g. "kael-v2"
+    baseImagePath?: string,   // absolute path to ControlNet/img2img source
+    seed?: number             // omit for random
+  }
+  Response 202: { jobId: string, status: 'queued' }
+  Response 503: { error: 'ComfyUI not reachable' }
+
+GET /jobs/:id
+  Response 200: {
+    jobId: string,
+    status: 'queued' | 'running' | 'complete' | 'failed',
+    outputPath?: string,      // absolute path to .png when complete
+    error?: string,
+    durationMs?: number
+  }
+  Response 404: { error: 'Job not found' }
+
+POST /loras/train
+  Body: {
+    characterId: string,
+    imageDir: string,         // absolute path to training images folder
+    baseModel: string,        // e.g. "v1-5-pruned-emaonly.ckpt"
+    steps?: number            // default 1500
+  }
+  Response 202: { loraJobId: string, status: 'training' }
+
+GET /loras/:id/status
+  Response 200: {
+    loraJobId: string,
+    status: 'training' | 'complete' | 'failed',
+    outputPath?: string,      // path to .safetensors when complete
+    progress?: number,        // 0-100 parsed from kohya stdout
+    logPath: string           // path to streaming log file
+  }
+```
+
+### Middleware Stack
+
+```typescript
+app.use(express.json({ limit: '1mb' }))   // body parsing
+app.use(requestLogger)                     // simple console logging
+app.use('/jobs', jobsRouter)
+app.use('/loras', lorasRouter)
+app.use(errorHandler)                      // catches unhandled errors, returns 500
+```
 
 ---
 
-### Anti-Pattern 5: Building the Assembler Before Validating Generation Quality
+## ComfyUI Workflow JSON Structure
 
-**What people do:** Build the full pipeline (all 6 stages automated) before generating and reviewing a single chapter manually.
+ComfyUI workflow JSON uses a **node graph format** — each node has a numeric string ID, a `class_type`, and `inputs`. Node inputs can reference another node's output via `["nodeId", outputIndex]`.
 
-**Why it's wrong:** If Stage 3 produces unusable output (wrong style, wrong characters, garbled panels), stages 4-6 are wasted engineering. The pipeline's value depends entirely on acceptable generation quality, which must be empirically validated before automation is built.
-
-**Do this instead:** Build and validate Stage 3 manually (copy-paste workflow) first. Get one full chapter's pages to a state you'd publish. Then build stages 4-6 automation. This is the correct build order.
-
----
-
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Gemini (Imagen) — manual | Copy-paste text prompt to Gemini web UI; save output PNG | Current workflow. No API key required. Rate limited by manual throughput. |
-| Gemini API (`google-generativeai` Python SDK) | POST prompt + optional reference image; receive base64 PNG; write to file | Future workflow. Requires Gemini Pro API key. Image generation via `gemini-2.0-flash-exp` or Imagen 3 model. Confidence: MEDIUM — verify current image generation API endpoint and model ID before implementing. |
-| Webtoon Platform | Manual upload of final assembled strips via Creator Studio web UI | Webtoon has no public API for programmatic upload as of training cutoff. Confirm before automating upload step. |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Stage 1 → Stage 2 | File read (`chapter-NN-script.md`) | Stage 2 only reads Stage 1 output; no shared state |
-| Stage 2 → Stage 3 | File read (`prompts/ch-NN-pages-XX-YY.md`) | Human manually opens file and copies prompts to Gemini in current workflow |
-| Stage 3 → Stage 4 | File system (`output/ch-NN/raw/`) | Human downloads images from Gemini UI and places in `raw/` folder |
-| Stage 4 → Stage 5 | File system (`output/ch-NN/processed/` + `dialogue_map.json`) | Dialogue data extracted from script; image locations from processed folder |
-| Stage 5 → Stage 6 | File system (`output/ch-NN/lettered/`) | Assembler reads all images in folder in sorted order |
-
-### Dialogue Map Schema
-
-Stage 5 requires structured dialogue data extracted from the script. The recommended intermediate format:
+### Nodes Required for SD 1.5 txt2img + LoRA
 
 ```json
 {
-  "chapter": "01",
-  "pages": [
-    {
-      "page": 1,
-      "panels": [
-        {
-          "panel": 3,
-          "balloons": [
-            {
-              "type": "thought",
-              "speaker": "SPYKE",
-              "text": "Shit. I'm gonna be late...",
-              "position": "top-right"
-            }
-          ]
-        }
-      ]
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "v1-5-pruned-emaonly.ckpt" }
+  },
+  "2": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "model": ["1", 0],
+      "clip": ["1", 1],
+      "lora_name": "{{LORA_NAME}}.safetensors",
+      "strength_model": 0.8,
+      "strength_clip": 0.8
     }
-  ]
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "{{POSITIVE_PROMPT}}",
+      "clip": ["2", 1]
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "low quality, blurry, extra limbs, text, watermark",
+      "clip": ["2", 1]
+    }
+  },
+  "5": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["2", 0],
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "latent_image": ["6", 0],
+      "seed": "{{SEED}}",
+      "steps": 20,
+      "cfg": 7.0,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1.0
+    }
+  },
+  "6": {
+    "class_type": "EmptyLatentImage",
+    "inputs": { "width": 800, "height": 1067, "batch_size": 1 }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["5", 0], "vae": ["1", 2] }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": { "images": ["7", 0], "filename_prefix": "{{FILENAME_PREFIX}}" }
+  }
 }
 ```
 
-This can be generated by Claude (Stage 1.5: dialogue extraction pass) from the structured script, or hand-authored alongside the script. It decouples the overlay tool from markdown parsing complexity.
+### Additional Nodes for img2img + ControlNet
+
+Replace node `6` (EmptyLatentImage) with:
+
+```json
+"6": {
+  "class_type": "LoadImage",
+  "inputs": { "image": "{{BASE_IMAGE_FILENAME}}" }
+},
+"6b": {
+  "class_type": "VAEEncode",
+  "inputs": { "pixels": ["6", 0], "vae": ["1", 2] }
+},
+"9": {
+  "class_type": "ControlNetLoader",
+  "inputs": { "control_net_name": "control_v11p_sd15_lineart.pth" }
+},
+"10": {
+  "class_type": "ControlNetApply",
+  "inputs": {
+    "conditioning": ["3", 0],
+    "control_net": ["9", 0],
+    "image": ["6", 0],
+    "strength": 0.9
+  }
+}
+```
+
+And change KSampler node `5` to:
+- `"latent_image": ["6b", 0]`
+- `"positive": ["10", 0]`
+- `"denoise": 0.7` (img2img denoising strength)
+
+### Template Injection Points
+
+The workflow injector (`injector.ts`) performs string replacement on the parsed JSON object. Injection points use `{{PLACEHOLDER}}` tokens. This is simpler than a template engine — ComfyUI workflows are already JSON; string replacement on parsed objects avoids double-serialization issues.
+
+| Placeholder | Source | Node |
+|-------------|--------|------|
+| `{{POSITIVE_PROMPT}}` | Job request `promptText` | CLIPTextEncode positive |
+| `{{LORA_NAME}}` | Job request `loraName` or default | LoraLoader `lora_name` |
+| `{{SEED}}` | Random or job request `seed` | KSampler `seed` |
+| `{{FILENAME_PREFIX}}` | Derived from `ch{N}_p{N}_v{N}` | SaveImage |
+| `{{BASE_IMAGE_FILENAME}}` | Basename of `baseImagePath` after upload to ComfyUI input dir | LoadImage |
+
+**Note on base images:** ComfyUI's `LoadImage` node reads from its own `input/` directory. The Express service must copy the base image to the ComfyUI input folder before submitting the workflow. This is a simple `fs.copyFile` from the pipeline's `output/ch-NN/processed/` path to `[COMFYUI_DIR]/input/`.
 
 ---
 
-## Suggested Build Order
+## Job Management Approach
 
-Build order is determined by stage dependencies and risk mitigation:
+**Recommendation: In-memory Map with serial queue. No Redis, no file-based queue.**
 
-**Phase 1 — Validate Generation Quality (no tooling needed)**
-Manual execution of Stages 1-3 for Chapter 1. Accept that Chapter 1 scripts and prompts already exist. Focus is on generating all 29 pages manually and reviewing output quality. This is the proof-of-concept gate. Everything else depends on Gemini producing acceptable images.
+**Rationale for single-user local service:**
+- ComfyUI on M1 Pro with 16GB RAM runs one generation job at a time. Concurrent submissions would queue in ComfyUI anyway, but tracking state in the Express service allows the CLI to poll without querying ComfyUI directly.
+- File-based queue adds fsync latency and complexity for no benefit — there is no crash recovery requirement for a dev tool.
+- Redis requires a separate process, adds infrastructure overhead. Unjustified for a service that runs locally alongside the pipeline CLI.
 
-**Phase 2 — Assembly Tooling (Stages 4-6)**
-Build post-processing, overlay, and assembly scripts. These are deterministic Python scripts and can be built and tested without Gemini API access. Use the manually-generated Chapter 1 images as test input.
+### In-Memory Job State
 
-**Phase 3 — Process Codification (Stage 1-2 templates)**
-Formalize Stage 1 and Stage 2 as repeatable Claude prompts with consistent input/output contracts. Template for each stage: what context to inject, what format to request, how to validate output.
+```typescript
+// job-manager.ts
 
-**Phase 4 — API Automation (Stage 3 automation)**
-Integrate the Gemini API for automated image generation. Requires confirmed API access and validated prompt format from Phase 1.
+type JobStatus = 'queued' | 'running' | 'complete' | 'failed';
 
-**Phase 5 — Chapter 2+ Repeatability**
-Run the full pipeline on Chapter 2. The pipeline is considered proven when Chapter 2 produces publishable output with less manual effort than Chapter 1.
+interface Job {
+  jobId: string;
+  status: JobStatus;
+  request: JobRequest;
+  outputPath?: string;
+  error?: string;
+  startedAt?: number;
+  completedAt?: number;
+  comfyPromptId?: string;   // ComfyUI's internal prompt ID, for WS correlation
+}
+
+const jobs = new Map<string, Job>();
+let activeJob: Job | null = null;
+const queue: Job[] = [];
+```
+
+**Worker loop:** When a job completes (or fails), the worker immediately dequeues the next job. No polling interval needed — the WebSocket event from ComfyUI triggers the transition.
+
+**Lifetime:** Jobs stay in the Map until the service restarts. For a dev tool this is fine — the CLI can retrieve results within the same session.
+
+**If persistence is later needed** (across restarts): add `appendFileSync` writes to `outputs/images/<jobId>.json` when job state changes. The CLI can reconstruct state from those files on startup. This is a 30-line addition, not an architectural change.
+
+---
+
+## ComfyUI API — Key Endpoints
+
+These are the ComfyUI endpoints the Express service calls directly:
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/prompt` | POST | Submit a workflow for execution. Body: `{ prompt: workflowJSON, client_id: string }`. Returns `{ prompt_id: string }`. |
+| `/queue` | GET | List pending and running prompts. |
+| `/history/:prompt_id` | GET | Get execution history and output filenames for a completed prompt. |
+| `/view` | GET | Download an output image. Params: `filename`, `subfolder`, `type=output`. Returns image bytes. |
+| `/upload/image` | POST | Upload an image to ComfyUI's input directory. Multipart form. Required before using `LoadImage` node. |
+| `/system_stats` | GET | Health check — confirm ComfyUI is running. |
+
+**WebSocket events** on `ws://127.0.0.1:8188/`:
+- `{ type: 'executing', data: { node: null, prompt_id } }` — job started
+- `{ type: 'progress', data: { value, max } }` — step-level progress
+- `{ type: 'executed', data: { node, output, prompt_id } }` — individual node done
+- `{ type: 'execution_success', data: { prompt_id } }` — entire workflow complete (HIGH confidence this event exists; verify event name)
+- `{ type: 'execution_error', data: { prompt_id, error } }` — workflow failed
+
+**Confidence note:** The ComfyUI API has been stable in its core structure since 2023, but event names and `/history` response shape should be verified against a running instance before finalising the WebSocket client.
+
+---
+
+## Pipeline Integration Point: generate.ts
+
+**Decision: The existing `generate.ts` calls the Express service via HTTP. generate.ts is NOT restructured.**
+
+This is the correct integration point because:
+1. The stage interface (`StageOptions → StageResult`) stays unchanged. The CLI (`cli.ts`) needs no changes to the generate command's structure beyond adding a `--comfyui` flag.
+2. `comfyui-client.ts` follows the same pattern as `gemini-client.ts`: a thin async function that takes a prompt and returns an image buffer (or writes a file). generate.ts calls whichever client matches the selected mode.
+3. The Express service is an **optional sidecar** — the pipeline continues to work without it. If the service is not running, the ComfyUI mode fails with a clear error; manual and Gemini API modes are unaffected.
+
+### generate.ts Integration Pattern
+
+```typescript
+// In generate.ts, the new mode='comfyui' branch:
+if (mode === 'comfyui') {
+  const serviceUrl = process.env['COMFYUI_SERVICE_URL'] ?? DEFAULT_COMFYUI_SERVICE_URL;
+
+  // Check service is alive
+  const healthy = await pingComfyUiService(serviceUrl);
+  if (!healthy) {
+    return { stage: 'generate', success: false, errors: ['ComfyUI service not running at ' + serviceUrl], ... };
+  }
+
+  for (const file of filteredFiles) {
+    const promptText = await readFile(promptFilePath, 'utf-8');
+    const version = nextVersion(chapterPaths.raw, options.chapter, pageNum);
+    const filename = panelImageFilename(options.chapter, pageNum, version);
+    const destPath = path.join(chapterPaths.raw, filename);
+
+    // Submit job and poll
+    const result = await generateViaComfyUi({
+      serviceUrl,
+      promptText,
+      chapter: options.chapter,
+      page: pageNum,
+      version,
+      baseImagePath: options.baseImagePath,  // new CLI option
+      loraName: options.loraName,            // new CLI option
+    });
+
+    // result.outputPath is the Express service's local image path
+    await copyFile(result.outputPath, destPath);
+
+    // Manifest entry (same structure as Gemini mode, backend field added)
+    const entry: GenerationLogEntry = {
+      imageFile: filename,
+      promptFile: ...,
+      promptHash: hashPrompt(promptText),
+      model: options.loraName ?? 'sd-1.5',
+      generationBackend: 'comfyui',   // new field
+      timestamp: new Date().toISOString(),
+      version,
+      approved: false,
+    };
+    await addEntry(chapterPaths.root, manifest, entry);
+  }
+}
+```
+
+### comfyui-client.ts Polling Pattern
+
+```typescript
+// pipeline/src/generation/comfyui-client.ts
+
+export async function generateViaComfyUi(opts: ComfyUiGenerateOptions): Promise<{ outputPath: string }> {
+  // 1. Submit job
+  const { jobId } = await submitJob(opts.serviceUrl, opts);
+
+  // 2. Poll with timeout
+  const POLL_INTERVAL_MS = 2000;
+  const TIMEOUT_MS = 300_000;  // 5 minutes
+  const deadline = Date.now() + TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    await sleep(POLL_INTERVAL_MS);
+    const status = await getJobStatus(opts.serviceUrl, jobId);
+
+    if (status.status === 'complete') return { outputPath: status.outputPath! };
+    if (status.status === 'failed') throw new Error(`ComfyUI job failed: ${status.error}`);
+    // 'queued' | 'running' → continue polling
+  }
+
+  throw new Error(`ComfyUI job ${jobId} timed out after ${TIMEOUT_MS}ms`);
+}
+```
+
+---
+
+## LoRA Output Handling
+
+**kohya_ss output directory:** By default, kohya_ss writes trained `.safetensors` to a directory specified in the training config JSON (the `output_dir` field). The recommended path to set in the training config:
+
+```
+[COMFYUI_DIR]/models/loras/<characterId>/
+```
+
+e.g., `/path/to/ComfyUI/models/loras/kael/kael-v1.safetensors`
+
+**Why this directory:** ComfyUI's `LoraLoader` node scans `models/loras/` recursively. Placing the output directly in ComfyUI's model directory means the LoRA is immediately available to workflows without a copy step.
+
+**ComfyUI finds it:** After training completes, ComfyUI detects new model files either on next workflow submission or via a model refresh. ComfyUI does NOT need to be restarted. The `lora_name` in the workflow JSON is the relative path from `models/loras/`, e.g. `"kael/kael-v1.safetensors"`.
+
+**The Express service should record** the final LoRA path in `outputs/loras/<loraJobId>.json`:
+
+```json
+{
+  "loraJobId": "lora-abc123",
+  "characterId": "kael",
+  "status": "complete",
+  "outputPath": "/path/to/ComfyUI/models/loras/kael/kael-v1.safetensors",
+  "loraName": "kael/kael-v1",
+  "completedAt": "2026-02-19T12:00:00Z"
+}
+```
+
+**The pipeline CLI** reads this JSON when constructing a generation job to automatically populate `loraName`.
+
+---
+
+## Process Management: kohya_ss Training
+
+```typescript
+// pipeline/service/training/kohya-runner.ts
+
+import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
+
+export function spawnTraining(opts: TrainingOpts): ChildProcessHandle {
+  const logStream = createWriteStream(opts.logPath, { flags: 'a' });
+
+  const child = spawn('python', [
+    opts.kohyaScriptPath,           // e.g. /path/to/kohya_ss/train_network.py
+    '--config_file', opts.configPath
+  ], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, PYTHONUNBUFFERED: '1' }
+  });
+
+  child.stdout.pipe(logStream);
+  child.stderr.pipe(logStream);
+
+  // Parse progress from stdout lines like "steps: 150/1500"
+  child.stdout.on('data', (chunk: Buffer) => {
+    const line = chunk.toString();
+    const match = /steps:\s*(\d+)\/(\d+)/.exec(line);
+    if (match) {
+      const progress = Math.round((parseInt(match[1]!) / parseInt(match[2]!)) * 100);
+      opts.onProgress?.(progress);
+    }
+  });
+
+  child.on('exit', (code) => {
+    logStream.close();
+    if (code === 0) opts.onComplete(opts.expectedOutputPath);
+    else opts.onError(new Error(`kohya_ss exited with code ${code}`));
+  });
+
+  return { pid: child.pid!, kill: () => child.kill('SIGTERM') };
+}
+```
+
+**Key constraints on M1 Pro:**
+- kohya_ss on Apple Silicon uses MPS (Metal Performance Shaders). Requires `accelerate` config with `mps` device.
+- Training 1500 steps on M1 Pro with 16GB takes approximately 20-60 minutes depending on dataset size and resolution. The Express service must not time out the HTTP response for training jobs — respond immediately with `202 Accepted` and poll via `GET /loras/:id/status`.
+- Only ONE training job at a time. The JobManager should reject a second training request if one is active, returning `409 Conflict`.
+
+---
+
+## Build Order
+
+Build order is determined by dependency: each layer depends on the one below it.
+
+**Layer 1: ComfyUI Client (no dependencies on Express)**
+Build and test `comfyui/http-client.ts` and `comfyui/ws-client.ts` as standalone modules. Verify they can submit a hand-crafted workflow JSON to a running ComfyUI and retrieve the output image. This validates the ComfyUI API shape before building anything around it.
+
+**Layer 2: Workflow Templates + Injector**
+Build `workflows/loader.ts`, `workflows/injector.ts`, and the JSON templates. Unit-testable without ComfyUI running: inject known values, assert the resulting JSON has correct node input values.
+
+**Layer 3: JobManager**
+Build `job-manager.ts`. Test with mock ComfyUI client. Verify serial queue behaviour: second job queued while first is running; second runs after first completes.
+
+**Layer 4: Express Routes + Service Entry**
+Wire `routes/jobs.ts` and `service/index.ts`. Integration test with a real running ComfyUI instance. Submit one job, poll to completion, verify image appears at expected path.
+
+**Layer 5: pipeline/src/generation/comfyui-client.ts**
+Build the pipeline-side client that calls the Express service. Test end-to-end: CLI → comfyui-client.ts → Express service → ComfyUI → image in output/ch-NN/raw/.
+
+**Layer 6: generate.ts modification**
+Add the `comfyui` mode branch to the existing generate stage. The branch is a thin wrapper around comfyui-client.ts. Regression test: verify `--manual` and `--api` modes still work unchanged.
+
+**Layer 7: LoRA training (independent of 1-6)**
+Build `training/kohya-runner.ts` and `routes/loras.ts`. This is independent of the image generation path and can be built after Layers 1-6 are working. kohya_ss training requires a separate setup step (Python environment, kohya_ss installation) that may need its own research spike.
+
+### Phase Summary
+
+| Phase | Components | Deliverable |
+|-------|-----------|-------------|
+| 1 | ComfyUI HTTP + WS clients | Submit a workflow, retrieve output image from ComfyUI directly |
+| 2 | Workflow templates + injector | Correct JSON for SD 1.5 txt2img + LoRA |
+| 3 | JobManager | Serial queue with state tracking |
+| 4 | Express service (routes + entry) | Working HTTP API at port 3000 |
+| 5 | comfyui-client.ts | Pipeline CLI can generate via ComfyUI |
+| 6 | generate.ts mode branch | Full end-to-end: `pnpm stage:generate -- --comfyui -c 1` works |
+| 7 | kohya_ss runner + LoRA routes | Training pipeline operational |
+
+---
+
+## Constraints Specific to M1 Pro / Single-User
+
+- **No GPU VRAM limit concerns** — M1 Pro uses unified memory. 16GB is shared between CPU and GPU. SD 1.5 inference uses approximately 4-6GB; LoRA training uses 8-12GB. Cannot run generation and training simultaneously.
+- **ComfyUI input directory** — When a base image is needed for img2img/ControlNet, the Express service must upload it to ComfyUI via `POST /upload/image` (multipart form) before submitting the workflow. Alternatively, copy the file to `[COMFYUI_DIR]/input/` directly via filesystem — simpler and avoids HTTP overhead for large images.
+- **File paths** — All paths between the Express service and ComfyUI should be absolute. ComfyUI's output filenames are returned by the history endpoint as relative names within ComfyUI's output directory; the Express service needs to know ComfyUI's output directory path (configured via env var `COMFYUI_OUTPUT_DIR`).
+- **Port conflicts** — Express at 3000, ComfyUI at 8188. Both configurable via env vars. Document clearly.
+- **COMFYUI_DIR env var** — The service needs to know the absolute path to ComfyUI's installation directory to: (a) copy images to `input/`, (b) locate `models/loras/` for training output, (c) read images from `output/`. Make this a required env var with no default.
+
+---
+
+## Environment Variables
+
+```
+# pipeline/service/.env  (new file, gitignored)
+COMFYUI_URL=http://127.0.0.1:8188
+COMFYUI_DIR=/path/to/ComfyUI
+EXPRESS_PORT=3000
+OUTPUTS_DIR=/path/to/plasma/pipeline/service/outputs
+KOHYA_SCRIPT=/path/to/kohya_ss/train_network.py
+KOHYA_PYTHON=/path/to/kohya_venv/bin/python
+
+# pipeline/.env  (existing file, add one line)
+COMFYUI_SERVICE_URL=http://localhost:3000
+```
 
 ---
 
 ## Sources
 
-- Direct inspection of `/Users/dondemetrius/Code/plasma/03_manga/prompts/pages-01-to-15.md` — existing Gemini prompt format (MEDIUM confidence — source is the project's own established pattern)
-- Direct inspection of `/Users/dondemetrius/Code/plasma/03_manga/chapter-01-script.md` — script structure and panel format
-- Direct inspection of `/Users/dondemetrius/Code/plasma/.planning/PROJECT.md` — stated pipeline stages and constraints
-- Architecture patterns for AI image pipeline stages: domain knowledge from AI art production workflows (LOW confidence on specific tool choices — verify Pillow API, Gemini API endpoint, and font rendering libraries before implementation)
-- Webtoon format: 800px wide, vertical scroll optimized for mobile — well-established Webtoon Creator guidelines (MEDIUM confidence — verify current Webtoon Creator upload specifications at creators.webtoons.com before finalizing image dimensions)
+- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/stages/generate.ts` — existing stage interface and mode branching pattern
+- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/generation/gemini-client.ts` — existing client pattern to replicate for ComfyUI
+- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/types/pipeline.ts` — `StageOptions`, `StageResult` interface contracts
+- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/types/generation.ts` — `GenerationLogEntry`, `GenerationManifest`
+- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/cli.ts` — command structure, flag patterns
+- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/config/paths.ts` — `PATHS.chapterOutput`, output directory structure
+- ComfyUI HTTP API (`/prompt`, `/view`, `/history`, `/upload/image`, WebSocket events): training data — MEDIUM confidence, verify against running instance
+- ComfyUI workflow JSON node graph format: training data — HIGH confidence, core format stable since 2023
+- kohya_ss `train_network.py` CLI and `output_dir` config field: training data — MEDIUM confidence, verify kohya_ss version installed before implementing runner
+- M1 Pro MPS device support in accelerate/kohya_ss: training data — MEDIUM confidence, known to work but setup is non-trivial
 
 ---
-*Architecture research for: AI manga production pipeline (story-to-Webtoon)*
-*Researched: 2026-02-18*
+
+*Architecture research for: ComfyUI + LoRA integration into TypeScript manga pipeline*
+*Researched: 2026-02-19*

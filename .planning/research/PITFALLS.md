@@ -1,301 +1,793 @@
-# Pitfalls Research
+# Pitfalls Research: ComfyUI + LoRA on Apple Silicon
 
-**Domain:** AI-powered manga production pipeline (Webtoon vertical scroll, Gemini image generation)
-**Researched:** 2026-02-18
-**Confidence:** MEDIUM — character sheet evidence is HIGH confidence (first-hand from this repo); Gemini-specific behaviors are MEDIUM confidence (training data + observed output patterns); web research unavailable this session
+**Domain:** Local AI image generation pipeline — ComfyUI + kohya_ss on M1 Pro 16GB
+**Researched:** 2026-02-19
+**Confidence:** MEDIUM overall — training data through Aug 2025, no live web search available this session. Apple Silicon / MPS behavior patterns are well-documented in the community through mid-2025; flag specifics for verification against current ComfyUI and kohya_ss changelogs.
 
----
-
-## Critical Pitfalls
-
-### Pitfall 1: Character Drift Across Generations
-
-**What goes wrong:**
-Each time you generate a panel, Gemini re-rolls the character from scratch based only on the text description. Without an image reference, the same character description produces visually inconsistent results: hair length varies, skin tone shifts, clothing details morph, proportions change. Evidence from this repo: Spyke's hair appeared as shoulder-length ponytail in early concept runs when the prompt said "tips reach traps" (near-neck), cloak length varied from knee-length to floor-length across attempts, and the asymmetric glove setup (red fingerless left vs armored right) was sometimes mirrored or simplified.
-
-**Why it happens:**
-Gemini's image model (Imagen 3 / Gemini 2.0 Flash native image generation) has no memory between generations. Every prompt is a blank slate. Natural language descriptions of complex multi-detail characters inevitably produce variation — "shoulder-length" and "neck-length" land differently each run, and when a character has 12+ distinguishing details, some will be dropped or reinterpreted every generation.
-
-**How to avoid:**
-1. Generate canonical reference sheets first (done — Spyke_Final.png, June, Draster sheets exist). Use these as visual anchors for all human review.
-2. When Gemini's API is accessible, use image-to-image prompting or pass the reference image as part of the prompt. In the manual workflow, describe characters from their approved sheet explicitly: copy the approved description verbatim, not a paraphrase.
-3. Build a per-character "prompt fingerprint" — a locked, tested character description block that has been validated to produce on-model results. Paste this fingerprint into every panel prompt, never rewrite it from scratch.
-4. Limit character detail in action panels: instead of describing all 12 outfit details in every panel, identify the 4-5 most recognizable "silhouette anchors" (Spyke: white cloak + red bandana + ginger hair + massive broadsword on back) and rely on those.
-5. Accept a QC step: every generated panel image gets checked against the reference sheet before it moves to assembly. Character drift found late (post-assembly) costs 10x more to fix.
-
-**Warning signs:**
-- Spyke's cloak appearing as a trench coat, coat-length, or with both sleeves intact
-- June's clothing appearing blue or teal (happened in first two generation attempts — her prompt originally specified dark pink but Gemini interpreted "blue" from the sporty/athletic framing)
-- Draster's skin tone rendering too light
-- The asymmetric glove setup (different left/right) being mirrored or simplified to matching gloves
-- Spyke's age metadata in generated sheets showing 16 instead of 21 (happened in two early runs — a sign the model anchored to teenager archetype)
-
-**Phase to address:** Phase 1 (Character System / Prompt Fingerprint) — before any panel generation begins
+**Note on confidence calibration:**
+- HIGH = stable behavior confirmed across multiple sources in training data, unlikely to have changed
+- MEDIUM = documented behavior as of mid-2025, may have improved in recent releases
+- LOW = community anecdote, single source, or extrapolated from adjacent behavior
 
 ---
 
-### Pitfall 2: Text in AI-Generated Images Is Unreliable
+## Apple Silicon / Metal Pitfalls
+
+### Pitfall 1: MPS Fallback to CPU for Unsupported Operations (CRITICAL)
 
 **What goes wrong:**
-Asking Gemini to render readable speech bubbles, SFX text, or any dialogue directly in a generated manga panel will produce garbled, misspelled, or visually corrupt text most of the time. Even when the text appears to render correctly, it is inconsistent across generations. The current Chapter 1 page prompts include requests for speech balloons with dialogue baked in — this is a high-risk approach.
+PyTorch MPS does not implement every CUDA operation. When ComfyUI or a sampler calls an unsupported op, PyTorch silently falls back to CPU for that op (or raises an error), causing generation to run 3-10x slower than expected. You may not notice this without profiling — the output looks normal but takes 5 minutes for a 512x512 image instead of 45 seconds.
 
 **Why it happens:**
-Image generation models treat text as visual texture, not as semantic characters. Gemini / Imagen 3 has improved text rendering versus older models (it can produce legible labels as seen in the character reference sheets), but it remains unreliable for multi-word dialogue in panel contexts, especially when the text needs to fit inside a speech bubble shape and coexist with a busy visual composition.
+MPS backend coverage has been growing steadily but is not 100% CUDA-equivalent. Certain attention variants, some custom nodes, and specific sampler math hit unimplemented ops. Silent fallback is the default behavior (MPS_FALLBACK_ENABLED).
 
-**How to avoid:**
-Do not bake dialogue into AI-generated panel images. Generate panels as art-only images with no text. Add all dialogue, speech bubbles, SFX, thought captions, and narration boxes as a programmatic overlay layer (using Pillow/ImageDraw in Python, or an image compositing tool like GIMP scripting). This separation means:
-- Text is always perfectly legible
-- Dialogue edits don't require regenerating the panel art
-- Font choice, bubble style, and layout are fully controlled
-- SFX can be stylized manually with vector type
+**Consequences:**
+- "GPU acceleration" that is actually mostly CPU
+- Generation times that feel wrong (first 5-10 steps fast, then dramatically slow)
+- Battery drain and thermal throttling masking the real problem
 
-Exception: character reference sheet labels (like the detail callouts already generated) are low-stakes and can be left to Gemini if they render acceptably on that specific run.
+**Prevention:**
+- Set `PYTORCH_ENABLE_MPS_FALLBACK=1` explicitly (prevents errors vs the alternative which is a crash)
+- Set `PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0` to help with memory management
+- Time a known reference run (512x512, 20 steps, Euler a) after setup — benchmark is ~30-60s on M1 Pro. If it takes 5+ minutes, something is falling back to CPU.
+- Install ComfyUI and run `python main.py --force-fp16` — fp16 has better MPS coverage than fp32
 
-**Warning signs:**
-- Any prompt containing `Speech balloon:`, `speech balloon:`, or inline dialogue text mixed into the panel description
-- Panel prompts that describe text placement rather than visual composition
-- Generated images where you can see speech bubble shapes but text inside is illegible or wrong
-
-**Phase to address:** Phase 1 (Text Rendering Strategy) — decide and lock the overlay approach before generating any page-level panels
-
----
-
-### Pitfall 3: Prompt Complexity Exceeds Model Attention Span
-
-**What goes wrong:**
-The current Chapter 1 page prompts are extremely long and detailed — some panels run 200+ words for a single panel within a multi-panel page prompt. Gemini doesn't give equal attention to every instruction. The later parts of a long prompt receive less attention than the opening lines. This causes elements mentioned early (general style, setting) to dominate, while elements mentioned late (specific character poses, background details, SFX text) get dropped or simplified.
-
-**Why it happens:**
-Attention mechanisms in large language/vision models have a well-documented recency bias and tend to prioritize high-level framing over granular detail once the prompt exceeds a certain density. A 300-word prompt describing three panels simultaneously is asking the model to hold too much in working attention while also generating a coherent image.
-
-**How to avoid:**
-Generate each panel individually, not the entire page at once. This feels slower but produces far more controllable results. For a multi-panel page, run N separate generations for N panels, then composite them together programmatically. Put the most critical details — character identity, action, emotion — at the start of each prompt. The style preamble (cel-shaded, colored manga, etc.) should be a fixed prefix that always appears first.
-
-Structure prompts in priority order:
-```
-[Style prefix — always first]
-[Character identity anchors]
-[Primary action]
-[Composition/framing]
-[Secondary details]
-[Optional: SFX if attempting baked text]
+**Detection:**
+```bash
+# Check if Metal is actually being used
+python -c "import torch; print(torch.backends.mps.is_available()); print(torch.backends.mps.is_built())"
+# Activity Monitor → GPU History — should show GPU load during generation
 ```
 
-**Warning signs:**
-- Prompts that describe more than one panel simultaneously
-- Prompts where the character description is buried after setting descriptions
-- Prompts over ~150 words for a single panel
-- Outputs where the right character appears but their pose or expression ignores the prompt
-
-**Phase to address:** Phase 2 (Prompt Engineering System) — build the prompt template before writing any production prompts
+**Confidence:** HIGH — well-documented MPS limitation, fundamental to PyTorch MPS architecture.
 
 ---
 
-### Pitfall 4: Multi-Character Scenes Cause Merging and Confusion
+### Pitfall 2: Unified Memory Exhaustion Kills the Process (CRITICAL)
 
 **What goes wrong:**
-When multiple characters appear in the same panel, Gemini may: merge their visual traits (one character ends up with another's hair color), apply the same outfit to multiple characters, or simply generate the wrong number of characters. Panels like Page 16's Panel 2 — which requires Spyke, June, AND Draster in the same frame — are high-failure-rate.
+On M1 Pro 16GB, RAM is shared between CPU, GPU, and OS. ComfyUI + the model + your Node.js service + macOS UI can together exhaust RAM, causing macOS to kill the Python process mid-generation with a cryptic error, or swap to disk causing 10-100x slowdown.
 
 **Why it happens:**
-The model has to simultaneously satisfy multiple character descriptions and keep them visually separate. This is a known hard problem in image generation. When character descriptions share structural similarities (all young, all in action clothes, all holding weapons), the model conflates them. Draster's dark brown skin is a strong differentiator, but Spyke and June share blonde/ginger proximity in some lighting.
+SD 1.5 fp16 model: ~2GB. VAE: ~335MB. ControlNet model: ~1.4GB. Sampler working memory: 1-4GB for 512x512. OS baseline: 3-5GB. Node.js service: 200-400MB. That's 8-12GB for a basic generation run, leaving only 4-8GB buffer. At 768x768 or with multiple ControlNets loaded simultaneously, the buffer disappears.
 
-**How to avoid:**
-Lean on strong visual differentiators in the prompt ordering. For the Plasma trio, always lead with Draster's skin tone since it's the clearest differentiator. Use positional language ("left", "center", "right") consistently. Avoid having all three characters occupy equal prominence — give one character a clear visual focal point in any given panel. If a group shot fails repeatedly, split it: generate each character separately against a transparent/white background and composite.
+**Consequences:**
+- OOM kill during generation (the worst case — you get a corrupt partial output or nothing)
+- macOS memory pressure causing thermal throttling across the whole system
+- Generation quality degradation due to swap (some samplers behave differently when memory is paged)
 
-Accept that some complex compositions cannot be generated in one shot reliably. Build a compositing step into the workflow budget.
+**Prevention (requirements-level):**
+- Maximum resolution: **512x768** as the hard default. Never attempt 768x768 or larger as a routine operation.
+- Load ONE ControlNet at a time. Never chain two ControlNet models simultaneously in a workflow.
+- Use fp16 everywhere: model, VAE, ControlNet. fp32 doubles VRAM usage.
+- Close other heavy processes (Chrome tabs, VS Code with large TS projects) before training runs.
+- Set ComfyUI `--lowvram` flag or `--medvram` flag to enable CPU offloading for model layers not in active use.
 
-**Warning signs:**
-- Two characters with the same hair color in a panel where they should differ
-- The wrong character holding a weapon (June with broadsword, Spyke without)
-- Three-character panels where only two characters appear
-- Characters' outfits bleeding into each other (Spyke in navy, Draster in white)
+**Prevention (architecture-level):**
+- Implement memory pressure detection in the Express service: poll `vm_stat` (macOS) before accepting a generation job. If swap usage is growing, queue rather than run.
+- Limit ComfyUI to a single worker process (no parallel generation).
 
-**Phase to address:** Phase 2 (Prompt Engineering System) and Phase 3 (QC Checklist)
+**Confidence:** HIGH — RAM math is deterministic; the limits are well understood.
 
 ---
 
-### Pitfall 5: Style Consistency Across an Entire Chapter
+### Pitfall 3: fp16 vs fp32 Correctness Bugs on MPS
 
 **What goes wrong:**
-Even if individual panels look good in isolation, a chapter of 30-50 generated panels will feel visually inconsistent as a unit. Line weight varies between generations, color saturation shifts, some panels look more realistic while others look more stylized, backgrounds vary in rendering complexity. The result looks like a compilation from multiple artists rather than a single coherent chapter.
+Some MPS operations produce numerically incorrect results in fp16 that they do not in fp32 (or CUDA fp16). This manifests as NaN (not-a-number) propagation through the denoising steps, producing black images, pure gray images, or images with large corrupted patches. It's the most confusing failure mode because the pipeline runs without errors.
 
 **Why it happens:**
-Each generation is stateless. Gemini doesn't know what your previous panels looked like. Subtle variations in how the style prefix is phrased produce visible differences in output. Real manga chapters have visual consistency because one artist draws all of them — the same hand, the same tools, the same creative interpretation across 30+ pages.
+MPS fp16 implementation has had correctness bugs in specific operations (LayerNorm, some attention variants) that produce NaN outputs in edge cases. These accumulate through the U-Net denoising loop.
 
-**How to avoid:**
-Lock a single, tested style fingerprint string and paste it verbatim into every prompt. Do not paraphrase or adapt it. Even minor wording changes ("clean linework" vs "crisp linework") can shift the output aesthetic noticeably. Consider generating all background-type panels (establishing shots, interiors) in a single session before moving to character-heavy panels — batching similar panel types reduces visible variance. A consistent "post-processing" step (slight saturation normalization, uniform border treatment) applied to all panels in assembly can reduce perceived inconsistency.
+**Consequences:**
+- Black or gray output image with no error message
+- Intermittent failures (only happens with certain seeds, schedulers, or step counts)
+- Corrupted LoRA outputs during training
 
-**Warning signs:**
-- One panel looks painterly/realistic and adjacent panels look flat/cel-shaded
-- Background depth and detail varies wildly between panels on the same page
-- The same character looks older or younger in different panels due to facial rendering variance
+**Prevention:**
+- If you see a black/gray output, first attempt: switch to fp32 for just that run to confirm the issue is fp16-related.
+- Use `--force-fp16` for ComfyUI inference (generally works fine) but test the specific checkpoint + VAE combination.
+- For **VAE specifically**: run VAE in fp32 even if the U-Net runs fp16. VAE fp16 on MPS has a documented history of producing washed-out or gray outputs. Set `--fp16-vae` only after explicitly testing.
+- Some community members recommend `--upcast-sampling` for MPS — this runs the final sampling step in fp32 even in an fp16 workflow.
 
-**Phase to address:** Phase 2 (Style System) — establish and test the style fingerprint before production
+**Detection:**
+- Black output → suspect fp16 NaN
+- Washed out / gray output → suspect VAE fp16 issue
+- Works on one seed, fails on another → fp16 numerical instability
+
+**Confidence:** MEDIUM — documented through community reports mid-2025, may have improved in PyTorch 2.4+/2.5+.
 
 ---
 
-### Pitfall 6: Action Scenes and Dynamic Poses Produce Anatomy Failures
+### Pitfall 4: ComfyUI Custom Nodes That Require CUDA (MEDIUM)
 
 **What goes wrong:**
-AI image generation is notoriously poor at complex body positions: specific sword grips, mid-leap poses, two-handed weapon swings, asymmetric stances. Gemini will produce extra fingers, broken wrist angles, weapons held at physically impossible angles, or bodies with wrong limb proportions. The manga style (speed lines, impact frames) can partially hide anatomical errors, but in close-up panels they become glaring.
+Many popular ComfyUI custom nodes include inline CUDA kernels (`.cu` files) that will not compile or run on MPS. Installing them silently poisons the ComfyUI node graph — the node appears in the UI but fails at runtime.
 
 **Why it happens:**
-Training data for highly specific action poses in manga style is less abundant than for standing character portraits. Manga anatomy is already stylized in ways that differ from realistic proportions, and when you layer in a specific action (iaijutsu quick-draw, mid-air sword swing, Draster's two-handed Plasma Glove blast), the model is solving a very rare distribution problem.
+Custom node authors target NVIDIA first. CUDA extensions are common for performance-critical ops (fast attention, efficient sampling). The custom node manager may show the node as "installed" even though it cannot execute.
 
-**How to avoid:**
-Prompt action poses in terms of visual impression rather than physical mechanics. Instead of "Spyke's right arm extended forward, katana horizontal at chest height, body turned 30 degrees left with weight on rear foot" — say "Spyke in aggressive katana forward-pointing challenge stance, low center of gravity, intense focus." Use the manga visual language from the existing scripts: "speed lines radiate from the blade", "impact frame", "afterimage of the blade path". These cues trigger the model's manga-mode pattern matching rather than its literal pose reconstruction.
+**Consequences:**
+- Workflow that works on CUDA breaks silently on Mac
+- Some nodes will error on load, crashing the whole ComfyUI server
+- Dependency on a specific community node creates a portability cliff
 
-For close-up action shots with specific hand/weapon details, run multiple generations and pick the best. Budget 3-5 generation attempts for any panel that requires a specific action pose.
+**Prevention (requirements-level):**
+- Maintain a whitelist of MPS-confirmed custom nodes. Only install from this whitelist.
+- MPS-safe nodes as of mid-2025: ComfyUI-Manager (management only), ComfyUI_IPAdapter_plus (broadly tested on Mac), ComfyUI-Advanced-ControlNet (pure Python, MPS-compatible).
+- Before installing any custom node, check its issues/README for "MPS support" or "Mac support" mention.
 
-**Warning signs:**
-- Any panel prompt specifying exact joint angles or limb positions
-- Panels requiring a character to grip a weapon with both hands in a specific configuration
-- Close-up panels on hands during combat (the most common anatomy failure point)
-
-**Phase to address:** Phase 2 (Prompt Engineering System) — build action scene prompt conventions
+**Confidence:** MEDIUM — pattern is well-established; specific node compatibility list evolves.
 
 ---
 
-### Pitfall 7: Webtoon Vertical Format Aspect Ratio Mismatch
+### Pitfall 5: Thermal Throttling Under Sustained Load
 
 **What goes wrong:**
-Gemini's image generation defaults to square or standard landscape/portrait outputs. Webtoon format is a very tall vertical strip — a single "page" might be 800px wide by 5000-8000px tall (a vertical scroll of stacked panels). If you generate panels at the wrong aspect ratio or resolution, assembling them into a Webtoon will produce panels that look stretched, cropped, or require resizing that degrades quality.
+M1 Pro is fanless in passive cooling conditions and has an aggressive thermal governor. During a 500-image training run or extended batch generation, the chip will thermal throttle, dropping from ~peak performance to ~60% after 20-40 minutes. Training that starts at 1 minute/iteration slows to 1.8 minutes/iteration by hour 2.
 
 **Why it happens:**
-Gemini doesn't have a native "manga panel" output aspect ratio that matches Webtoon specs. The model was not trained with Webtoon assembly in mind. Most AI art tools default to 1:1, 4:3, or 16:9 outputs.
+The M1 Pro's efficiency cores and Neural Engine run hot under sustained ML workloads. macOS dynamically reduces clock speed to prevent thermal damage. The MBP fans do run but the M1 Pro was not designed for sustained 100% utilization.
 
-**How to avoid:**
-Decide the per-panel resolution spec before generating any production panels and document it. A standard approach for Webtoon: width = 800px, panel height varies by panel type (tall action panels, short reaction panels, wide establishing shots at narrow height). Generate each panel at the target width with appropriate height, then stack them vertically in the assembly step. Use prompt language to suggest composition proportions: "vertical composition", "portrait orientation", "wide horizontal establishing shot" to nudge the model. Verify Gemini's output resolution options early — not all models support arbitrary aspect ratio specification.
+**Consequences:**
+- Training time estimates made from the first 10 iterations are optimistic by 30-50%
+- Overnight training jobs can take 2x longer than expected
 
-**Warning signs:**
-- No resolution specification in your panel generation workflow
-- Assembling panels and finding they don't line up cleanly
-- Panels that look correct in isolation but are wrong proportions for the planned layout
+**Prevention:**
+- Run training sessions in the evening (lower ambient temp, lid open)
+- Use the `caffeinate` command to prevent sleep but accept the thermal cost
+- Plan training time with a 1.5x buffer (e.g., if iteration 1 says "2 hours", plan for 3)
+- Do NOT run ComfyUI generation during training — both compete for MPS and RAM
 
-**Phase to address:** Phase 1 (Format Specification) — determine Webtoon specs before any production generation
+**Confidence:** HIGH — hardware thermal behavior is well understood.
 
 ---
 
-### Pitfall 8: Manual Copy-Paste Workflow Creates Version Chaos
+## kohya_ss on Mac Pitfalls
+
+### Pitfall 1: kohya_ss Installation Is Fragile on Mac (CRITICAL)
 
 **What goes wrong:**
-The current workflow is manual: copy prompt text, paste into Gemini web UI, download the image, manually track what was generated when and with what prompt. With 30-50 panels per chapter and multiple generation attempts per panel, you will lose track of which image corresponds to which panel, which version was approved vs. rejected, and what prompt produced the chosen image. Regenerating a panel later (to fix a continuity issue) becomes impossible if the prompt is not saved.
+kohya_ss has complex Python dependency chains (PyTorch, bitsandbytes, xformers) that are not all available for Apple Silicon without manual patching. The standard install script targets CUDA Linux. Running it on Mac produces either: import errors at training start, or a silently degraded training path (CPU instead of MPS).
 
 **Why it happens:**
-The manual workflow has no enforced structure for tracking prompt-to-image relationships. Image files get generic Gemini filenames (already visible in this repo: Gemini_Generated_Image_654svk654svk654s.png). The folder organization per-character is a good start, but panel-level tracking doesn't exist yet.
+- `bitsandbytes` (8-bit optimizer) requires CUDA and does not have an MPS backend. Attempting to use it causes immediate crash.
+- `xformers` is CUDA-only. MPS uses standard PyTorch attention instead.
+- The install script assumes CUDA and may pull wrong PyTorch builds.
 
-**How to avoid:**
-Before generating any production panels, establish a naming and tracking convention. Minimum viable:
-- Panel images named: `ch01_p003_panel2_v1.png` (chapter, page, panel, version)
-- A companion `prompts.md` per chapter that records the exact prompt used for each approved panel
-- A "status" marker per panel: `[generated]`, `[approved]`, `[needs-regen]`
+**Consequences:**
+- Training fails immediately at import time
+- Training runs on CPU (takes 10x longer), and you may not notice
 
-This can be a simple markdown table maintained manually. When the pipeline upgrades to API automation, this tracking data becomes the input/output log automatically.
+**Prevention (requirements-level):**
+- Use the **simplified-trainer** alternative or use kohya_ss with explicit `--use_8bit_adam=False` and `--no_xformers` flags.
+- Install PyTorch via the Apple Silicon-specific channel: `pip install torch torchvision torchaudio` from the Apple MPS wheel, NOT the CUDA wheel.
+- Verify training is using MPS: monitor Activity Monitor → GPU History during the first training step.
+- Consider **sd-scripts** (the upstream of kohya_ss) directly — it's easier to configure for MPS than the GUI wrapper.
 
-**Warning signs:**
-- Image files with generic Gemini filenames in production panel folders
-- Any situation where you don't know which prompt produced an image you like
-- Having to "remember" what prompt variation worked for a character
+**Prevention (architecture-level):**
+- Wrap training in a shell script that sets environment variables before calling kohya_ss:
+```bash
+PYTORCH_ENABLE_MPS_FALLBACK=1 \
+PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 \
+python train_network.py --network_module networks.lora \
+  --no_xformers \
+  --mixed_precision no \
+  ...
+```
 
-**Phase to address:** Phase 1 (Workflow Infrastructure) — naming conventions before first production run
-
----
-
-## Technical Debt Patterns
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Baking dialogue into panel art prompts | Saves the overlay tooling step | Unreadable text forces regen; editing dialogue requires art regen | Never — always separate text from art |
-| Using one mega-prompt per full page | Faster prompting session | Lower quality, less control, harder to regen individual panels | Never in production; acceptable for rough layout previews |
-| Skipping the character fingerprint review step | Ships faster | Inconsistent characters accumulate and are expensive to fix retroactively | Never — do it once before production starts |
-| Keeping generic Gemini filenames | Zero admin overhead | Complete inability to manage a multi-panel chapter | Never past prototype stage |
-| Generating multi-character scenes in one shot | One generation instead of three | High failure rate means more retries; compositing is faster overall | Acceptable for background group shots where individual identity doesn't matter |
-| Paraphrasing the style prefix per prompt | Feels more natural | Style variance accumulates across a chapter | Never — lock and copy the style prefix verbatim |
+**Confidence:** MEDIUM — known issues documented widely; the ecosystem improves, so verify current state at implementation.
 
 ---
 
-## Integration Gotchas
+### Pitfall 2: LoRA Training OOM on 16GB Unified Memory (CRITICAL)
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Gemini API (future upgrade) | Assuming the web UI and API produce identical results with the same prompt | Web UI and API may use different model versions or safety filter thresholds — re-validate prompts on API before assuming parity |
-| Gemini image generation | Expecting it to follow image reference URLs in prompts (it doesn't in text-only prompting) | For image-based character consistency, use the native multimodal input (upload the reference image) or the Imagen 3 subject reference feature if available on Pro |
-| Python Pillow for text overlay | Rendering speech bubbles programmatically with pixel-perfect positioning is complex | Use a pre-built manga text overlay tool or design a simple template system with fixed bubble positions per panel type |
-| Webtoon assembly | Assembling panels by hand in an image editor per chapter | Automate vertical assembly from the start: a script that takes a directory of panel images and stacks them with consistent margins is faster and more consistent |
-| Color correction | Assuming all generated panels will match color temperature | Apply a consistent post-processing color grade to all panels as part of the assembly step |
+**What goes wrong:**
+SD 1.5 LoRA training at typical settings (batch size 4, 512x512, fp16) requires approximately 8-12GB of unified memory, leaving almost no headroom. With the OS baseline (~3-5GB), you are right at the limit. macOS will swap or kill the process.
 
----
+**Memory breakdown for SD 1.5 LoRA training (approximate):**
+- Base model loaded for training: ~3-4GB
+- Training optimizers and gradients: ~2-4GB
+- Batch images and augmentation: ~1-2GB (scales with batch size)
+- OS + background: ~3-5GB
+- **Total: 9-15GB** — dangerously close to 16GB limit
 
-## Performance Traps
+**Consequences:**
+- OOM mid-training (after 30-60 minutes) loses the entire run
+- Swap-induced slowdown produces corrupted or low-quality LoRA weights
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Generating full chapter in one session | Prompt fatigue — later panels get worse prompts due to copy-paste errors | Generate in batches of 5-10 panels; review before continuing | After 15+ panels in a session |
-| Storing full-resolution PNGs without compression | Disk usage explodes; assembly scripts slow down | Export approved panels to optimized PNG/WebP before assembly | After ~2 full chapters at 4K+ resolution |
-| Regenerating failed panels mid-assembly | Style and character drift when a panel is regenerated weeks later with slightly different style | Lock the style fingerprint in a versioned file; always use the same version | Any time gap between generation sessions |
-| Ignoring Gemini rate limits in manual workflow | No issue manually, massive issue at API scale | Rate limit handling built into the automation upgrade from day one | When moving to API automation |
+**Prevention (hard constraints):**
+- **Batch size: 1.** Not 2, not 4. Batch size 1 is the only safe default on 16GB.
+- **Resolution: 512x512.** Training at 768x768 doubles GPU memory for activations.
+- **Mixed precision: bf16** if the PyTorch version supports it on MPS, otherwise fp32. fp16 on MPS has correctness issues noted above.
+- **Gradient accumulation: 4-8** to compensate for batch size 1 (simulate larger effective batch without memory cost).
+- Close all other heavy processes before training. Close Chrome, VS Code, Slack.
+- Use a dedicated user session for training (log out of other accounts).
 
----
+**Settings that cause OOM:**
+```
+--batch_size 2+          → OOM
+--resolution 768         → OOM
+--train_batch_size 4     → OOM
+Multiple ControlNets     → OOM
+```
 
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Running QC only at chapter completion | All failed panels discovered at once; fixes cascade | QC panel-by-panel as they're generated; never advance to next panel without approval |
-| No visual diff between approved and candidate panels | Approved reference sheet forgotten; imposter panels pass QC | Always have the reference sheet open and visible during QC; physically compare |
-| Overly detailed prompts for background/filler panels | Wasted generation effort on low-stakes art | Reserve prompt detail budget for foreground character panels; simplify background-only shots |
-
----
-
-## "Looks Done But Isn't" Checklist
-
-- [ ] **Character fingerprint:** Prompt fingerprint for each character generated, tested (multiple runs), approved against reference sheet — not just "written down"
-- [ ] **Text overlay pipeline:** Dialogue overlay is implemented and tested, not just planned — verify a real speech bubble appears correctly before generating all panels art-only
-- [ ] **Panel naming convention:** Naming convention documented AND enforced on the first 5 panels — not retroactively applied
-- [ ] **Webtoon resolution spec:** Output resolution confirmed in Gemini before committing — Gemini's actual output dimensions may not match what you specified
-- [ ] **Style fingerprint:** Style prefix tested across 10+ generations to confirm consistent output — not just "looks good on the first try"
-- [ ] **Multi-character panel strategy:** At least one Spyke+June+Draster group panel successfully generated (or compositing workflow tested) before assuming it works
-- [ ] **Chapter assembly:** Full chapter vertical assembly run end-to-end at least once before declaring the pipeline ready — verify scroll behavior, panel gaps, aspect ratio on mobile
+**Confidence:** HIGH — memory math is deterministic; these limits are well-established for M1 Pro 16GB.
 
 ---
 
-## Recovery Strategies
+### Pitfall 3: Speed Expectations on Mac vs. Community Benchmarks (MEDIUM)
 
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Character drift discovered post-assembly | HIGH | Identify which panels have off-model characters, regenerate with locked fingerprint, reassemble affected pages |
-| Baked-in text discovered to be garbled | MEDIUM | Re-generate all affected panels art-only, then build text overlay pipeline — work already done on art is preserved |
-| Generic filename chaos | MEDIUM | Manually match images to panel positions using visual inspection, establish naming going forward — time-consuming but recoverable |
-| Style inconsistency across chapter | MEDIUM | Apply a uniform color grade/filter pass to all panels in post; for severe cases, regenerate worst offenders |
-| Wrong aspect ratio panels discovered at assembly | HIGH | Regenerate all panels at correct dimensions — no workaround that preserves quality |
-| Action pose anatomy failure | LOW | Regenerate with simpler action description; 3-5 attempts usually produces an acceptable result |
+**What goes wrong:**
+Community LoRA training tutorials reference speeds like "30 minutes for 1000 steps." Those benchmarks are on RTX 3090/4090 with CUDA. On M1 Pro MPS, expect **5-10x slower**. A 2000-step training run that "should take 30 minutes" takes 3-5 hours.
+
+**Actual M1 Pro training estimates (LOW confidence — extrapolated):**
+- 1000 steps, 512x512, batch 1: ~2-4 hours
+- 2000 steps, 512x512, batch 1: ~4-8 hours
+
+**Consequences:**
+- Scheduling overnight runs that don't finish by morning
+- Thermal throttling making estimates based on early steps inaccurate
+- Abandoning training mid-run due to unexpected duration
+
+**Prevention:**
+- Run a 50-step test with the full training configuration and extrapolate: `50_step_time * (target_steps / 50) * 1.4` (for thermal overhead).
+- Schedule 1000-step runs as the minimum (enough to produce a usable LoRA), 2000 steps as a quality target.
+- Training does NOT need GPU while sleeping — do NOT close the lid (may suspend MPS).
+
+**Confidence:** LOW on specific numbers — requires a hardware test to confirm. Use test run to calibrate.
 
 ---
 
-## Pitfall-to-Phase Mapping
+### Pitfall 4: Dataset Size with Only 1-10 Images of Spyke (CRITICAL for this project)
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Character drift | Phase 1: Character System | Test fingerprint across 5 consecutive generations; all should be on-model |
-| Text in images garbled | Phase 1: Text Strategy | Generate one complete panel with overlay; dialogue must be perfectly legible |
-| Prompt attention span overload | Phase 2: Prompt Engineering | Single-panel prompts only; measure per-panel detail word count vs. quality |
-| Multi-character scene failures | Phase 2: Prompt Engineering | Successfully generate the trio in one scene, or confirm compositing workflow |
-| Style inconsistency | Phase 2: Style System | Generate 10 panels from the locked style prefix; no visible style variance |
-| Action pose anatomy | Phase 2: Action Conventions | At least 3 action panel types (sword strike, magic cast, running) produce acceptable results |
-| Wrong Webtoon aspect ratio | Phase 1: Format Specification | One chapter's worth of panels assembled; scroll correctly on mobile |
-| Manual workflow version chaos | Phase 1: Workflow Infrastructure | All panel images have correct names before leaving the generation step |
+**What goes wrong:**
+LoRA training with fewer than 10-15 images of a character is insufficient to learn the character's identity robustly. With 1-5 reference images, the LoRA will overfit to those specific poses/expressions and fail to generalize to new compositions. The character will look correct only when the base prompt closely matches the training image's composition.
+
+**Why it happens:**
+LoRA is learning the "delta" that maps the base model's concept space to the target character. With too few images, it memorizes specific pixels rather than learning the underlying concept (face, outfit, body proportions).
+
+**Consequences:**
+- LoRA produces Spyke's face only when the pose exactly matches the reference
+- Novel action poses (required for manga panels) produce a character-Spyke hybrid
+- Overfitting: the training loss looks great but real-world outputs are wrong
+
+**The project's reality:**
+The project has `Spyke_Final.png` (a character reference sheet). That is likely 1-3 actual rendered views of the character. That is **below the minimum** for reliable LoRA.
+
+**Prevention strategies:**
+1. **Data augmentation from the reference sheet** — crop individual panels from the reference sheet (face closeup, upper body, full body) to produce 6-10 distinct training crops from one reference sheet.
+2. **Synthetic augmentation** — generate 10-20 additional reference images of Spyke using Gemini (the v1.0 pipeline) before training. These don't need to be perfect — they're training data, not production output. Use existing fingerprints with varied poses/expressions/backgrounds.
+3. **Use the manga script panels** — any panel images that were generated in v1.0 that show Spyke can become training data. Even imperfect generations help if they're consistent on key features.
+4. **Target 15-20 images minimum** — all showing the same character, varied poses and crops, consistent key visual features (white cloak, red bandana, ginger hair, massive broadsword).
+
+**Confidence:** HIGH — LoRA data requirements are well-researched; these minimums are well-established.
+
+---
+
+### Pitfall 5: Caption Quality Determines LoRA Generalization
+
+**What goes wrong:**
+Training without captions (or with poor captions) teaches the LoRA to bake the training images' style/background/pose into the trigger word itself. The trigger word then only "works" in contexts similar to the training images. With well-captioned data, the LoRA learns only the character identity, leaving everything else to the prompt.
+
+**Example of bad captioning:**
+```
+spyke_v2
+(all training images get the same single trigger word with no description)
+```
+
+**Example of good captioning:**
+```
+spyke_v2, white cloak, red bandana, ginger hair, full body, standing, white background, simple background
+```
+
+**Consequences:**
+- Trigger word also activates the training background (white background bleeds into all generations)
+- Trigger word activates specific training pose (always standing, never sitting)
+- NSFW or unintended concepts in training images get associated with the trigger word
+
+**Prevention:**
+- Caption every training image individually with: trigger word + character features present + pose + background type + framing (close-up / full body / bust).
+- Use `--no_token_padding` and proper token budgets.
+- Tools for auto-captioning: WD14-tagger (produces booru-style tags, good for anime characters) — run on each training image and manually review/edit output.
+- If using a character reference sheet as a single image: caption the sheet as a whole, noting it's a reference sheet.
+
+**Confidence:** HIGH — well-established LoRA training best practice.
+
+---
+
+### Pitfall 6: Trigger Word Bleeding (MEDIUM)
+
+**What goes wrong:**
+Choosing a trigger word that shares tokens with common SD 1.5 vocabulary contaminates the LoRA. A trigger word like `spyke` may partially activate if the base model has seen "spike" in training data. This causes the LoRA character to "bleed" into unrelated prompts at low strength.
+
+**Prevention:**
+- Choose an uncommon trigger token: `spyke_plasma_v1` or `sypke_lora` (deliberate misspelling) is better than `spyke` alone.
+- Test the trigger word without the LoRA loaded — if the base model produces anything recognizable, choose a different word.
+- Use LoRA at moderate strength (0.6-0.8) rather than 1.0 — reduces bleed while preserving character.
+
+**Confidence:** MEDIUM — documented community behavior; severity varies by base model.
+
+---
+
+## Node.js to ComfyUI Integration Pitfalls
+
+### Pitfall 1: WebSocket Race Condition on Job Completion (CRITICAL)
+
+**What goes wrong:**
+ComfyUI's API uses a two-channel pattern: you POST the workflow via HTTP, then listen for completion via WebSocket. If you connect to the WebSocket AFTER posting the job, you may miss the completion event entirely (the image was already done). If you connect BEFORE posting, you receive events from other clients' jobs mixed with yours.
+
+**Consequences:**
+- Job appears to hang indefinitely (Express service waiting for an event that already fired)
+- Occasional spurious "completion" from a previous job
+
+**Prevention (architecture-level):**
+1. **Always connect WebSocket BEFORE submitting the prompt.** Use the client_id pattern: generate a UUID, connect WebSocket with `ws://localhost:8188/ws?clientId={uuid}`, THEN POST the prompt with that same `client_id` in the payload.
+2. Filter WebSocket messages by `client_id` — ComfyUI sends all execution events to all connected clients; only process events matching your UUID.
+3. Implement a timeout on the WebSocket listener (30-60 seconds for generation). If no completion event fires, poll `GET /queue` and `GET /history` to check job status.
+
+**Reference pattern (TypeScript):**
+```typescript
+const clientId = crypto.randomUUID();
+const ws = new WebSocket(`ws://localhost:8188/ws?clientId=${clientId}`);
+await waitForOpen(ws);
+
+// Only THEN submit the prompt
+const response = await fetch('http://localhost:8188/prompt', {
+  method: 'POST',
+  body: JSON.stringify({ prompt: workflow, client_id: clientId })
+});
+const { prompt_id } = await response.json();
+
+// Filter events
+ws.on('message', (data) => {
+  const msg = JSON.parse(data.toString());
+  if (msg.type === 'executing' && msg.data?.prompt_id === prompt_id && msg.data?.node === null) {
+    // generation complete
+  }
+});
+```
+
+**Confidence:** HIGH — this is the documented ComfyUI API pattern; the race condition is a well-known integration mistake.
+
+---
+
+### Pitfall 2: ComfyUI HTTP API Has No Built-In Authentication or CORS (MEDIUM)
+
+**What goes wrong:**
+ComfyUI runs on localhost with no auth. If Node.js and ComfyUI are on the same machine (they are here), this is fine. The pitfall is if you ever try to expose the Express service beyond localhost — the ComfyUI API remains open and unauthenticated.
+
+**Prevention:**
+- Bind ComfyUI to `127.0.0.1` explicitly (not `0.0.0.0`): `python main.py --listen 127.0.0.1`
+- Express service should be the only external entry point
+- This is acceptable for single-developer local use; document the constraint
+
+**Confidence:** HIGH — standard network security pattern.
+
+---
+
+### Pitfall 3: File Paths Between Node.js and ComfyUI (MEDIUM)
+
+**What goes wrong:**
+ComfyUI expects model paths relative to its own directory structure (`models/checkpoints/`, `models/lora/`, `models/controlnet/`). Your Node.js service will need to reference these paths to: trigger model loading, reference uploaded images for img2img, and locate output files after generation. Hardcoded absolute paths break when ComfyUI's install location changes.
+
+**Consequences:**
+- "Model not found" errors when ComfyUI's models directory path doesn't match what Node.js sends
+- Generated images not found by Node.js because output path differs from what the workflow specified
+- Workflow JSON files referencing wrong paths when copied between machines
+
+**Prevention:**
+- Store ComfyUI's base directory as a single env variable (`COMFYUI_BASE_PATH`).
+- Derive all model paths from this base: `${COMFYUI_BASE_PATH}/models/lora/spyke_v1.safetensors`
+- Use ComfyUI's `/object_info` API to discover available models at startup rather than hardcoding model names.
+- For generated outputs: use ComfyUI's `SaveImage` node with a predictable filename pattern, then read from `${COMFYUI_BASE_PATH}/output/`.
+
+**Confidence:** HIGH — basic path management; well-understood pattern.
+
+---
+
+### Pitfall 4: Long-Running Training Jobs and Process Management (MEDIUM)
+
+**What goes wrong:**
+Spawning a kohya_ss training job from Node.js via `child_process.spawn()` creates a long-running process (hours) that can:
+- Silently die without triggering the Node.js `'exit'` event if killed by OOM
+- Leave zombie processes if Node.js itself restarts
+- Produce no meaningful status updates during training (only final loss curves)
+
+**Prevention (implementation-level):**
+
+```typescript
+// Use spawn (not exec) for streaming output
+const trainingProcess = spawn('python', ['train_network.py', ...args], {
+  stdio: ['ignore', 'pipe', 'pipe'],
+  env: { ...process.env, PYTORCH_ENABLE_MPS_FALLBACK: '1' }
+});
+
+// Stream logs to a file for inspection
+const logStream = fs.createWriteStream(`training-${jobId}.log`);
+trainingProcess.stdout.pipe(logStream);
+trainingProcess.stderr.pipe(logStream);
+
+// Parse progress from training output (kohya_ss outputs step/loss to stderr)
+trainingProcess.stderr.on('data', (chunk) => {
+  const line = chunk.toString();
+  const match = line.match(/step (\d+)\/(\d+)/);
+  if (match) updateJobProgress(jobId, parseInt(match[1]), parseInt(match[2]));
+});
+
+// Handle OOM kills (SIGKILL from macOS memory pressure)
+trainingProcess.on('exit', (code, signal) => {
+  if (signal === 'SIGKILL') {
+    // macOS killed the process (OOM or manual)
+    markJobFailed(jobId, 'OOM_KILL');
+  }
+});
+
+// Persist PID for crash recovery
+fs.writeFileSync(`training-${jobId}.pid`, trainingProcess.pid.toString());
+```
+
+**Recovery:**
+- On Node.js restart, check for orphaned PID files. If the PID is still running, reattach. If not, mark job as failed.
+- Partially completed training checkpoints are saved by kohya_ss — check `output_dir` for `*.safetensors` files at intermediate save intervals.
+
+**Confidence:** MEDIUM — standard Node.js child process patterns; the OOM/SIGKILL detection is Mac-specific.
+
+---
+
+### Pitfall 5: ComfyUI Startup Time and Health Check Timing
+
+**What goes wrong:**
+ComfyUI takes 10-30 seconds to start (model loading), then additional time to load the first checkpoint into memory. If the Node.js service sends the first generation request before ComfyUI is ready, the request fails with a connection refused or a queue error.
+
+**Prevention:**
+- Implement a startup health check loop: poll `GET /system_stats` until it returns 200 before accepting any generation requests.
+- Apply a backoff: check every 2 seconds for up to 60 seconds. If not up by 60s, fail loudly.
+- Start ComfyUI as a managed background process that the Express service can restart: use a process manager (PM2, or simple Node.js spawn with restart logic) rather than assuming it's already running.
+
+```typescript
+async function waitForComfyUI(maxWaitMs = 60000): Promise<void> {
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch('http://127.0.0.1:8188/system_stats');
+      if (res.ok) return;
+    } catch { /* not ready yet */ }
+    await sleep(2000);
+  }
+  throw new Error('ComfyUI did not start within 60 seconds');
+}
+```
+
+**Confidence:** HIGH — fundamental integration pattern for HTTP services with non-trivial startup time.
+
+---
+
+### Pitfall 6: WebSocket Reconnection on ComfyUI Crash
+
+**What goes wrong:**
+If ComfyUI crashes mid-generation (OOM, NaN propagation, manual kill), the WebSocket connection closes. If the Node.js service doesn't implement reconnection, it enters a dead state where all future generation requests hang waiting for a WebSocket that will never deliver results.
+
+**Prevention:**
+- Implement WebSocket reconnection with exponential backoff.
+- Tag all in-flight jobs — on reconnect, query `GET /history` to check if the job completed before the crash.
+- Implement a generation timeout: if a 512x768 image at 20 steps hasn't completed in 120 seconds, assume something failed and query the queue.
+
+**Confidence:** HIGH — standard WebSocket resilience pattern.
+
+---
+
+## ControlNet on Mac Pitfalls
+
+### Pitfall 1: Which ControlNet Models Are Safe on M1 Pro 16GB
+
+**Memory overhead per ControlNet model loaded:** ~1.2-1.5GB (fp16 safetensors format).
+
+**MPS-compatible ControlNet models (MEDIUM confidence — mid-2025 state):**
+
+| Model | Memory | MPS Status | Notes |
+|-------|---------|------------|-------|
+| control_v11p_sd15_openpose | ~1.4GB | Compatible | Pure Python inference, well-tested on Mac |
+| control_v11f1p_sd15_depth | ~1.4GB | Compatible | Depth estimation; MPS-compatible |
+| control_v11p_sd15_canny | ~1.4GB | Compatible | Edge detection; low compute, safe on MPS |
+| control_v11p_sd15_lineart | ~1.4GB | Compatible | Good for manga style; MPS-compatible |
+| control_v11p_sd15_scribble | ~1.4GB | Compatible | Sketch input; low risk |
+| T2I-Adapter (any) | ~300MB | Mostly compatible | Lighter than full ControlNet |
+
+**Models to avoid on 16GB:**
+- Do NOT load two ControlNet models simultaneously — 2 × 1.4GB + SD 1.5 2GB + working memory = OOM.
+- Inpainting ControlNet variants tend to use more working memory.
+
+**Recommended approach for this project:**
+Use **OpenPose** as the primary ControlNet (poses drive manga panel composition). Lineart as secondary if needed for panel-to-panel style consistency. Never both at once.
+
+**Confidence:** MEDIUM — model compatibility based on community reports through mid-2025.
+
+---
+
+### Pitfall 2: ControlNet Preprocessors Require Separate Models
+
+**What goes wrong:**
+ControlNet conditioning requires running a preprocessor first (OpenPose detection extracts pose data from an input image). The preprocessor models are separate downloads from the ControlNet weights. Forgetting to download them causes silent failures: ControlNet receives empty conditioning and has no effect on the output.
+
+**Prevention:**
+- OpenPose preprocessor: download `openpose.onnx` (or the PyTorch variant) to `models/controlnet/annotators/`.
+- Test the preprocessor chain explicitly: upload a test image, verify pose skeleton is detected before connecting to generation workflow.
+- ComfyUI-Advanced-ControlNet node handles the preprocessor call within the workflow — use this node rather than manual preprocessing.
+
+**Confidence:** MEDIUM — documented requirement; specific file paths depend on ComfyUI-Advanced-ControlNet version.
+
+---
+
+### Pitfall 3: ControlNet Strength vs. Prompt Strength Balance
+
+**What goes wrong:**
+With ControlNet strength too high (> 0.8-0.9), the model follows the pose skeleton exactly but ignores the character prompt — generating the pose with wrong character features. With too low (< 0.4), the pose is ignored and the LoRA generates what it wants.
+
+**For manga panels:**
+Optimal range is typically 0.6-0.75 for pose conditioning. Test with reference pose images before production.
+
+**Prevention:**
+- Expose ControlNet strength as a configurable parameter per generation request (not hardcoded).
+- Default to 0.65, allow per-call override.
+
+**Confidence:** MEDIUM — these ranges are established community practice; may vary by model combination.
+
+---
+
+## LoRA Training Data Pitfalls
+
+### Pitfall 1: The "1-10 Images" Dataset Problem (CRITICAL for this project)
+
+This is covered in depth in the kohya_ss section. Short summary:
+
+**Minimum viable dataset:** 15-20 images showing the character from varied angles and poses.
+**For Spyke specifically:** The project likely has 1-3 reference images. You must augment.
+
+**Augmentation strategy:**
+1. Crop the character reference sheet (Spyke_Final.png) into: face closeup, bust, upper body, full body — 4-6 crops.
+2. Use v1.0 Gemini pipeline to generate 10-15 additional Spyke images (varied poses, expressions, backgrounds). Quality doesn't need to be perfect — training data needs to be consistent on key features, not beautiful.
+3. Aim for: 50% full-body, 30% upper-body/bust, 20% face closeup — this distribution teaches the LoRA to generalize across framing.
+
+**Confidence:** HIGH — LoRA dataset requirements are well-researched.
+
+---
+
+### Pitfall 2: Overfitting to Training Images
+
+**What goes wrong:**
+With a small dataset (15-20 images), training too many steps causes the LoRA to memorize rather than generalize. At step 500, the character might look right in varied poses. At step 2000, it only looks right when the prompt closely matches the training image composition.
+
+**Signs of overfitting:**
+- Loss drops very low (< 0.001) before training ends
+- Character looks correct only for training-image-like prompts
+- Novel poses produce distorted anatomy while the character's face is still recognizable
+
+**Prevention:**
+- For datasets of 15-20 images: target **800-1200 training steps total** (not 2000+)
+- Rule of thumb for small datasets: `(num_images * 100) = roughly correct step count`
+- Use validation prompts (if supported) to check generalization during training
+- Save checkpoints every 200 steps, test each checkpoint, use the one that generalizes best (not the final one)
+
+**Confidence:** MEDIUM — the step count formula is a community heuristic, requires calibration to your specific data.
+
+---
+
+### Pitfall 3: Regularization Images and Why You Need Them
+
+**What goes wrong:**
+Training without regularization images causes "language drift" — the base model's understanding of common prompts degrades in the areas the LoRA affects. After training without regularization, prompts for unrelated concepts that share tokens with the training captions will produce distorted outputs.
+
+**Prevention:**
+- Generate 100-200 regularization images using the base SD 1.5 model (no LoRA) with a general prompt: `anime character, male, full body, white background`. These teach the model "here is what a normal character looks like — only update the delta for spyke_plasma_v1."
+- kohya_ss supports this via `--reg_data_dir` parameter.
+- With a tiny dataset (15-20 images), regularization images are critical — without them, the LoRA will corrupt the base model's concept space.
+
+**Confidence:** HIGH — regularization is a standard LoRA training technique with well-understood effects.
+
+---
+
+## Seed Reproducibility Pitfalls
+
+### Pitfall 1: MPS Seed Behavior Is NOT Fully Deterministic (CRITICAL)
+
+**What goes wrong:**
+Locking the seed in ComfyUI does NOT guarantee identical output on repeated runs on MPS the way it does on CUDA. Two runs with the same seed, same model, same workflow on M1 Pro may produce visually similar but not pixel-identical images. This undermines the "deterministic panel regeneration" requirement.
+
+**Why it happens (MEDIUM confidence):**
+- MPS does not guarantee operation ordering for some parallel operations — the same floating-point operations executed in different order produce different rounding
+- Some PyTorch MPS kernels have non-deterministic behavior by default
+- Thermal throttling changes the computation schedule (less likely to affect output, but theoretically possible)
+
+**Practical impact:**
+- Seed locking provides **strong consistency** (same character, same pose, very similar composition) but NOT **pixel-identical reproducibility**.
+- For manga panel production, "visually equivalent" is sufficient — you don't need pixel-identical outputs.
+- If you need to regenerate a panel weeks later and it looks "same enough to be consistent," seeds work adequately.
+- If you need to prove pixel-level reproducibility (e.g., for detecting unauthorized copies), MPS cannot guarantee this.
+
+**Prevention:**
+- Document that seed locking provides "character and composition consistency" not "bit-exact reproducibility."
+- In requirements: define "reproducible" as "same character, same pose, visually indistinguishable" rather than "pixel-identical."
+- Store the full workflow JSON (not just the seed) for every approved panel, so any regeneration uses the exact same workflow.
+- Test: run the same seed 3 times and visually compare — if the outputs are consistent enough for your use case, you're fine.
+
+**Confidence:** MEDIUM — MPS non-determinism is documented for some ops; the degree of variance in practice depends on the specific workflow and PyTorch version.
+
+---
+
+### Pitfall 2: Seeds From Community Are CUDA Seeds — They Do Not Transfer
+
+**What goes wrong:**
+Online resources share "good seeds" for specific styles or character types. These seeds are generated on CUDA hardware. Due to MPS non-determinism and different random number generation paths, CUDA seeds do not produce the same output on MPS. Don't waste time trying to replicate CUDA seed outputs on Mac.
+
+**Prevention:**
+- Develop your own seed library through testing on your hardware.
+- Run 50-100 generations with random seeds, save the ones that produce good character consistency, catalog them.
+- Your seed library is hardware-specific: `seeds-m1pro.json`.
+
+**Confidence:** HIGH — fundamental difference in random number generation between CUDA and MPS.
+
+---
+
+### Pitfall 3: Workflow JSON Must Be Versioned for Reproducibility
+
+**What goes wrong:**
+Storing only the seed is insufficient for reproducibility. If the model checkpoint changes (updated safetensors), the LoRA is retrained (new version), or any node in the ComfyUI workflow is updated, the same seed produces a different result.
+
+**Prevention:**
+- Store the complete workflow JSON alongside every approved generation: `ch01_p003_v1.workflow.json`
+- Record: checkpoint name + hash, LoRA name + version + strength, ControlNet model + strength, sampler, steps, CFG scale, seed
+- This is the production-traceability requirement — equivalent to committing a lock file
+
+**Confidence:** HIGH — standard reproducibility practice.
+
+---
+
+## Model File Management Pitfalls
+
+### Pitfall 1: VAE Is Not Optional for SD 1.5 (CRITICAL)
+
+**What goes wrong:**
+Some SD 1.5 checkpoints do not bake in a VAE (or include an older/lower-quality VAE). Generating with no VAE or the wrong VAE produces desaturated, washed-out images with blown-out highlights — a symptom often blamed on fp16 issues but actually a VAE mismatch.
+
+**The correct VAE for SD 1.5 anime-style outputs:**
+Use `vae-ft-mse-840000-ema-pruned.safetensors` (MSE-trained VAE). This is the standard VAE for SD 1.5 and produces correct color saturation. Size: ~335MB.
+
+**Prevention:**
+- Always load the VAE explicitly in the ComfyUI workflow (do not rely on the checkpoint's baked VAE).
+- Add VAE selection to the Express service API — make it a required parameter, not optional.
+- If outputs look washed out or desaturated: first check VAE before blaming fp16 or generation settings.
+
+**Confidence:** HIGH — VAE requirement for SD 1.5 is well-established, specific file name confirmed.
+
+---
+
+### Pitfall 2: Model File Integrity on Download (MEDIUM)
+
+**What goes wrong:**
+Large model files (2-7GB) downloaded from HuggingFace or CivitAI can be partially corrupted during download. A corrupted safetensors file may load without error but produce garbage outputs. This is particularly frustrating because the error appears to be in the generation settings, not the file.
+
+**Prevention:**
+- Always verify SHA256 hashes after downloading: most models publish expected hashes on their HuggingFace/CivitAI page.
+- If you get consistently wrong outputs that don't respond to prompt changes: re-download the model.
+- Use `huggingface-cli download` or `aria2c` for large files (handles interrupted downloads and resumes).
+
+**Confidence:** HIGH — standard file integrity issue for large downloads.
+
+---
+
+### Pitfall 3: fp16 vs fp32 for Inference on Mac
+
+**Recommendation:**
+- Checkpoint (U-Net): fp16. Saves ~2GB RAM with minimal quality difference for inference.
+- VAE: **fp32**. As noted in the MPS section, VAE fp16 has known correctness issues on MPS.
+- ControlNet: fp16. Same reasoning as checkpoint.
+- LoRA: stored in fp16 (standard), loaded at the precision of the base model.
+
+**The `--fp16` flag in ComfyUI** applies to the U-Net, not the VAE. VAE precision is controlled separately.
+
+**Concrete risk:** If you set everything to fp16 including VAE, you may get washed-out images that look like a style problem but are actually a VAE computation error. Test VAE fp32 explicitly if you see color issues.
+
+**Confidence:** MEDIUM — behavior observed through mid-2025 on MPS; may have improved in PyTorch 2.4+.
+
+---
+
+### Pitfall 4: Checkpoint Format — .ckpt vs .safetensors
+
+**Recommendation:** Always use `.safetensors` format. Avoid `.ckpt` files.
+
+**Why:**
+- `.ckpt` files can execute arbitrary Python code during loading (security risk, even for local use)
+- `.safetensors` loading is ~5-10x faster and does not allow code execution
+- Modern checkpoints are distributed in `.safetensors` format; `.ckpt` is legacy
+
+**On Mac specifically:** `.ckpt` loading with MPS can trigger memory management issues during deserialization. `.safetensors` is strictly better.
+
+**Confidence:** HIGH — well-established recommendation, not controversial.
+
+---
+
+## Prevention Checklist
+
+### Requirements Phase (Before Writing Any Code)
+
+- [ ] **Define "reproducible"** as "visually consistent" not "pixel-identical" — update requirements doc accordingly
+- [ ] **Hard-cap resolution** at 512x768 for generation, 512x512 for training — document this as a hardware constraint, not a quality choice
+- [ ] **Hard-cap training batch size** at 1 — document this as the only safe value for 16GB
+- [ ] **Plan dataset augmentation** before requirements sign-off — 15-20 images minimum for Spyke LoRA
+- [ ] **Specify VAE explicitly** in the generation API spec — required field, not optional
+- [ ] **Define ComfyUI startup dependency** — Express service health check must gate on ComfyUI readiness
+- [ ] **List which ControlNets** will be used — budget their memory into the 16GB budget explicitly
+
+### Architecture Phase (Before Implementation Planning)
+
+- [ ] **WebSocket + client_id pattern** designed before any integration code — prevents the race condition from being baked in
+- [ ] **Process management design** for training jobs — how OOM kills are detected and surfaced to the job status API
+- [ ] **Path resolution strategy** — single env variable for ComfyUI base, all paths derived from it
+- [ ] **Model version tracking** — how checkpoint/LoRA version is recorded alongside every generated image
+- [ ] **Memory pressure monitoring** — architecture for detecting swap/memory pressure before accepting jobs
+- [ ] **Workflow JSON storage** — where approved generation workflows are persisted alongside output images
+- [ ] **LoRA trigger word naming convention** — decided before any training runs
+
+### Implementation Phase (Code-Level)
+
+- [ ] **PyTorch MPS verification** — health check endpoint confirms `torch.backends.mps.is_available()` returns True
+- [ ] **WebSocket reconnection** implemented before integration testing — not added later as a "nice to have"
+- [ ] **Training job log streaming** — stdout/stderr piped to files, not buffered in memory
+- [ ] **Generation timeout** — hardcoded 120s timeout for 512x768 at 20 steps; fail loudly rather than hang
+- [ ] **VAE fp32 / U-Net fp16** — workflow defaults are explicitly set, not inherited from ComfyUI defaults
+- [ ] **PYTORCH_ENABLE_MPS_FALLBACK=1** — set in the environment before any Python subprocess is spawned
+- [ ] **Batch size validation** — training API endpoint rejects batch_size > 1 rather than letting it silently OOM
+- [ ] **Checkpoint hash logging** — log the safetensors hash when a model is loaded for the first time
+
+### Warning Signs to Watch During Development
+
+| Symptom | Likely Cause | First Check |
+|---------|--------------|-------------|
+| Generation takes > 3 minutes for 512x512/20 steps | CPU fallback from MPS | Check GPU History in Activity Monitor |
+| Black or gray output image | fp16 NaN or wrong VAE | Test fp32 VAE first |
+| Washed out / desaturated output | VAE fp16 issue | Switch VAE to fp32 |
+| Training loses progress mid-run | OOM kill | Check macOS Console for "killed by jetsam" |
+| WebSocket hangs indefinitely | Missed completion event | Check if client_id is in POST body |
+| ComfyUI responses time out on first request | Not started yet | Implement startup health check |
+| LoRA produces correct face but wrong pose | Overfitting or too few training steps | Test earlier checkpoints |
+| Trigger word bleeds into unrelated prompts | Token collision | Change trigger word to more unique string |
+| Model load time > 60s | Likely loading fp32 model | Verify checkpoint is fp16 safetensors |
+
+---
+
+## Phase-to-Pitfall Mapping
+
+| Phase | Pitfalls to Address | Priority |
+|-------|--------------------|---------|
+| Requirements | MPS memory limits, dataset size minimum, "reproducible" definition, VAE requirement | Critical — requirements must encode these as hard constraints |
+| Architecture | WebSocket race condition, process management, path resolution, memory pressure monitoring | Critical — architecture mistakes here cause rewrites |
+| ComfyUI Setup | fp16/fp32 correctness, MPS verification, model file integrity, VAE loading | High — catch before writing any integration code |
+| LoRA Data Prep | Dataset augmentation strategy, caption quality, regularization images, trigger word | Critical — wrong data means wasted training time |
+| LoRA Training | OOM prevention (batch size 1), step count, checkpoint interval, speed expectations | High — training runs are the longest operations |
+| Integration | WebSocket reconnection, timeout handling, log streaming, health check timing | High — integration bugs cause the most confusing failures |
+| ControlNet | Single model at a time, preprocessor download, strength calibration | Medium — important but easier to fix post-implementation |
+| Reproducibility | Workflow JSON storage, seed library, version tracking | Medium — correctness issue but not a blocker |
 
 ---
 
 ## Sources
 
-- First-hand observation: concept art generation attempts in `/Users/dondemetrius/Code/plasma/03_manga/concept/characters/` (8 images examined across 3 characters — direct evidence of character drift, color misinterpretation, age metadata errors)
-- First-hand observation: `/Users/dondemetrius/Code/plasma/03_manga/prompts/pages-01-to-15.md` and `pages-16-to-29.md` — evidence of multi-character scene complexity and baked-in dialogue approach requiring caution
-- First-hand observation: June Kamara character reference sheets — color prompt ("dark pink") produced blue/teal in 2 of 3 attempts, confirmed on third with more explicit color specification
-- First-hand observation: Spyke concept sheets — age labeled as "16" in two early runs despite prompt specifying "21", showing model defaulted to teenager archetype; corrected in final version by adding explicit adult descriptor
-- Training data (MEDIUM confidence): Gemini / Imagen 3 text-in-image capabilities, attention mechanisms in diffusion models, Webtoon format specifications
-- Project documentation: `/Users/dondemetrius/Code/plasma/.planning/PROJECT.md` — confirmed manual workflow, Gemini Pro account, text/dialogue approach undecided
+- Training data (MEDIUM confidence, through Aug 2025): PyTorch MPS documentation, Apple Silicon ML community reports, ComfyUI GitHub issues, kohya_ss README and issues
+- Hardware specifications: MacBook Pro M1 Pro 16GB unified memory architecture — deterministic RAM math (HIGH confidence)
+- ComfyUI API pattern (client_id + WebSocket): ComfyUI official API documentation examples (HIGH confidence — this is the documented integration pattern)
+- LoRA training data requirements: Well-established community consensus across multiple LoRA training guides (HIGH confidence on minimums)
+- MPS non-determinism: PyTorch MPS documentation noting non-deterministic behavior for some operations (MEDIUM confidence — may have improved)
+- VAE fp32 recommendation: Multiple community reports of VAE fp16 issues on MPS (MEDIUM confidence)
+- Safety note: ALL speed benchmarks are LOW confidence — require a hardware test on this specific machine to calibrate
+
+**Verification priorities at implementation time:**
+1. Confirm current PyTorch version's MPS coverage (may have improved since mid-2025)
+2. Verify kohya_ss current Mac/MPS install instructions against the current README
+3. Test actual generation speed (512x512, 20 steps) to calibrate timeout values
+4. Verify ComfyUI-Advanced-ControlNet current MPS compatibility
 
 ---
-*Pitfalls research for: AI manga production pipeline — Plasma Webtoon*
-*Researched: 2026-02-18*
+*Pitfalls research for: ComfyUI + LoRA pipeline on Apple Silicon (v2.0 milestone)*
+*Researched: 2026-02-19*
+*Context: Adding local ComfyUI + kohya_ss to existing TypeScript manga pipeline — M1 Pro 16GB*
