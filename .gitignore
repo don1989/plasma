@@ -8,5 +8,8 @@ pipeline/dist/
 # Environment variables (API keys)
 .env
 
+# LoRA dataset images (regeneratable — not committed; caption .txt files ARE committed)
+dataset/**/*.png
+
 # OS files
 *.DS_Store

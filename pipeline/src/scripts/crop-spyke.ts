@@ -10,22 +10,19 @@
  * Run from project root: /Users/dondemetrius/Code/plasma
  *
  * Source image dimensions (verified):
- *   Spyke_Final.png: 2816x1536
- *   ref-sheet-v1.png: 1024x1024
- *   ref-sheet-v2.png: 1024x1024
- *   ref-sheet-v7.png: 1024x1024
+ *   Spyke_Final.png:   2816x1536 — 4 body views (front, 3q, side, back) + expression row at y≈1220
+ *   Spyke_Younger.png: 2816x1536 — 4 body views (front neutral, action/combat, side, back), Age: 21
+ *
+ * Expression row order in Spyke_Final.png (confirmed from dry-run review):
+ *   Neutral (Cold) → Angry (Snarling) → Battle-focused → Rare Smirk → Shocked → Inner Pain
+ *   → [detail callouts: Red Bandana, Plasma Sword Glow, etc. — do NOT crop these]
  *
  * Crop coordinates are MEDIUM confidence — dry-run output MUST be visually reviewed
  * before generating final dataset images (Plan 02 checkpoint).
- *
- * NOTE: spyke_final_calm is SPECULATIVE. An ~830px gap exists between spyke_final_battle
- * (left:850) and spyke_final_shocked (left:1680). A 5th expression panel ('calm') may
- * exist at x=1260. If the preview shows a blank or duplicate crop, exclude this source
- * during the Plan 02 checkpoint review.
  */
 
 import sharp from 'sharp';
-import { writeFile, mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 
 // ---------------------------------------------------------------------------
@@ -47,9 +44,11 @@ interface CropSource {
 
 const CROP_SOURCES: CropSource[] = [
   // -------------------------------------------------------------------------
-  // Spyke_Final.png (2816x1536)
-  // Top row: 4 full-body views (poses across width)
-  // Bottom row: expression closeups at y=1230
+  // Spyke_Final.png (2816x1536) — canonical final design, Age: 21
+  // Top row: 4 full-body poses (front, 3q, side, back)
+  // Bottom row: expression faces starting at y≈1220
+  // Expression order: Neutral → Angry → Battle-focused → Rare Smirk → Shocked → Inner Pain
+  //                   → [detail callouts — do NOT crop past Inner Pain]
   // -------------------------------------------------------------------------
   {
     id: 'spyke_final_front',
@@ -79,127 +78,98 @@ const CROP_SOURCES: CropSource[] = [
     flip: true,
     caption: 'spyke_plasma_v1, full body, back view, white cloak visible, white background',
   },
+  // Expression row — coordinates verified from preview review (panel map derived from dry-run 2)
+  // Panel widths are non-uniform (~220-300px). Each crop starts at panel boundary.
+  // Order confirmed: Neutral → Angry → Battle-focused → Rare Smirk → Shocked → Inner Pain
+  //                  → [detail callouts: Red Bandana, Plasma Sword Glow — do NOT crop past Inner Pain]
   {
     id: 'spyke_final_neutral',
     src: '03_manga/concept/characters/spyke_tinwall/Spyke_Final.png',
-    crop: { left: 30, top: 1230, width: 380, height: 280 },
+    crop: { left: 10, top: 1220, width: 280, height: 290 },
     flip: true,
     caption: 'spyke_plasma_v1, closeup face, neutral expression, white background',
   },
   {
+    // 2nd expression panel — "Angry (Snarling)" — starts at x≈310
     id: 'spyke_final_angry',
     src: '03_manga/concept/characters/spyke_tinwall/Spyke_Final.png',
-    crop: { left: 430, top: 1230, width: 380, height: 280 },
+    crop: { left: 310, top: 1220, width: 220, height: 290 },
     flip: true,
     caption: 'spyke_plasma_v1, closeup face, angry expression, white background',
   },
   {
+    // 3rd expression panel — "Battle-focused" — starts at x≈545
     id: 'spyke_final_battle',
     src: '03_manga/concept/characters/spyke_tinwall/Spyke_Final.png',
-    crop: { left: 850, top: 1230, width: 380, height: 280 },
+    crop: { left: 545, top: 1220, width: 210, height: 290 },
     flip: true,
     caption: 'spyke_plasma_v1, closeup face, battle focus expression, white background',
   },
   {
-    // SPECULATIVE: ~830px gap between battle (left:850) and shocked (left:1680).
-    // A 5th expression panel ('calm') may exist at x=1260.
-    // Verify via --dry-run preview. Exclude in Plan 02 if no distinct panel present.
-    id: 'spyke_final_calm',
+    // 4th expression panel — "Rare Smirk" — starts at x≈770
+    id: 'spyke_final_smirk',
     src: '03_manga/concept/characters/spyke_tinwall/Spyke_Final.png',
-    crop: { left: 1260, top: 1230, width: 380, height: 280 },
+    crop: { left: 770, top: 1220, width: 210, height: 290 },
     flip: true,
-    caption: 'spyke_plasma_v1, closeup face, calm expression, white background',
+    caption: 'spyke_plasma_v1, closeup face, smirk expression, white background',
   },
   {
+    // 5th expression panel — "Shocked" — starts at x≈1000
     id: 'spyke_final_shocked',
     src: '03_manga/concept/characters/spyke_tinwall/Spyke_Final.png',
-    crop: { left: 1680, top: 1230, width: 380, height: 280 },
+    crop: { left: 1000, top: 1220, width: 230, height: 290 },
     flip: true,
     caption: 'spyke_plasma_v1, closeup face, shocked expression, white background',
   },
-
-  // -------------------------------------------------------------------------
-  // ref-sheet-v1.png (1024x1024) — clean white bg, 4 views across width
-  // -------------------------------------------------------------------------
   {
-    id: 'v1_front',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v1.png',
-    crop: { left: 10, top: 60, width: 240, height: 900 },
-    flip: false,
-    caption: 'spyke_plasma_v1, full body, front view, standing, white background',
-  },
-  {
-    id: 'v1_3q',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v1.png',
-    crop: { left: 270, top: 60, width: 240, height: 900 },
-    flip: false,
-    caption: 'spyke_plasma_v1, full body, three quarter angle, standing, white background',
-  },
-  {
-    id: 'v1_side',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v1.png',
-    crop: { left: 530, top: 60, width: 240, height: 900 },
-    flip: false,
-    caption: 'spyke_plasma_v1, full body, side profile, standing, white background',
-  },
-  {
-    id: 'v1_back',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v1.png',
-    // NOTE: left=784 (not 790) — original plan coords exceeded 1024px image width by 6px (790+240=1030).
-    // Adjusted left to 784 so right edge = 1024 exactly.
-    crop: { left: 784, top: 60, width: 240, height: 900 },
+    // 6th expression panel — "Inner Pain" — starts at x≈1250
+    id: 'spyke_final_inner_pain',
+    src: '03_manga/concept/characters/spyke_tinwall/Spyke_Final.png',
+    crop: { left: 1250, top: 1220, width: 220, height: 290 },
     flip: true,
-    caption: 'spyke_plasma_v1, full body, back view, white cloak visible, white background',
+    caption: 'spyke_plasma_v1, closeup face, pained expression, white background',
+  },
+  {
+    // Detail callout — "Red Bandana" — starts at x≈1570 (after inner pain panel)
+    // Accessory detail shot: trains the model on Spyke's distinctive red bandana
+    id: 'spyke_final_red_bandana',
+    src: '03_manga/concept/characters/spyke_tinwall/Spyke_Final.png',
+    crop: { left: 1570, top: 1220, width: 280, height: 290 },
+    flip: false,
+    caption: 'spyke_plasma_v1, closeup head, red bandana detail, white background',
   },
 
   // -------------------------------------------------------------------------
-  // ref-sheet-v7.png (1024x1024) — latest, clean
+  // Spyke_Younger.png (2816x1536) — canonical art, Age: 21
+  // Different poses from Spyke_Final: includes action/combat pose (pose 2)
+  // Preferred over AI-generated ref-sheets for body view diversity
   // -------------------------------------------------------------------------
   {
-    id: 'v7_front',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v7.png',
-    crop: { left: 10, top: 60, width: 240, height: 900 },
+    id: 'younger_front',
+    src: '03_manga/concept/characters/spyke_tinwall/Spyke_Younger.png',
+    crop: { left: 30, top: 100, width: 640, height: 1100 },
     flip: false,
     caption: 'spyke_plasma_v1, full body, front view, standing, white background',
   },
   {
-    id: 'v7_3q',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v7.png',
-    crop: { left: 270, top: 60, width: 240, height: 900 },
+    // Action/combat pose — sword raised, 3/4 angle
+    id: 'younger_action',
+    src: '03_manga/concept/characters/spyke_tinwall/Spyke_Younger.png',
+    crop: { left: 720, top: 100, width: 640, height: 1100 },
     flip: false,
-    caption: 'spyke_plasma_v1, full body, three quarter angle, standing, white background',
+    caption: 'spyke_plasma_v1, full body, three quarter angle, combat stance, sword raised, white background',
   },
   {
-    id: 'v7_side',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v7.png',
-    crop: { left: 530, top: 60, width: 240, height: 900 },
+    id: 'younger_side',
+    src: '03_manga/concept/characters/spyke_tinwall/Spyke_Younger.png',
+    crop: { left: 1400, top: 100, width: 640, height: 1100 },
     flip: false,
-    caption: 'spyke_plasma_v1, full body, side profile, standing, white background',
+    caption: 'spyke_plasma_v1, full body, side profile, white background',
   },
   {
-    id: 'v7_back',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v7.png',
-    // NOTE: left=784 (not 790) — same bounds fix as v1_back (790+240=1030 > 1024).
-    crop: { left: 784, top: 60, width: 240, height: 900 },
-    flip: true,
-    caption: 'spyke_plasma_v1, full body, back view, white cloak visible, white background',
-  },
-
-  // -------------------------------------------------------------------------
-  // ref-sheet-v2.png (1024x1024) — secondary clean
-  // -------------------------------------------------------------------------
-  {
-    id: 'v2_front',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v2.png',
-    crop: { left: 10, top: 60, width: 240, height: 900 },
-    flip: false,
-    caption: 'spyke_plasma_v1, full body, front view, standing, white background',
-  },
-  {
-    id: 'v2_back',
-    src: 'output/characters/spyke-tinwall/ref-sheet-v2.png',
-    // NOTE: left=784 (not 790) — same bounds fix as v1_back (790+240=1030 > 1024).
-    crop: { left: 784, top: 60, width: 240, height: 900 },
+    id: 'younger_back',
+    src: '03_manga/concept/characters/spyke_tinwall/Spyke_Younger.png',
+    crop: { left: 2080, top: 100, width: 640, height: 1100 },
     flip: true,
     caption: 'spyke_plasma_v1, full body, back view, white cloak visible, white background',
   },
@@ -283,15 +253,59 @@ function printSummaryTable(
 }
 
 // ---------------------------------------------------------------------------
+// Captions + flip augmentation
+// ---------------------------------------------------------------------------
+
+async function writeCaptionsAndFlips(trainDir: string): Promise<void> {
+  console.log('\nSpyke crop script — CAPTIONS mode');
+  console.log(`Writing captions + flips to: ${trainDir}\n`);
+
+  let captionCount = 0;
+  let flipCount = 0;
+
+  for (let i = 0; i < CROP_SOURCES.length; i++) {
+    const source = CROP_SOURCES[i]!;
+    const stem = `spyke_${String(i + 1).padStart(3, '0')}`;
+    const pngPath = join(trainDir, `${stem}.png`);
+    const txtPath = join(trainDir, `${stem}.txt`);
+
+    // Write caption for original
+    await writeFile(txtPath, source.caption, 'utf8');
+    captionCount++;
+    process.stdout.write(`  ${stem}.txt\n`);
+
+    // Generate flipped copy + caption
+    if (source.flip) {
+      const flipPng = join(trainDir, `${stem}_flip.png`);
+      const flipTxt = join(trainDir, `${stem}_flip.txt`);
+      await sharp(pngPath).flop().png().toFile(flipPng);
+      await writeFile(flipTxt, `${source.caption}, mirrored`, 'utf8');
+      captionCount++;
+      flipCount++;
+      process.stdout.write(`  ${stem}_flip.png + ${stem}_flip.txt\n`);
+    }
+  }
+
+  console.log(`\nDone. ${captionCount} caption files written, ${flipCount} flipped copies generated.`);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
   const isDryRun = process.argv.includes('--dry-run');
-  const mode: 'dry-run' | 'final' = isDryRun ? 'dry-run' : 'final';
+  const isCaptions = process.argv.includes('--captions');
 
   const projectRoot = process.cwd();
   const trainDir = resolve(projectRoot, 'dataset/spyke/train/10_spyke_plasma_v1');
+
+  if (isCaptions) {
+    await writeCaptionsAndFlips(trainDir);
+    return;
+  }
+
+  const mode: 'dry-run' | 'final' = isDryRun ? 'dry-run' : 'final';
   const previewDir = resolve(trainDir, 'preview');
   const outputDir = isDryRun ? previewDir : trainDir;
 
@@ -310,7 +324,7 @@ async function main(): Promise<void> {
   }> = [];
 
   for (let i = 0; i < CROP_SOURCES.length; i++) {
-    const source = CROP_SOURCES[i];
+    const source = CROP_SOURCES[i]!;
     const outputFile = isDryRun
       ? `preview_${source.id}.png`
       : `spyke_${String(i + 1).padStart(3, '0')}.png`;
