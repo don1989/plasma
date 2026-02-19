@@ -11,7 +11,7 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Foundation** - TypeScript pipeline infrastructure, CLI, and directory conventions
-- [ ] **Phase 2: Scripts, Characters, and Prompts** - Manga script generation, character fingerprint system, and Jinja2-style prompt templates
+- [x] **Phase 2: Scripts, Characters, and Prompts** - Manga script generation, character fingerprint system, and Jinja2-style prompt templates
 - [x] **Phase 3: Image Generation Workflow** - Manual and API Gemini workflows with naming conventions and prompt-to-image tracking
 - [x] **Phase 4: Assembly and Publish** - Dialogue overlay, vertical Webtoon strip assembly, and Canvas-ready output
 
@@ -48,7 +48,7 @@ Plans:
 - [x] 02-02-PLAN.md — Build markdown script parser and wire into script stage
 - [x] 02-03-PLAN.md — Create character YAML fingerprints, registry, and CLI subcommand
 - [x] 02-04-PLAN.md — Build Nunjucks template engine and prompt generator stage
-- [ ] 02-05-PLAN.md — Build per-panel QC checklist for character verification
+- [x] 02-05-PLAN.md — Build per-panel QC checklist for character verification
 
 ### Phase 3: Image Generation Workflow
 **Goal**: Prompts flow to Gemini (manually or via API) and resulting images are organized with full traceability from prompt to approved file
@@ -87,6 +87,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 1/1 | Complete | 2026-02-18 |
-| 2. Scripts, Characters, and Prompts | 4/5 | In Progress | - |
+| 2. Scripts, Characters, and Prompts | 5/5 | Complete    | 2026-02-19 |
 | 3. Image Generation Workflow | 3/3 | Complete    | 2026-02-19 |
 | 4. Assembly and Publish | 2/2 | Complete    | 2026-02-19 |
