@@ -91,10 +91,9 @@ None yet.
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
-- Webtoon Canvas exact output specifications (max file size, supported formats) need verification before Phase 4 finalizes assembly
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 04-01-PLAN.md (Dialogue overlay stage). Phase 4 in progress (1/2 plans). Ready for 04-02.
-Resume file: .planning/phases/04-assembly-and-publish/04-01-SUMMARY.md
+Stopped at: Completed 04-02-PLAN.md (Webtoon assembly stage). Phase 4 complete (2/2 plans). Milestone v1.0 complete.
+Resume file: .planning/phases/04-assembly-and-publish/04-02-SUMMARY.md

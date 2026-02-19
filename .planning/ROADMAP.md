@@ -13,7 +13,7 @@ Build a repeatable TypeScript pipeline that transforms Plasma story chapters int
 - [x] **Phase 1: Foundation** - TypeScript pipeline infrastructure, CLI, and directory conventions
 - [ ] **Phase 2: Scripts, Characters, and Prompts** - Manga script generation, character fingerprint system, and Jinja2-style prompt templates
 - [x] **Phase 3: Image Generation Workflow** - Manual and API Gemini workflows with naming conventions and prompt-to-image tracking
-- [ ] **Phase 4: Assembly and Publish** - Dialogue overlay, vertical Webtoon strip assembly, and Canvas-ready output
+- [x] **Phase 4: Assembly and Publish** - Dialogue overlay, vertical Webtoon strip assembly, and Canvas-ready output
 
 ## Phase Details
 
@@ -77,8 +77,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Dialogue overlay stage with SVG balloons, SFX, and text measurement
-- [ ] 04-02-PLAN.md — Webtoon assembly stage with vertical stacking, strip slicing, and Canvas output
+- [x] 04-01-PLAN.md — Dialogue overlay stage with SVG balloons, SFX, and text measurement
+- [x] 04-02-PLAN.md — Webtoon assembly stage with vertical stacking, strip slicing, and Canvas output
 
 ## Progress
 
@@ -89,4 +89,4 @@ Plans:
 | 1. Foundation | 1/1 | Complete | 2026-02-18 |
 | 2. Scripts, Characters, and Prompts | 4/5 | In Progress | - |
 | 3. Image Generation Workflow | 3/3 | Complete    | 2026-02-19 |
-| 4. Assembly and Publish | 0/2 | Not started | - |
+| 4. Assembly and Publish | 2/2 | Complete    | 2026-02-19 |
