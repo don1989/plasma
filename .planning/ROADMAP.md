@@ -58,7 +58,7 @@ Plans:
   1. Copy-pasting a generated prompt into Gemini web UI and saving the result produces a file named `ch01_p003_v1.png` in the correct output directory
   2. Automated Gemini API workflow generates images into `output/ch-NN/raw/` by running a single CLI command
   3. A prompt-to-image log records which exact prompt produced which approved image file for every panel
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 03-01-PLAN.md — Generation types, panel image naming convention, and manifest module (TDD)
@@ -84,5 +84,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Foundation | 1/1 | Complete | 2026-02-18 |
 | 2. Scripts, Characters, and Prompts | 4/5 | In Progress | - |
-| 3. Image Generation Workflow | 3/3 | Complete | 2026-02-19 |
+| 3. Image Generation Workflow | 3/3 | Complete    | 2026-02-19 |
 | 4. Assembly and Publish | 0/TBD | Not started | - |
