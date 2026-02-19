@@ -10,8 +10,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Scripting
 
 - [ ] **SCRP-01**: Pipeline can convert a prose story chapter into a structured panel-by-panel manga script following manga-script.md rules
-- [ ] **SCRP-02**: Generated scripts include shot types, panel composition notes, dialogue, and SFX per panel
-- [ ] **SCRP-03**: Script validation checks panel counts (4-7 per page), pacing rules, and required shot types
+- [x] **SCRP-02**: Generated scripts include shot types, panel composition notes, dialogue, and SFX per panel
+- [x] **SCRP-03**: Script validation checks panel counts (4-7 per page), pacing rules, and required shot types
 
 ### Prompt Engineering
 
@@ -33,7 +33,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **CHAR-01**: Locked prompt fingerprint exists for each character — tested and validated description block
 - [ ] **CHAR-02**: Per-panel QC checklist compares generated panels against character reference sheets
 - [ ] **CHAR-03**: New character introduction workflow generates reference sheets before chapter prompts
-- [ ] **CHAR-04**: Character reference data stored in structured format (YAML/JSON) for template injection
+- [x] **CHAR-04**: Character reference data stored in structured format (YAML/JSON) for template injection
 
 ### Dialogue & Text
 
@@ -98,8 +98,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SCRP-01 | Phase 2 | Pending |
-| SCRP-02 | Phase 2 | Pending |
-| SCRP-03 | Phase 2 | Pending |
+| SCRP-02 | Phase 2 | Complete |
+| SCRP-03 | Phase 2 | Complete |
 | PRMT-01 | Phase 2 | Pending |
 | PRMT-02 | Phase 2 | Pending |
 | PRMT-03 | Phase 2 | Pending |
@@ -112,7 +112,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAR-01 | Phase 2 | Pending |
 | CHAR-02 | Phase 2 | Pending |
 | CHAR-03 | Phase 2 | Pending |
-| CHAR-04 | Phase 2 | Pending |
+| CHAR-04 | Phase 2 | Complete |
 | TEXT-01 | Phase 4 | Pending |
 | TEXT-02 | Phase 4 | Pending |
 | ASSM-01 | Phase 4 | Pending |

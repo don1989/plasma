@@ -44,7 +44,7 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Install dependencies, expand types, create Zod validation schemas
+- [x] 02-01-PLAN.md — Install dependencies, expand types, create Zod validation schemas
 - [ ] 02-02-PLAN.md — Build markdown script parser and wire into script stage
 - [ ] 02-03-PLAN.md — Create character YAML fingerprints, registry, and CLI subcommand
 - [ ] 02-04-PLAN.md — Build Nunjucks template engine and prompt generator stage
@@ -78,6 +78,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 1/1 | Complete | 2026-02-18 |
-| 2. Scripts, Characters, and Prompts | 0/5 | Not started | - |
+| 2. Scripts, Characters, and Prompts | 1/5 | In Progress | - |
 | 3. Image Generation Workflow | 0/TBD | Not started | - |
 | 4. Assembly and Publish | 0/TBD | Not started | - |
