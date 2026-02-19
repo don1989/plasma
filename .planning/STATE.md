@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Phase 6: Spyke Dataset Preparation
+**Current focus:** v2.0 — Phase 7: ComfyUI + Express Integration
 
 ## Current Position
 
-Phase: 6 — Spyke Dataset Preparation
-Plan: 1 of 4 complete (06-01 done — crop script + 19 preview PNGs; user review needed before Plan 02)
-Status: In Progress (Plan 02 unblocked pending user visual review of preview crops)
-Last activity: 2026-02-19 — Completed 06-01 (Spyke crop script, dataset scaffold, 19 preview PNGs)
+Phase: 7 — ComfyUI + Express Integration
+Plan: 1 of 3 complete (07-01 done — Express service scaffold, validation, workflow templates)
+Status: In Progress (Plan 02 ready — wire ComfyUI WebSocket client into job handler)
+Last activity: 2026-02-19 — Completed 07-01 (Express service, router, job-store, slot-fill, workflow templates)
 
-Progress: [#####_____] ~47% (v2.0 Phase 6 in progress — 1/4 plans done)
+Progress: [######____] ~52% (v2.0 Phase 7 in progress — 1/3 plans done)
 
 ## Performance Metrics
 
@@ -33,10 +33,11 @@ Progress: [#####_____] ~47% (v2.0 Phase 6 in progress — 1/4 plans done)
 | 4. Assembly & Publish | 2 | 7 min | 3.5 min |
 | 5. Environment Validation | 4 | 93 min | 23.3 min |
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
+| 7. ComfyUI + Express | 1 | 3 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (3 min), 05-01 (3 min), 05-03 (67 min — download-dominated), 05-04 (20 min — benchmark + human verify), 06-01 (3 min — crop script)
-- Trend: Stable; 05-03 outlier due to 3.4 GB of binary model downloads
+- Last 5 plans: 05-04 (20 min — benchmark + human verify), 06-01 (3 min — crop script), 07-01 (3 min — Express scaffold)
+- Trend: Stable at 3 min for scaffolding plans
 
 *Updated after each plan completion*
 
@@ -106,6 +107,10 @@ Recent decisions affecting current work:
 - [Phase 06]: crop-spyke.ts dry-run writes to preview/ subdir — protects final output, allows safe inspection
 - [Phase 06]: ref-sheet _back crop left coord corrected from 790 to 784 (1024px image; 790+240=1030 out of bounds)
 - [Phase 06]: spyke_final_calm crop is SPECULATIVE — must be visually confirmed or excluded at Plan 02 review checkpoint
+- [07-01]: Zod v4 ZodError uses .issues not .errors — updated router.ts error extraction with optional chaining
+- [07-01]: POST /jobs returns 202 immediately; fire-and-forget setImmediate stub for Plan 02 WebSocket dispatch
+- [07-01]: SAVE_NODE_ID = '7' in txt2img-lora.json (SaveImage node) — needed by comfyui-client.ts in Plan 02
+- [07-01]: mps: true hardcoded in /health response — confirmed by Phase 5 benchmark (MPS active on this machine)
 
 ### Pending Todos
 
@@ -114,12 +119,12 @@ None.
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
-- Phase 5 gates Phase 7 and Phase 10 — ComfyUI must be running and benchmarked before integration work begins
+- Phase 5 gate cleared — ComfyUI running, MPS confirmed, health check works (Phase 7 unblocked)
 - Phase 6 gates Phase 8 — dataset minimum (15-20 images) must be met before any training is attempted; skipping this is the highest-probability failure mode
 - Phase 8 blocker: ~/tools/kohya_ss/sd-scripts/ is empty — run `cd ~/tools/kohya_ss && git submodule update --init --recursive` before Phase 8 begins
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 06-01-PLAN.md (Spyke crop script + dataset scaffold; 19 preview PNGs generated in dataset/spyke/train/10_spyke_plasma_v1/preview/). User must visually review previews before Plan 02.
-Resume file: .planning/phases/06-spyke-dataset-preparation/06-02-PLAN.md (flip augmentation + caption .txt files — after user reviews preview crops)
+Stopped at: Completed 07-01-PLAN.md (Express service scaffold — router, job-store, slot-fill, workflow templates).
+Resume file: .planning/phases/07-comfyui-express-integration/07-02-PLAN.md (ComfyUI WebSocket client + job dispatch)
