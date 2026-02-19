@@ -1,0 +1,37 @@
+id: hood-morkain
+name: Hood (Morkain)
+aliases: ["Hood", "HOOD", "Morkain", "MORKAIN", "Hood (Morkain)"]
+
+# Verbatim prompt fingerprint — DO NOT paraphrase or rearrange
+# Source: 03_manga/prompts/pages-01-to-15.md Character Quick Reference
+fingerprint: |
+  Hood — tall hooded figure, full black cloak, face hidden in deep shadow,
+  broadsword in one hand, dark purple-black aura
+
+reference_sheet_prompt: |
+  Colored manga character reference sheet, clean linework, cel-shaded,
+  vibrant colors (dark palette), white background, multiple views (front,
+  3/4, side, back), pose sheet below.
+  Character: Hood (true identity: Morkain, kept hidden). Tall imposing
+  figure, entirely shrouded in a full-length black hooded cloak. The cloak
+  is heavy, flowing, and all-concealing. The hood is deep and pulled far
+  forward, casting the face in complete shadow. Only the lower jaw and
+  mouth are barely visible beneath the hood's shadow.
+  Cloak Details: Pure black fabric, heavy and slightly tattered at the
+  bottom hem. The cloak has a dark purple inner lining barely visible when
+  it shifts. A dark aura and wind-like energy constantly emanates from the
+  figure — wisps of dark purple-black energy curling off the cloak edges
+  like smoke or shadow tendrils.
+  Weapon: A broadsword held in one hand — a large, dark-bladed sword
+  gripped casually in the right hand. The sword is plain and brutal in
+  design, dark metal, heavy and functional.
+  Build: Tall (significantly taller than the teenage protagonists),
+  broad-shouldered, powerful frame implied beneath the cloak.
+
+palette:
+  primary: ["black (cloak)", "dark purple (aura, inner lining)"]
+  accent: ["dark metal (broadsword)", "pale (barely visible lower jaw)"]
+
+variants:
+  combat_stance: "broadsword raised, cloak billowing, dark aura intensifying"
+  wind_power: "left hand extended, dark wind vortex spiraling outward, cloak whipping"
