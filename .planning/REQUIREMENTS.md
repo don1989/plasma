@@ -30,9 +30,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Character Consistency
 
-- [ ] **CHAR-01**: Locked prompt fingerprint exists for each character — tested and validated description block
+- [x] **CHAR-01**: Locked prompt fingerprint exists for each character — tested and validated description block
 - [ ] **CHAR-02**: Per-panel QC checklist compares generated panels against character reference sheets
-- [ ] **CHAR-03**: New character introduction workflow generates reference sheets before chapter prompts
+- [x] **CHAR-03**: New character introduction workflow generates reference sheets before chapter prompts
 - [x] **CHAR-04**: Character reference data stored in structured format (YAML/JSON) for template injection
 
 ### Dialogue & Text
@@ -109,9 +109,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IGEN-02 | Phase 3 | Pending |
 | IGEN-03 | Phase 3 | Pending |
 | IGEN-04 | Phase 3 | Pending |
-| CHAR-01 | Phase 2 | Pending |
+| CHAR-01 | Phase 2 | Complete |
 | CHAR-02 | Phase 2 | Pending |
-| CHAR-03 | Phase 2 | Pending |
+| CHAR-03 | Phase 2 | Complete |
 | CHAR-04 | Phase 2 | Complete |
 | TEXT-01 | Phase 4 | Pending |
 | TEXT-02 | Phase 4 | Pending |
