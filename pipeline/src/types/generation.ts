@@ -31,6 +31,10 @@ export interface GenerationLogEntry {
   notes?: string;
   /** Full prompt text for absolute traceability. */
   promptText?: string;
+  /** Generation source — 'gemini' (manual/api) or 'comfyui'. Absent for legacy entries. */
+  source?: 'gemini' | 'comfyui';
+  /** For comfyui-sourced images: absolute path to source file in raw/comfyui/ before promotion. */
+  sourcePath?: string;
 }
 
 /** Manifest tracking all generated images for a chapter. */

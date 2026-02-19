@@ -46,13 +46,16 @@ export const PATHS = {
   /** Chapter-specific output paths. */
   chapterOutput: (chapter: number) => {
     const chNum = String(chapter).padStart(2, '0');
+    const root = path.join(PROJECT_ROOT, 'output', `ch-${chNum}`);
+    const raw = path.join(root, 'raw');
     return {
-      root: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`),
-      raw: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'raw'),
-      processed: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'processed'),
-      lettered: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'lettered'),
-      webtoon: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'webtoon'),
-      prompts: path.join(PROJECT_ROOT, 'output', `ch-${chNum}`, 'prompts'),
+      root,
+      raw,
+      processed: path.join(root, 'processed'),
+      lettered: path.join(root, 'lettered'),
+      webtoon: path.join(root, 'webtoon'),
+      prompts: path.join(root, 'prompts'),
+      comfyuiRaw: path.join(raw, 'comfyui'),  // raw/comfyui/ for ComfyUI-generated images
     };
   },
 } as const;

@@ -40,8 +40,8 @@ import {
  * Options for the generate stage, extending base stage options.
  */
 export interface GenerateOptions extends StageOptions {
-  /** Workflow mode: manual (copy-paste) or api (automated). Defaults to 'manual'. */
-  mode?: 'manual' | 'api';
+  /** Workflow mode: manual (copy-paste), api (automated Gemini), or comfyui. No default — must be explicit. */
+  mode?: 'manual' | 'api' | 'comfyui';
   /** Path to a downloaded image to import (use with --page). */
   importPath?: string;
   /** Page number for single-page operations. */
