@@ -15,11 +15,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Prompt Engineering
 
-- [ ] **PRMT-01**: Pipeline generates Gemini-optimized art prompts from manga scripts, one prompt per page
-- [ ] **PRMT-02**: Every prompt embeds the full character visual description inline (prompt fingerprint system)
-- [ ] **PRMT-03**: Style guide prefix is locked verbatim and included in every prompt automatically
-- [ ] **PRMT-04**: Jinja2-style template library manages character blocks, style prefix, and setting descriptions
-- [ ] **PRMT-05**: Templates can be updated in one place and propagate to all generated prompts
+- [x] **PRMT-01**: Pipeline generates Gemini-optimized art prompts from manga scripts, one prompt per page
+- [x] **PRMT-02**: Every prompt embeds the full character visual description inline (prompt fingerprint system)
+- [x] **PRMT-03**: Style guide prefix is locked verbatim and included in every prompt automatically
+- [x] **PRMT-04**: Jinja2-style template library manages character blocks, style prefix, and setting descriptions
+- [x] **PRMT-05**: Templates can be updated in one place and propagate to all generated prompts
 
 ### Image Generation
 
@@ -100,11 +100,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCRP-01 | Phase 2 | Complete |
 | SCRP-02 | Phase 2 | Complete |
 | SCRP-03 | Phase 2 | Complete |
-| PRMT-01 | Phase 2 | Pending |
-| PRMT-02 | Phase 2 | Pending |
-| PRMT-03 | Phase 2 | Pending |
-| PRMT-04 | Phase 2 | Pending |
-| PRMT-05 | Phase 2 | Pending |
+| PRMT-01 | Phase 2 | Complete |
+| PRMT-02 | Phase 2 | Complete |
+| PRMT-03 | Phase 2 | Complete |
+| PRMT-04 | Phase 2 | Complete |
+| PRMT-05 | Phase 2 | Complete |
 | IGEN-01 | Phase 3 | Pending |
 | IGEN-02 | Phase 3 | Pending |
 | IGEN-03 | Phase 3 | Pending |
@@ -132,4 +132,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after roadmap creation — all 27 requirements mapped*
+*Last updated: 2026-02-19 after 02-04 completion — PRMT-01 through PRMT-05 marked complete*

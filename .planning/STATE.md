@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 2 of 4 (Scripts, Characters & Prompts)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: Executing Phase 2
-Last activity: 2026-02-19 — Completed 02-02-PLAN.md (script parser and stage)
+Last activity: 2026-02-19 — Completed 02-04-PLAN.md (prompt template engine and generator)
 
-Progress: [######----] 60% (Phase 2)
+Progress: [########--] 80% (Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 6.0 min
-- Total execution time: 0.40 hours
+- Total plans completed: 5
+- Average duration: 6.4 min
+- Total execution time: 0.53 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Foundation | 1 | 4 min | 4 min |
-| 2. Scripts/Characters | 3 | 20 min | 6.7 min |
+| 2. Scripts/Characters | 4 | 28 min | 7.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4 min), 02-01 (7 min), 02-03 (5 min), 02-02 (8 min)
+- Last 5 plans: 01-01 (4 min), 02-01 (7 min), 02-03 (5 min), 02-02 (8 min), 02-04 (8 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -62,6 +62,10 @@ Recent decisions affecting current work:
 - [02-03]: Removed CharacterRegistry type alias, replaced by CharacterRegistry class with richer functionality
 - [02-03]: CLI ref-sheet uses string concatenation (not Nunjucks) for immediate utility before template engine
 - [02-03]: Character fingerprints sourced verbatim from tested prompts in 03_manga/prompts/
+- [02-04]: Establishing shot detection limited to page 1 Wide shots + pages with establishing/panorama keywords
+- [02-04]: Narrator excluded from character extraction -- narration boxes have no visual character to fingerprint
+- [02-04]: Character fingerprints deduplicated by id per panel -- prevents duplicates from name+alias matches
+- [02-04]: Layout description uses count-based text (vertical layout for 2-3, layout for 4+) matching hand-written style
 
 ### Pending Todos
 
@@ -75,5 +79,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 02-02-PLAN.md (script parser and stage). Phase 2 plans 1-3 of 5 done.
-Resume file: .planning/phases/02-scripts-characters-and-prompts/02-02-SUMMARY.md
+Stopped at: Completed 02-04-PLAN.md (prompt template engine and generator). Phase 2 plans 1-4 of 5 done.
+Resume file: .planning/phases/02-scripts-characters-and-prompts/02-04-SUMMARY.md
