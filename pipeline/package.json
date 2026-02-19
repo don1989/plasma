@@ -12,23 +12,28 @@
     "stage:prompt": "tsx src/cli.ts prompt",
     "stage:generate": "tsx src/cli.ts generate",
     "stage:overlay": "tsx src/cli.ts overlay",
-    "stage:assemble": "tsx src/cli.ts assemble"
+    "stage:assemble": "tsx src/cli.ts assemble",
+    "start:service": "tsx src/comfyui/service.ts"
   },
   "dependencies": {
     "@google/genai": "^1.42.0",
     "commander": "^14.0.3",
+    "express": "^5.2.1",
     "nunjucks": "^3.2.4",
     "remark-parse": "^11.0.0",
     "sharp": "^0.34.5",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0",
+    "ws": "^8.19.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/mdast": "^4.0.4",
     "@types/node": "^20.0.0",
     "@types/nunjucks": "^3.2.6",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.21.0",
     "typescript": "~5.7.0",
     "vitest": "^4.0.18"
