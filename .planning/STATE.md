@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Planning next milestone (ComfyUI + LoRA local pipeline)
+**Current focus:** v2.0 — Phase 5: Environment Validation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 5 — Environment Validation
 Plan: —
-Status: Defining requirements for v2.0
-Last activity: 2026-02-19 — Milestone v2.0 started — Local ComfyUI + LoRA Pipeline
+Status: Planning (roadmap created, phase plans TBD)
+Last activity: 2026-02-19 — Roadmap created for v2.0 milestone (Phases 5–10)
 
-Progress: [__________] 0% (v2.0 Phase 5+ — not yet planned)
+Progress: [__________] 0% (v2.0 Phase 5 — not yet planned)
 
 ## Performance Metrics
 
@@ -83,17 +83,23 @@ Recent decisions affecting current work:
 - [04-01]: Thought bubbles use dashed-stroke ellipse (not trailing circles) for v1 simplicity
 - [04-01]: Passthrough mode copies raw to lettered when page has no dialogue/SFX — maintains stage chain
 - [04-01]: OverlayOptions interface separate from StageOptions for page/pages filtering
+- [v2.0 Roadmap]: ComfyUI install outside repo at ~/tools/ComfyUI — sidecar pattern, not embedded dependency
+- [v2.0 Roadmap]: Phase 10 (ControlNet) depends on Phase 7 (Express service) and Phase 5 (OpenPose model) — can run in parallel with Phase 8/9
+- [v2.0 Roadmap]: GEN-04 split across Phase 7 (template + slot definition) and Phase 9 (LoRA wired into slot after training)
+- [v2.0 Roadmap]: Reproducibility defined as visually consistent same-character same-pose, not pixel-identical — MPS non-determinism is a hardware fact
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
+- Phase 5 gates Phase 7 and Phase 10 — ComfyUI must be running and benchmarked before integration work begins
+- Phase 6 gates Phase 8 — dataset minimum (15-20 images) must be met before any training is attempted; skipping this is the highest-probability failure mode
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 04-02-PLAN.md (Webtoon assembly stage). Phase 4 complete (2/2 plans). Milestone v1.0 complete.
-Resume file: .planning/phases/04-assembly-and-publish/04-02-SUMMARY.md
+Stopped at: v2.0 roadmap created (Phases 5–10). Next: plan Phase 5 via /gsd:plan-phase 5.
+Resume file: .planning/ROADMAP.md
