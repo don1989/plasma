@@ -19,6 +19,21 @@ export const TOKENS = {
 } as const;
 
 /**
+ * Escape a string value for safe injection into a JSON string literal.
+ *
+ * JSON.stringify produces a full JSON string including outer quotes.
+ * Slicing off the outer quotes gives us the escaped content only, which
+ * is safe to drop directly into an existing JSON string slot.
+ *
+ * This handles all control characters (\n, \t, \r), backslashes,
+ * Unicode escapes, em-dashes, and any other characters that would
+ * break a raw JSON string substitution.
+ */
+function jsonEscapeString(s: string): string {
+  return JSON.stringify(s).slice(1, -1);
+}
+
+/**
  * Fill all placeholder tokens in a workflow JSON string.
  *
  * @param templateJson  Raw JSON string read from a workflow template file.
@@ -40,18 +55,19 @@ export function slotFill(
     result = result.replace('"{{SEED}}"', String(values['seed']));
   }
 
-  // All other string tokens use simple replaceAll.
+  // String tokens: escape values for safe JSON string injection before substitution.
+  // Raw replacement breaks JSON when the value contains newlines, em-dashes, etc.
   if ('prompt_text' in values) {
-    result = result.replaceAll('{{PROMPT_TEXT}}', String(values['prompt_text']));
+    result = result.replaceAll('{{PROMPT_TEXT}}', jsonEscapeString(String(values['prompt_text'])));
   }
   if ('negative_prompt' in values) {
-    result = result.replaceAll('{{NEGATIVE_PROMPT}}', String(values['negative_prompt']));
+    result = result.replaceAll('{{NEGATIVE_PROMPT}}', jsonEscapeString(String(values['negative_prompt'])));
   }
   if ('lora_name' in values) {
-    result = result.replaceAll('{{LORA_NAME}}', String(values['lora_name']));
+    result = result.replaceAll('{{LORA_NAME}}', jsonEscapeString(String(values['lora_name'])));
   }
   if ('checkpoint_name' in values) {
-    result = result.replaceAll('{{CHECKPOINT_NAME}}', String(values['checkpoint_name']));
+    result = result.replaceAll('{{CHECKPOINT_NAME}}', jsonEscapeString(String(values['checkpoint_name'])));
   }
 
   return result;
