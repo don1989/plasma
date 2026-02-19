@@ -37,15 +37,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Dialogue & Text
 
-- [ ] **TEXT-01**: Programmatic dialogue overlay renders speech balloons and text onto panel images using Sharp
-- [ ] **TEXT-02**: Dialogue data extracted from scripts into structured format (JSON) for overlay processing
+- [x] **TEXT-01**: Programmatic dialogue overlay renders speech balloons and text onto panel images using Sharp
+- [x] **TEXT-02**: Dialogue data extracted from scripts into structured format (JSON) for overlay processing
 
 ### Assembly & Output
 
 - [ ] **ASSM-01**: Pipeline assembles panels into vertical-scroll Webtoon strips (800px wide)
 - [ ] **ASSM-02**: Output is Webtoon Canvas-compatible (JPG/PNG at correct dimensions)
 - [ ] **ASSM-03**: Splash pages and double-spreads handled with appropriate aspect ratio assembly
-- [ ] **ASSM-04**: Intermediate artifacts preserved at each stage (raw/, processed/, lettered/, webtoon/)
+- [x] **ASSM-04**: Intermediate artifacts preserved at each stage (raw/, processed/, lettered/, webtoon/)
 
 ### Infrastructure
 
@@ -113,12 +113,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAR-02 | Phase 2 | Complete |
 | CHAR-03 | Phase 2 | Complete |
 | CHAR-04 | Phase 2 | Complete |
-| TEXT-01 | Phase 4 | Pending |
-| TEXT-02 | Phase 4 | Pending |
+| TEXT-01 | Phase 4 | Complete |
+| TEXT-02 | Phase 4 | Complete |
 | ASSM-01 | Phase 4 | Pending |
 | ASSM-02 | Phase 4 | Pending |
 | ASSM-03 | Phase 4 | Pending |
-| ASSM-04 | Phase 4 | Pending |
+| ASSM-04 | Phase 4 | Complete |
 | INFR-01 | Phase 1 | Complete |
 | INFR-02 | Phase 1 | Complete |
 | INFR-03 | Phase 1 | Complete |

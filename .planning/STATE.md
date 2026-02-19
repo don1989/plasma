@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** Phase 3 — Image Generation Workflow
+**Current focus:** Phase 4 — Assembly and Publish
 
 ## Current Position
 
-Phase: 3 of 4 (Image Generation Workflow)
-Plan: 3 of 3 in current phase
-Status: Phase 3 Complete
-Last activity: 2026-02-19 — Completed 03-03-PLAN.md (Gemini API workflow)
+Phase: 4 of 4 (Assembly and Publish)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-19 — Completed 04-01-PLAN.md (Dialogue overlay stage)
 
-Progress: [##########] 100% (Phase 3)
+Progress: [#####-----] 50% (Phase 4)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 5.9 min
-- Total execution time: 0.78 hours
+- Total plans completed: 9
+- Average duration: 5.7 min
+- Total execution time: 0.85 hours
 
 **By Phase:**
 
@@ -30,9 +30,10 @@ Progress: [##########] 100% (Phase 3)
 | 1. Foundation | 1 | 4 min | 4 min |
 | 2. Scripts/Characters | 4 | 28 min | 7.0 min |
 | 3. Image Generation | 3 | 15 min | 5.0 min |
+| 4. Assembly & Publish | 1 | 4 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (8 min), 02-04 (8 min), 03-01 (3 min), 03-02 (5 min), 03-03 (7 min)
+- Last 5 plans: 02-04 (8 min), 03-01 (3 min), 03-02 (5 min), 03-03 (7 min), 04-01 (4 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -77,6 +78,11 @@ Recent decisions affecting current work:
 - [03-03]: Dry-run checked before API key validation so --dry-run works without a configured key
 - [03-03]: loadEnvFile inline helper avoids dotenv dependency for minimal .env parsing
 - [03-03]: vi.hoisted() pattern for vitest mocks that need constructor-safe references
+- [04-01]: SVG-to-Buffer balloon rendering — Sharp composites SVG buffers directly, no temp files needed
+- [04-01]: Zone-based balloon placement divides image height by panel count, alternates left-right
+- [04-01]: Thought bubbles use dashed-stroke ellipse (not trailing circles) for v1 simplicity
+- [04-01]: Passthrough mode copies raw to lettered when page has no dialogue/SFX — maintains stage chain
+- [04-01]: OverlayOptions interface separate from StageOptions for page/pages filtering
 
 ### Pending Todos
 
@@ -90,5 +96,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 03-03-PLAN.md (Gemini API workflow). Phase 3 complete (3/3 plans). Ready for Phase 4.
-Resume file: .planning/phases/03-image-generation-workflow/03-03-SUMMARY.md
+Stopped at: Completed 04-01-PLAN.md (Dialogue overlay stage). Phase 4 in progress (1/2 plans). Ready for 04-02.
+Resume file: .planning/phases/04-assembly-and-publish/04-01-SUMMARY.md
