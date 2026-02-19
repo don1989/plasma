@@ -10,21 +10,13 @@
  */
 import { Router } from 'express';
 import { z } from 'zod';
-import { createJob, getJob } from './job-store.js';
-import { slotFill } from './slot-fill.js';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createJob, getJob, updateJob } from './job-store.js';
+import { submitJob } from './comfyui-client.js';
+import { randomInt } from 'node:crypto';
+import { mkdir } from 'node:fs/promises';
+import { PATHS } from '../config/paths.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const WORKFLOWS_DIR = path.join(__dirname, 'workflows');
 const COMFYUI_URL = 'http://127.0.0.1:8188';
-const DEFAULT_CHECKPOINT = 'AnythingXL_inkBase.safetensors';
-const DEFAULT_NEGATIVE = 'lowres, bad anatomy, bad hands, text, error, missing fingers';
-const DEFAULT_STEPS = 20;
-const DEFAULT_CFG = 7;
-const DEFAULT_SAMPLER = 'euler_ancestral';
-const DEFAULT_SCHEDULER = 'normal';
 
 // ---------------------------------------------------------------------------
 // Zod validation schema for POST /jobs (GEN-03)
@@ -43,6 +35,8 @@ export const jobRequestSchema = z.object({
     height: z.number().int().min(1),
   }),
   checkpoint_name: z.string().optional(),
+  chapter: z.number().int().min(1).optional(),
+  page: z.number().int().min(1).optional(),
 });
 
 export type JobRequestBody = z.infer<typeof jobRequestSchema>;
@@ -121,19 +115,49 @@ export function createJobRouter(): Router {
     // Respond immediately with 202 Accepted
     res.status(202).json({ jobId: job.jobId, status: 'queued' });
 
-    // Fire-and-forget async job execution
-    // TODO: Plan 02 wires ComfyUI execution here via comfyui-client
+    // Fire-and-forget async execution — responds 202 immediately, runs generation in background
     setImmediate(async () => {
-      // Stub: slot-fill template for future use
-      const templatePath = path.join(WORKFLOWS_DIR, 'txt2img-lora.json');
-      const templateJson = readFileSync(templatePath, 'utf-8');
-      const _filled = slotFill(templateJson, {
-        prompt_text: body.prompt_text,
-        negative_prompt: body.negative_prompt ?? DEFAULT_NEGATIVE,
-        seed: body.seed ?? Math.floor(Math.random() * 2 ** 32),
-        checkpoint_name: body.checkpoint_name ?? DEFAULT_CHECKPOINT,
-      });
-      // Plan 02: submit _filled to ComfyUI WebSocket client
+      try {
+        const chapter = body.chapter ?? 1;
+        const page = body.page ?? 1;
+        const chapterPaths = PATHS.chapterOutput(chapter);
+        const comfyuiDir = `${chapterPaths.raw}/comfyui`;
+        await mkdir(comfyuiDir, { recursive: true });
+
+        // Determine version — scan comfyui subdir for existing files
+        const { nextVersion } = await import('../generation/naming.js');
+        const version = nextVersion(comfyuiDir, chapter, page);
+
+        updateJob(job.jobId, { status: 'running' });
+
+        const result = await submitJob({
+          promptText: body.prompt_text,
+          negativePrompt: body.negative_prompt,
+          seed: body.seed ?? randomInt(2_147_483_647),
+          steps: body.steps ?? 20,
+          cfg: body.cfg ?? 7,
+          sampler: body.sampler,
+          scheduler: body.scheduler,
+          checkpointName: body.checkpoint_name,
+          destDir: comfyuiDir,
+          chapter,
+          page,
+          version,
+        });
+
+        updateJob(job.jobId, {
+          status: 'complete',
+          promptId: result.promptId,
+          imagePath: result.imagePath,
+          imageFile: result.imageFile,
+        });
+
+        console.log(`[service] Job ${job.jobId} complete -> ${result.imageFile}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[service] Job ${job.jobId} failed: ${msg}`);
+        updateJob(job.jobId, { status: 'failed', error: msg });
+      }
     });
   });
 
