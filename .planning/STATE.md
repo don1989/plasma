@@ -5,21 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Planning next milestone (ComfyUI + LoRA local pipeline)
+**Current focus:** v2.0 — Phase 5: Environment Validation
 
 ## Current Position
 
-Milestone v1.0 complete. Between milestones.
-Last activity: 2026-02-19 — Archived v1.0 milestone. Pivoting to v2.0 local ComfyUI + LoRA pipeline.
+Phase: 6 — Spyke Dataset Preparation
+Plan: 0 of ? complete (Phase 5 fully done; Phase 6 planning not yet started)
+Status: Ready (Phase 5 gate PASS — all INFRA requirements satisfied)
+Last activity: 2026-02-19 — Completed 05-04 (ComfyUI MPS benchmark: 15s, PASS; Phase 5 gate cleared)
 
-Progress: [##########] v1.0 Complete — starting v2.0
+Progress: [####______] ~43% (v2.0 Phase 5 complete — 4/4 plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 5.4 min
-- Total execution time: 0.90 hours
+- Total plans completed: 11
+- Average duration: 10.5 min (skewed by 67-min 05-03 download-heavy plan)
+- Total execution time: 1.90 hours
 
 **By Phase:**
 
@@ -29,10 +31,11 @@ Progress: [##########] v1.0 Complete — starting v2.0
 | 2. Scripts/Characters | 4 | 28 min | 7.0 min |
 | 3. Image Generation | 3 | 15 min | 5.0 min |
 | 4. Assembly & Publish | 2 | 7 min | 3.5 min |
+| 5. Environment Validation | 4 | 93 min | 23.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (8 min), 03-01 (3 min), 03-02 (5 min), 03-03 (7 min), 04-01 (4 min)
-- Trend: Steady
+- Last 5 plans: 04-01 (4 min), 04-02 (3 min), 05-01 (3 min), 05-03 (67 min — download-dominated), 05-04 (20 min — benchmark + human verify)
+- Trend: Stable; 05-03 outlier due to 3.4 GB of binary model downloads
 
 *Updated after each plan completion*
 
@@ -81,17 +84,36 @@ Recent decisions affecting current work:
 - [04-01]: Thought bubbles use dashed-stroke ellipse (not trailing circles) for v1 simplicity
 - [04-01]: Passthrough mode copies raw to lettered when page has no dialogue/SFX — maintains stage chain
 - [04-01]: OverlayOptions interface separate from StageOptions for page/pages filtering
+- [v2.0 Roadmap]: ComfyUI install outside repo at ~/tools/ComfyUI — sidecar pattern, not embedded dependency
+- [v2.0 Roadmap]: Phase 10 (ControlNet) depends on Phase 7 (Express service) and Phase 5 (OpenPose model) — can run in parallel with Phase 8/9
+- [v2.0 Roadmap]: GEN-04 split across Phase 7 (template + slot definition) and Phase 9 (LoRA wired into slot after training)
+- [v2.0 Roadmap]: Reproducibility defined as visually consistent same-character same-pose, not pixel-identical — MPS non-determinism is a hardware fact
+- [05-01]: PyTorch 2.5.1 installed from cpu index URL (arm64 MPS wheel) — NOT nightly; 2.5.1 stable is confirmed working, nightly introduces breakage risk
+- [05-01]: ComfyUI-Manager cloned before first launch — Manager is detected at startup, not dynamically loaded
+- [05-01]: models/controlnet/ created in plan 01 so plan 03 curl only needs to drop the file
+- [05-02]: Do not use requirements_macos_arm64.txt — references torch==2.8.0.* nightly (broken, GitHub issue #3281); manual pip install is correct path
+- [05-02]: accelerate mixed_precision must be 'no' — fp16 triggers ValueError on MPS (PyTorch AMP autocast does not support mps+fp16)
+- [05-02]: write_basic_config() sets use_cpu: true by default; manual YAML override needed to enforce use_cpu: false per spec
+- [05-02]: Omit bitsandbytes, xformers, triton from kohya_ss install — CUDA/Linux-only, incompatible with Apple Silicon
+- [05-03]: AnythingXL_inkBase.safetensors accepted as equivalent substitute for anything-v5-PrtRE.safetensors — same SD 1.5 architecture, ComfyUI accepts any filename, no hardcoded path in pipeline
+- [05-03]: control_v11p_sd15_openpose.pth is 1.3 GiB on macOS (1378 MB base-10 / 1024 = 1.35 GiB binary) — correct download size, not truncated
+- [05-03]: Plan 04 benchmark workflow must reference AnythingXL_inkBase by actual filename, not plan-spec anything-v5-PrtRE filename
+- [05-04]: INFRA-04 benchmark result: 15s for 512x512 20-step euler_ancestral — 8x under 120s threshold; Phase 7 job timeout should be ~90s with comfortable headroom
+- [05-04]: /system_stats is the correct ComfyUI health check endpoint (not /health, which does not exist); MPS detection via response.devices[0].type === "mps"
+- [05-04]: Phase 5 gate PASS on all five INFRA criteria — Phases 6 and 7 are unblocked
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
+- Phase 5 gates Phase 7 and Phase 10 — ComfyUI must be running and benchmarked before integration work begins
+- Phase 6 gates Phase 8 — dataset minimum (15-20 images) must be met before any training is attempted; skipping this is the highest-probability failure mode
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 04-02-PLAN.md (Webtoon assembly stage). Phase 4 complete (2/2 plans). Milestone v1.0 complete.
-Resume file: .planning/phases/04-assembly-and-publish/04-02-SUMMARY.md
+Stopped at: Completed 05-04-PLAN.md (ComfyUI MPS benchmark: 15s, PASS). Phase 5 complete. Next: Phase 6 — Spyke Dataset Preparation (planning not yet started).
+Resume file: .planning/ROADMAP.md (Phase 6 plans to be defined)

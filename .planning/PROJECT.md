@@ -10,6 +10,17 @@ v1.0 delivered the full Gemini-based pipeline: script parsing → character fing
 
 A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
 
+## Current Milestone: v2.0 Local ComfyUI + LoRA Pipeline
+
+**Goal:** Replace Gemini generation with a local ComfyUI + kohya_ss stack that delivers deterministic character consistency via LoRA fine-tuning, ControlNet pose conditioning, and seed locking — all running on M1 Pro 16GB.
+
+**Target features:**
+- ComfyUI inference server (Metal/MPS) with SD 1.5 anime + realistic presets
+- img2img workflow with ControlNet OpenPose pose conditioning
+- LoRA training via kohya_ss on character reference images (e.g., Spyke_Final.png)
+- Seed locking + full parameter traceability for reproducible panels
+- TypeScript Express service replacing `generate` stage: `/train-lora`, `/generate`, `/jobs/:id`, `/health`
+
 ## Current State (v1.0 Shipped)
 
 - **Pipeline:** TypeScript, ~28,500 LOC, 135 files
