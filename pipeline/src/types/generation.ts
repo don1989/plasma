@@ -35,6 +35,22 @@ export interface GenerationLogEntry {
   source?: 'gemini' | 'comfyui';
   /** For comfyui-sourced images: absolute path to source file in raw/comfyui/ before promotion. */
   sourcePath?: string;
+  /** Seed used for ComfyUI generation (integer). */
+  seed?: number;
+  /** Sampler name used (e.g. 'euler_ancestral'). */
+  sampler?: string;
+  /** Scheduler name used (e.g. 'normal'). */
+  scheduler?: string;
+  /** Number of denoising steps. */
+  steps?: number;
+  /** CFG scale value. */
+  cfg?: number;
+  /** LoRA identifier used (e.g. 'spyke_plasma_v1_production'). */
+  loraId?: string;
+  /** ControlNet strength (0–1). Only present when ControlNet was used. */
+  controlnetStrength?: number;
+  /** The filled workflow JSON string used for this generation — stored for PIPE-05 workflow.json write. */
+  workflowTemplate?: string;
 }
 
 /** Manifest tracking all generated images for a chapter. */

@@ -25,6 +25,20 @@ export interface JobState {
   error?: string;
   createdAt: string;    // ISO 8601
   updatedAt: string;    // ISO 8601
+  /** Resolved seed used. */
+  seed?: number;
+  /** LoRA identifier used. */
+  loraId?: string;
+  /** Sampler name. */
+  sampler?: string;
+  /** Scheduler name. */
+  scheduler?: string;
+  /** Denoising steps. */
+  steps?: number;
+  /** CFG scale. */
+  cfg?: number;
+  /** Filled workflow JSON as submitted. */
+  workflowJson?: string;
 }
 
 export interface ComfyMessage {

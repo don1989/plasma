@@ -44,6 +44,7 @@ export interface ComfyJobInput {
   sampler?: string;
   scheduler?: string;
   checkpointName?: string;
+  loraName?: string;
   destDir: string; // absolute path to raw/comfyui/ directory
   chapter: number;
   page: number;
@@ -54,6 +55,10 @@ export interface ComfyJobResult {
   promptId: string;
   imagePath: string; // absolute path to copied image in raw/comfyui/
   imageFile: string; // bare filename e.g. ch01_p001_v1.png
+  /** The resolved seed actually used in this generation. */
+  seed: number;
+  /** The filled workflow JSON string as submitted to ComfyUI. */
+  workflowJson: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -194,5 +199,5 @@ export async function submitJob(input: ComfyJobInput): Promise<ComfyJobResult> {
   await copyFile(srcPath, destPath);
   console.log(`[comfyui-client] Image saved: ${destPath}`);
 
-  return { promptId, imagePath: destPath, imageFile };
+  return { promptId, imagePath: destPath, imageFile, seed, workflowJson: filledJson };
 }
