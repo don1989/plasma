@@ -137,5 +137,5 @@ Plans:
 | 6. Spyke Dataset Preparation | 1/4 | In Progress|  | - |
 | 7. ComfyUI + Express Integration | 3/3 | Complete    | 2026-02-19 | - |
 | 8. Spyke LoRA Training | v2.0 | 3/3 | Complete | 2026-02-20 |
-| 9. LoRA Integration + Reproducibility | 2/4 | In Progress|  | - |
+| 9. LoRA Integration + Reproducibility | 3/4 | In Progress|  | - |
 | 10. ControlNet OpenPose | v2.0 | 0/? | Not started | - |

@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 Phase: 9 — LoRA Integration + Reproducibility
 Plan: 3 of 4 (09-03 complete)
 Status: Phase 9 in progress — 3/4 plans done. 09-04 (end-to-end checkpoint) is next.
-Last activity: 2026-02-20 — 09-03 complete: POST /loras/train GEN-06 validation implemented (batch_size guard, concurrency guard, 202 async stub).
+Last activity: 2026-02-20 — 09-02 complete: LoRA + inference params wired end-to-end through comfyui-client, router, generate.ts; PIPE-04 manifest fields and PIPE-05 workflow.json on approve.
 
 Progress: [##########] ~93% (v2.0 Phase 8 complete — Phase 9 next)
 
@@ -35,10 +35,10 @@ Progress: [##########] ~93% (v2.0 Phase 8 complete — Phase 9 next)
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
 | 7. ComfyUI + Express | 3 | 16 min | 5.3 min |
 | 8. Spyke LoRA Training | 3 | 324 min | 108 min |
-| 9. LoRA Integration (partial) | 1 | 2 min | 2 min |
+| 9. LoRA Integration (partial) | 3 | 11 min | 3.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 07-01 (3 min — Express scaffold), 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring), 09-03 (2 min — router validation)
+- Last 5 plans: 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring), 09-01 (2 min — types/template), 09-03 (2 min — router validation), 09-02 (7 min — inference param wiring)
 - Trend: Stable at 2-5 min for integration plans
 
 *Updated after each plan completion*
@@ -141,6 +141,9 @@ Recent decisions affecting current work:
 - [09-01]: loraName on ComfyJobInput is optional — Phase 9-02 router defaults it to spyke_plasma_v1_production
 - [Phase 09-03]: loraTrainSchema keeps batch_size optional so handler can reject > 1 while silently passing omitted values — cleaner than schema-level refine for this semantic rule
 - [Phase 09-03]: trainingJobActive is module-level (not inside createJobRouter) so it persists across all request handlers within a process lifetime
+- [09-02]: generate.ts hardwires loraId: 'spyke_plasma_v1_production' in POST /jobs body — no CLI flag needed in Phase 9; simplest path to GEN-04 compliance
+- [09-02]: resolvedSeed extracted before submitJob call so the value passed to ComfyUI matches what is stored in JobState and manifest entry
+- [09-02]: workflow.json written at approve time, not generation time — workflowTemplate stored in manifest entry for deferred write at approval (PIPE-05)
 
 ### Pending Todos
 
@@ -154,5 +157,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 09-03-PLAN.md — POST /loras/train GEN-06 validation (batch_size guard + concurrency guard). Next: 09-04 end-to-end checkpoint.
+Stopped at: Completed 09-02-PLAN.md — LoRA + inference params wired end-to-end (GEN-04, PIPE-04, PIPE-05). 09-03 was already complete. Next: 09-04 end-to-end checkpoint.
 Resume file: .planning/phases/09-lora-integration/09-04-PLAN.md
