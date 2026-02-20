@@ -183,7 +183,7 @@ The milestone is complete when ALL of the following are true:
 | LORA-03 | Phase 8 | Pending |
 | LORA-04 | Phase 8 | Complete |
 | LORA-05 | Phase 8 | Pending |
-| GEN-06 | Phase 9 | Pending |
+| GEN-06 | Phase 9 | Complete |
 | PIPE-04 | Phase 9 | Pending |
 | PIPE-05 | Phase 9 | Pending |
 | CTRL-01 | Phase 10 | Pending |
