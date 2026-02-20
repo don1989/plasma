@@ -133,13 +133,20 @@ export async function submitJob(input: ComfyJobInput): Promise<ComfyJobResult> {
   const templateJson = readFileSync(templatePath, 'utf-8');
   const seed = input.seed ?? Math.floor(Math.random() * 2_147_483_647);
 
+  // Ensure lora_name has .safetensors extension — ComfyUI LoraLoader requires the full filename.
+  // loraName may be passed as a bare id (e.g. 'spyke_plasma_v1_production') without extension.
+  const rawLoraName = input.loraName ?? 'spyke_plasma_v1_production';
+  const loraNameWithExt = rawLoraName.endsWith('.safetensors')
+    ? rawLoraName
+    : `${rawLoraName}.safetensors`;
+
   // slotFill uses lowercase key names matching its internal token map
   const filledJson = slotFill(templateJson, {
     prompt_text: input.promptText,
     negative_prompt:
       input.negativePrompt ?? 'lowres, bad anatomy, bad hands, text, error, missing fingers',
     seed,
-    lora_name: input.loraName ?? 'spyke_plasma_v1_production',
+    lora_name: loraNameWithExt,
     checkpoint_name: input.checkpointName ?? 'AnythingXL_inkBase.safetensors',
   });
   const workflow = JSON.parse(filledJson) as Record<string, unknown>;
