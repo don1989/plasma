@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 8 — Spyke LoRA Training
-Plan: 1 of 3 (08-01 complete — environment validated, full training run ready)
-Status: In Progress (1/3 plans done: 08-01 submodule fix + smoke test complete)
-Last activity: 2026-02-19 — 08-01 complete: sd-scripts submodule fixed, dataset TOML written, MPS confirmed, 5-step smoke test passed (LORA-04 satisfied)
+Plan: 2 of 3 (08-02 complete — 1840-step training run done, 10 checkpoints produced, step 1400 is loss minimum)
+Status: In Progress (2/3 plans done: 08-01 env setup + 08-02 full training run complete)
+Last activity: 2026-02-20 — 08-02 complete: 1840-step training run finished, 10 safetensors checkpoints at 72MB each, loss U-curve minimum at step 1400 (avr_loss=0.0717)
 
-Progress: [########__] ~82% (v2.0 Phase 8 in progress — 08-01 done)
+Progress: [#########_] ~88% (v2.0 Phase 8 in progress — 08-02 done, 08-03 checkpoint selection next)
 
 ## Performance Metrics
 
@@ -34,6 +34,7 @@ Progress: [########__] ~82% (v2.0 Phase 8 in progress — 08-01 done)
 | 5. Environment Validation | 4 | 93 min | 23.3 min |
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
 | 7. ComfyUI + Express | 3 | 16 min | 5.3 min |
+| 8. Spyke LoRA Training | 2 | 159 min | 79.5 min |
 
 **Recent Trend:**
 - Last 5 plans: 07-01 (3 min — Express scaffold), 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring)
@@ -125,6 +126,9 @@ Recent decisions affecting current work:
 - [08-01]: flip_aug excluded from dataset TOML by design — Spyke's costume asymmetry makes horizontal flip destructive to character consistency
 - [08-01]: Full training command flags locked and validated by smoke test: --no_half_vae --mixed_precision=no --optimizer_type=AdamW --network_dim=32 --network_alpha=16
 - [08-01]: Smoke test pattern: always run --max_train_steps=5 before full run to validate environment in 30-90s vs 70+ minutes
+- [08-02]: TOML num_repeats=10 + folder prefix 10_ are ADDITIVE — resulted in 20 repeats/epoch (1840 steps not 920). For future runs: use folder prefix OR TOML repeat, not both.
+- [08-02]: Loss U-curve pattern: 0.0786 (step 1000) → 0.0717 (step 1400 minimum) → 0.0855 (step 1840). Step 1400 is lowest-loss checkpoint, likely sweet spot before overfitting.
+- [08-02]: 10 checkpoint files generated (steps 200–1800 every 200 + final at 1840), all 72MB each.
 
 ### Pending Todos
 
@@ -135,10 +139,10 @@ None.
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
 - Phase 5 gate cleared — ComfyUI running, MPS confirmed, health check works (Phase 7 unblocked)
 - Phase 6 gates Phase 8 — dataset minimum (15-20 images) must be met before any training is attempted; skipping this is the highest-probability failure mode
-- Phase 8: sd-scripts submodule fixed (08-01 complete) — 08-02 full training run is next; kohya_ss venv Python deps also installed
+- Phase 8: 08-02 training complete (1840 steps, 10 checkpoints) — 08-03 checkpoint selection is next; step 1400 is primary candidate (lowest loss)
 
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: Completed 08-01-PLAN.md (sd-scripts submodule fix + dataset TOML + 5-step smoke test — LORA-04 satisfied).
-Resume file: .planning/phases/08-spyke-lora-training/08-02-PLAN.md (full 920-step LoRA training run)
+Last session: 2026-02-20
+Stopped at: Completed 08-02-PLAN.md (1840-step training run, 10 checkpoints produced, step 1400 is loss minimum — LORA-01 + LORA-02 satisfied).
+Resume file: .planning/phases/08-spyke-lora-training/08-03-PLAN.md (checkpoint selection — test step 1400 first in ComfyUI, deploy best to loras/)
