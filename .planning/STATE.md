@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Phase 7: ComfyUI + Express Integration
+**Current focus:** v2.0 — Phase 9: LoRA Integration + Reproducibility
 
 ## Current Position
 
-Phase: 7 — ComfyUI + Express Integration
-Plan: 3 of 3 complete (07-03 done — generate.ts CLI wiring, full end-to-end loop)
-Status: Phase Complete (all 3 plans done — Phase 8 LoRA dataset next)
-Last activity: 2026-02-19 — Completed 07-03 (--comfyui flag, ComfyUI mode branch, approve-and-copy, slot-fill JSON fix)
+Phase: 9 — LoRA Integration + Reproducibility
+Plan: 0 of TBD (Phase 9 not yet planned)
+Status: Phase 8 complete (3/3 plans done). Phase 9 ready to plan.
+Last activity: 2026-02-20 — 08-03 complete: v3 LoRA trained (1200 steps, loss 0.0698), deployed as spyke_plasma_v1_production.safetensors. Phase 8 gate PASS.
 
-Progress: [########__] ~80% (v2.0 Phase 7 complete — 3/3 plans done)
+Progress: [##########] ~93% (v2.0 Phase 8 complete — Phase 9 next)
 
 ## Performance Metrics
 
@@ -34,6 +34,7 @@ Progress: [########__] ~80% (v2.0 Phase 7 complete — 3/3 plans done)
 | 5. Environment Validation | 4 | 93 min | 23.3 min |
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
 | 7. ComfyUI + Express | 3 | 16 min | 5.3 min |
+| 8. Spyke LoRA Training | 3 | 324 min | 108 min |
 
 **Recent Trend:**
 - Last 5 plans: 07-01 (3 min — Express scaffold), 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring)
@@ -120,6 +121,19 @@ Recent decisions affecting current work:
 - [07-03]: JSON.stringify(s).slice(1,-1) in slotFill for all string tokens — handles newlines, em-dashes, control chars that break raw JSON template injection
 - [07-03]: approve-and-copy is lazy post-approve check: approveImage() sets flag, then generate.ts loads manifest, detects source=comfyui, copies file
 - [07-03]: argv stripping extended to handle '--' at argv[3] for pnpm stage:* scripts (was only argv[2] for pnpm dev)
+- [08-01]: sd-scripts submodule was empty on this machine — git submodule update --init --recursive from ~/tools/kohya_ss is required before any training command
+- [08-01]: Missing Python deps (imagesize, rich, sentencepiece, altair, lion-pytorch, schedulefree, pytorch-optimizer, prodigy-plus-schedule-free, prodigyopt) must be pip-installed into kohya_ss venv; requirements.txt alone is insufficient on Apple Silicon
+- [08-01]: flip_aug excluded from dataset TOML by design — Spyke's costume asymmetry makes horizontal flip destructive to character consistency
+- [08-01]: Full training command flags locked and validated by smoke test: --no_half_vae --mixed_precision=no --optimizer_type=AdamW --network_dim=32 --network_alpha=16
+- [08-01]: Smoke test pattern: always run --max_train_steps=5 before full run to validate environment in 30-90s vs 70+ minutes
+- [08-02]: TOML num_repeats=10 + folder prefix 10_ are ADDITIVE — resulted in 20 repeats/epoch (1840 steps not 920). For future runs: use folder prefix OR TOML repeat, not both.
+- [08-02]: Loss U-curve pattern: 0.0786 (step 1000) → 0.0717 (step 1400 minimum) → 0.0855 (step 1840). Step 1400 is lowest-loss checkpoint, likely sweet spot before overfitting.
+- [08-02]: 10 checkpoint files generated (steps 200–1800 every 200 + final at 1840), all 72MB each.
+- [08-03]: Character LoRA caption strategy: pose/composition only + ONLY asymmetric costume details. All general appearance (hair, eyes, cloak, weapons) must be learned visually — listing them in captions decouples them from the trigger word.
+- [08-03]: Flip augmentation is destructive for asymmetric costumes — horizontal flip reverses left/right assignments. Deleted all 8 flip pairs from dataset.
+- [08-03]: accelerate launch --num_cpu_threads_per_process=4 is required for MPS training speed (~2s/step). Raw python3 causes 10–40x slowdown.
+- [08-03]: AdamW8bit fails on MPS (bitsandbytes blockwise update uses CPU fallback). Use plain AdamW on Apple Silicon.
+- [08-03]: Production LoRA: spyke_plasma_v1_production.safetensors (v3 final, 72MB). Phase 9 must use this filename in workflow templates. LoRA strength: 0.8.
 
 ### Pending Todos
 
@@ -128,12 +142,10 @@ None.
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
-- Phase 5 gate cleared — ComfyUI running, MPS confirmed, health check works (Phase 7 unblocked)
-- Phase 6 gates Phase 8 — dataset minimum (15-20 images) must be met before any training is attempted; skipping this is the highest-probability failure mode
-- Phase 8 blocker: ~/tools/kohya_ss/sd-scripts/ is empty — run `cd ~/tools/kohya_ss && git submodule update --init --recursive` before Phase 8 begins
+- Phase 9 LoRA slot currently uses empty string in Express service templates — Phase 9 must wire in `spyke_plasma_v1_production` as lora_name
 
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: Completed 07-03-PLAN.md (generate.ts CLI wiring — full ComfyUI end-to-end loop verified).
-Resume file: .planning/phases/08-lora-training/ (Phase 8 LoRA dataset prep and training)
+Last session: 2026-02-20
+Stopped at: Phase 8 complete — 08-03 done, v3 LoRA deployed as spyke_plasma_v1_production.safetensors. Phase 9 is next.
+Resume file: .planning/phases/09-lora-integration/ (Phase 9 not yet planned — run /gsd:plan-phase 9)

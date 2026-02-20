@@ -1,0 +1,18 @@
+[general]
+enable_bucket = true
+caption_extension = ".txt"
+shuffle_caption = true
+keep_tokens = 1
+
+[[datasets]]
+resolution = 512
+batch_size = 1
+
+  [[datasets.subsets]]
+  image_dir = "/Users/dondemetrius/Code/plasma/dataset/spyke/train/10_spyke_plasma_v1"
+  num_repeats = 10
+
+  [[datasets.subsets]]
+  is_reg = true
+  image_dir = "/Users/dondemetrius/Code/plasma/dataset/spyke/reg/1_anime_character"
+  num_repeats = 1
