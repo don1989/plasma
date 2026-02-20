@@ -139,7 +139,7 @@ export async function submitJob(input: ComfyJobInput): Promise<ComfyJobResult> {
     negative_prompt:
       input.negativePrompt ?? 'lowres, bad anatomy, bad hands, text, error, missing fingers',
     seed,
-    lora_name: '', // Phase 7: no LoRA — Phase 9 wires this
+    lora_name: input.loraName ?? 'spyke_plasma_v1_production',
     checkpoint_name: input.checkpointName ?? 'AnythingXL_inkBase.safetensors',
   });
   const workflow = JSON.parse(filledJson) as Record<string, unknown>;
