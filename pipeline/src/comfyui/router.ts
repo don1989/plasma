@@ -53,6 +53,7 @@ export const jobRequestSchema = z.object({
     height: z.number().int().min(1),
   }),
   checkpoint_name: z.string().optional(),
+  loraId: z.string().optional(),
   chapter: z.number().int().min(1).optional(),
   page: z.number().int().min(1).optional(),
 });
@@ -148,15 +149,19 @@ export function createJobRouter(): Router {
 
         updateJob(job.jobId, { status: 'running' });
 
+        // Generate resolved seed now so it can be stored in job state
+        const resolvedSeed = body.seed ?? randomInt(2_147_483_647);
+
         const result = await submitJob({
           promptText: body.prompt_text,
           negativePrompt: body.negative_prompt,
-          seed: body.seed ?? randomInt(2_147_483_647),
+          seed: resolvedSeed,
           steps: body.steps ?? 20,
           cfg: body.cfg ?? 7,
           sampler: body.sampler,
           scheduler: body.scheduler,
           checkpointName: body.checkpoint_name,
+          loraName: body.loraId,  // undefined → client defaults to spyke_plasma_v1_production
           destDir: comfyuiDir,
           chapter,
           page,
@@ -168,6 +173,13 @@ export function createJobRouter(): Router {
           promptId: result.promptId,
           imagePath: result.imagePath,
           imageFile: result.imageFile,
+          seed: result.seed,
+          loraId: body.loraId ?? 'spyke_plasma_v1_production',
+          sampler: body.sampler ?? 'euler_ancestral',
+          scheduler: body.scheduler ?? 'normal',
+          steps: body.steps ?? 20,
+          cfg: body.cfg ?? 7,
+          workflowJson: result.workflowJson,
         });
 
         console.log(`[service] Job ${job.jobId} complete -> ${result.imageFile}`);
