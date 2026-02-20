@@ -103,10 +103,18 @@ export async function runGenerate(options: GenerateOptions): Promise<StageResult
       const manifest = await loadManifest(chapterPaths.root, options.chapter);
       const entry = manifest.entries.find(e => e.imageFile === options.approve);
       if (entry?.source === 'comfyui' && entry.sourcePath) {
-        const { copyFile } = await import('node:fs/promises');
+        const { copyFile, writeFile } = await import('node:fs/promises');
         const destPath = path.join(chapterPaths.raw, options.approve);
         await copyFile(entry.sourcePath, destPath);
         console.log(`[generate] Promoted ComfyUI image: ${options.approve} -> raw/`);
+
+        // PIPE-05: write filled workflow JSON alongside promoted image
+        if (entry.workflowTemplate) {
+          const workflowFilename = options.approve!.replace(/\.png$/, '.workflow.json');
+          const workflowPath = path.join(chapterPaths.raw, workflowFilename);
+          await writeFile(workflowPath, entry.workflowTemplate, 'utf-8');
+          console.log(`[generate] Workflow JSON written: ${workflowFilename}`);
+        }
       }
 
       console.log(`[generate] Approved: ${options.approve}`);
@@ -547,6 +555,7 @@ export async function runGenerate(options: GenerateOptions): Promise<StageResult
           chapter: options.chapter,
           page,
           seed: Math.floor(Math.random() * 2_147_483_647),
+          loraId: 'spyke_plasma_v1_production',
         }),
       });
       if (!jobRes.ok) {
@@ -579,6 +588,13 @@ export async function runGenerate(options: GenerateOptions): Promise<StageResult
       imageFile?: string;
       imagePath?: string;
       error?: string;
+      seed?: number;
+      loraId?: string;
+      sampler?: string;
+      scheduler?: string;
+      steps?: number;
+      cfg?: number;
+      workflowJson?: string;
     }
 
     let finalJobState: JobStatusResponse | null = null;
@@ -638,6 +654,14 @@ export async function runGenerate(options: GenerateOptions): Promise<StageResult
       promptText,
       source: 'comfyui',
       sourcePath: imagePath,
+      // PIPE-04: inference params from GET /jobs/:id response
+      seed: finalJobState.seed,
+      loraId: finalJobState.loraId,
+      sampler: finalJobState.sampler,
+      scheduler: finalJobState.scheduler,
+      steps: finalJobState.steps,
+      cfg: finalJobState.cfg,
+      workflowTemplate: finalJobState.workflowJson,
     };
     await addEntry(chapterPaths.root, manifest, logEntry);
 
