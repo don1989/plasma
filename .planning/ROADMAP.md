@@ -23,7 +23,7 @@
 - [ ] **Phase 6: Spyke Dataset Preparation** — 15–20 captioned training images + regularization set, ready for kohya_ss
 - [x] **Phase 7: ComfyUI + Express Integration** — End-to-end generation via `--comfyui` flag produces output in correct directory (completed 2026-02-19)
 - [x] **Phase 8: Spyke LoRA Training** — v3 LoRA trained (1200 steps, pose-only captions) and deployed as spyke_plasma_v1_production.safetensors (completed 2026-02-20)
-- [ ] **Phase 9: LoRA Integration + Reproducibility** — LoRA wired into pipeline with full parameter traceability and manifest extension
+- [x] **Phase 9: LoRA Integration + Reproducibility** — LoRA wired into pipeline with full parameter traceability and manifest extension (completed 2026-02-20)
 - [ ] **Phase 10: ControlNet OpenPose** — Pose-conditioned generation available via `--pose-ref` flag on `POST /jobs`
 
 ## Phase Details

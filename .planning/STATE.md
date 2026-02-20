@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Phase 9: LoRA Integration + Reproducibility
+**Current focus:** v2.0 — Phase 10: ControlNet OpenPose
 
 ## Current Position
 
-Phase: 9 — LoRA Integration + Reproducibility
-Plan: 3 of 4 (09-03 complete)
-Status: Phase 9 in progress — 3/4 plans done. 09-04 (end-to-end checkpoint) is next.
-Last activity: 2026-02-20 — 09-02 complete: LoRA + inference params wired end-to-end through comfyui-client, router, generate.ts; PIPE-04 manifest fields and PIPE-05 workflow.json on approve.
+Phase: 9 — LoRA Integration + Reproducibility — COMPLETE
+Plan: 4 of 4 (09-04 complete)
+Status: Phase 9 complete. Phase 10 (ControlNet OpenPose) is next.
+Last activity: 2026-02-20 — Phase 9 complete: all 6 acceptance criteria verified. Three seed-42 generations byte-identical (md5 match). Manifest has all PIPE-04 fields. PIPE-05 workflow.json exists alongside promoted image. GEN-06 HTTP 400/409 confirmed.
 
-Progress: [##########] ~93% (v2.0 Phase 8 complete — Phase 9 next)
+Progress: [##########] ~97% (v2.0 Phase 9 complete — Phase 10 next)
 
 ## Performance Metrics
 
@@ -35,7 +35,7 @@ Progress: [##########] ~93% (v2.0 Phase 8 complete — Phase 9 next)
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
 | 7. ComfyUI + Express | 3 | 16 min | 5.3 min |
 | 8. Spyke LoRA Training | 3 | 324 min | 108 min |
-| 9. LoRA Integration (partial) | 3 | 11 min | 3.7 min |
+| 9. LoRA Integration | 4 | 82 min | 20.5 min |
 
 **Recent Trend:**
 - Last 5 plans: 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring), 09-01 (2 min — types/template), 09-03 (2 min — router validation), 09-02 (7 min — inference param wiring)
@@ -152,10 +152,9 @@ None.
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
-- Phase 9 LoRA slot addressed: 09-01 added loraName to ComfyJobInput; 09-02 runtime wiring will populate spyke_plasma_v1_production
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 09-02-PLAN.md — LoRA + inference params wired end-to-end (GEN-04, PIPE-04, PIPE-05). 09-03 was already complete. Next: 09-04 end-to-end checkpoint.
-Resume file: .planning/phases/09-lora-integration/09-04-PLAN.md
+Stopped at: Phase 9 complete. All 6 acceptance criteria verified. Phase 10 (ControlNet OpenPose) is next.
+Resume file: .planning/phases/10-controlnet-openpose/ (not yet created)
