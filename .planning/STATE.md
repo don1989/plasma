@@ -135,6 +135,10 @@ Recent decisions affecting current work:
 - [08-03]: accelerate launch --num_cpu_threads_per_process=4 is required for MPS training speed (~2s/step). Raw python3 causes 10–40x slowdown.
 - [08-03]: AdamW8bit fails on MPS (bitsandbytes blockwise update uses CPU fallback). Use plain AdamW on Apple Silicon.
 - [08-03]: Production LoRA: spyke_plasma_v1_production.safetensors (v3 final, 72MB). Phase 9 must use this filename in workflow templates. LoRA strength: 0.8.
+- [09-01]: CLIPSetLastLayer stop_at_clip_layer=-2 (CLIP skip 2) is standard SD 1.5 LoRA inference setting — hardcoded in template, not a runtime slot
+- [09-01]: LoRA strength 0.8 locked from Phase 8 production results — hardcoded in workflow template, not configurable per-job
+- [09-01]: ComfyJobResult.seed and workflowJson are required fields — every ComfyUI job must capture these for PIPE-05 reproducibility
+- [09-01]: loraName on ComfyJobInput is optional — Phase 9-02 router defaults it to spyke_plasma_v1_production
 - [Phase 09-03]: loraTrainSchema keeps batch_size optional so handler can reject > 1 while silently passing omitted values — cleaner than schema-level refine for this semantic rule
 - [Phase 09-03]: trainingJobActive is module-level (not inside createJobRouter) so it persists across all request handlers within a process lifetime
 
@@ -145,7 +149,7 @@ None.
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
-- Phase 9 LoRA slot currently uses empty string in Express service templates — Phase 9 must wire in `spyke_plasma_v1_production` as lora_name
+- Phase 9 LoRA slot addressed: 09-01 added loraName to ComfyJobInput; 09-02 runtime wiring will populate spyke_plasma_v1_production
 
 ## Session Continuity
 
