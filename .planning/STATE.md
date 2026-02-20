@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Phase 8: Spyke LoRA Training
+**Current focus:** v2.0 — Phase 9: LoRA Integration + Reproducibility
 
 ## Current Position
 
-Phase: 8 — Spyke LoRA Training
-Plan: 2 of 3 (08-02 complete — 1840-step training run done, 10 checkpoints produced, step 1400 is loss minimum)
-Status: In Progress (2/3 plans done: 08-01 env setup + 08-02 full training run complete)
-Last activity: 2026-02-20 — 08-02 complete: 1840-step training run finished, 10 safetensors checkpoints at 72MB each, loss U-curve minimum at step 1400 (avr_loss=0.0717)
+Phase: 9 — LoRA Integration + Reproducibility
+Plan: 0 of TBD (Phase 9 not yet planned)
+Status: Phase 8 complete (3/3 plans done). Phase 9 ready to plan.
+Last activity: 2026-02-20 — 08-03 complete: v3 LoRA trained (1200 steps, loss 0.0698), deployed as spyke_plasma_v1_production.safetensors. Phase 8 gate PASS.
 
-Progress: [#########_] ~88% (v2.0 Phase 8 in progress — 08-02 done, 08-03 checkpoint selection next)
+Progress: [##########] ~93% (v2.0 Phase 8 complete — Phase 9 next)
 
 ## Performance Metrics
 
@@ -34,7 +34,7 @@ Progress: [#########_] ~88% (v2.0 Phase 8 in progress — 08-02 done, 08-03 chec
 | 5. Environment Validation | 4 | 93 min | 23.3 min |
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
 | 7. ComfyUI + Express | 3 | 16 min | 5.3 min |
-| 8. Spyke LoRA Training | 2 | 159 min | 79.5 min |
+| 8. Spyke LoRA Training | 3 | 324 min | 108 min |
 
 **Recent Trend:**
 - Last 5 plans: 07-01 (3 min — Express scaffold), 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring)
@@ -129,6 +129,11 @@ Recent decisions affecting current work:
 - [08-02]: TOML num_repeats=10 + folder prefix 10_ are ADDITIVE — resulted in 20 repeats/epoch (1840 steps not 920). For future runs: use folder prefix OR TOML repeat, not both.
 - [08-02]: Loss U-curve pattern: 0.0786 (step 1000) → 0.0717 (step 1400 minimum) → 0.0855 (step 1840). Step 1400 is lowest-loss checkpoint, likely sweet spot before overfitting.
 - [08-02]: 10 checkpoint files generated (steps 200–1800 every 200 + final at 1840), all 72MB each.
+- [08-03]: Character LoRA caption strategy: pose/composition only + ONLY asymmetric costume details. All general appearance (hair, eyes, cloak, weapons) must be learned visually — listing them in captions decouples them from the trigger word.
+- [08-03]: Flip augmentation is destructive for asymmetric costumes — horizontal flip reverses left/right assignments. Deleted all 8 flip pairs from dataset.
+- [08-03]: accelerate launch --num_cpu_threads_per_process=4 is required for MPS training speed (~2s/step). Raw python3 causes 10–40x slowdown.
+- [08-03]: AdamW8bit fails on MPS (bitsandbytes blockwise update uses CPU fallback). Use plain AdamW on Apple Silicon.
+- [08-03]: Production LoRA: spyke_plasma_v1_production.safetensors (v3 final, 72MB). Phase 9 must use this filename in workflow templates. LoRA strength: 0.8.
 
 ### Pending Todos
 
@@ -137,12 +142,10 @@ None.
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
-- Phase 5 gate cleared — ComfyUI running, MPS confirmed, health check works (Phase 7 unblocked)
-- Phase 6 gates Phase 8 — dataset minimum (15-20 images) must be met before any training is attempted; skipping this is the highest-probability failure mode
-- Phase 8: 08-02 training complete (1840 steps, 10 checkpoints) — 08-03 checkpoint selection is next; step 1400 is primary candidate (lowest loss)
+- Phase 9 LoRA slot currently uses empty string in Express service templates — Phase 9 must wire in `spyke_plasma_v1_production` as lora_name
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 08-02-PLAN.md (1840-step training run, 10 checkpoints produced, step 1400 is loss minimum — LORA-01 + LORA-02 satisfied).
-Resume file: .planning/phases/08-spyke-lora-training/08-03-PLAN.md (checkpoint selection — test step 1400 first in ComfyUI, deploy best to loras/)
+Stopped at: Phase 8 complete — 08-03 done, v3 LoRA deployed as spyke_plasma_v1_production.safetensors. Phase 9 is next.
+Resume file: .planning/phases/09-lora-integration/ (Phase 9 not yet planned — run /gsd:plan-phase 9)

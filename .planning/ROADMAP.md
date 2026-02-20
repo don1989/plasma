@@ -22,7 +22,7 @@
 - [x] **Phase 5: Environment Validation** — ComfyUI running on M1 Pro with Metal/MPS confirmed and benchmarked (completed 2026-02-19)
 - [ ] **Phase 6: Spyke Dataset Preparation** — 15–20 captioned training images + regularization set, ready for kohya_ss
 - [x] **Phase 7: ComfyUI + Express Integration** — End-to-end generation via `--comfyui` flag produces output in correct directory (completed 2026-02-19)
-- [ ] **Phase 8: Spyke LoRA Training** — Trained LoRA in ComfyUI models/loras/ with MPS confirmed active during training
+- [x] **Phase 8: Spyke LoRA Training** — v3 LoRA trained (1200 steps, pose-only captions) and deployed as spyke_plasma_v1_production.safetensors (completed 2026-02-20)
 - [ ] **Phase 9: LoRA Integration + Reproducibility** — LoRA wired into pipeline with full parameter traceability and manifest extension
 - [ ] **Phase 10: ControlNet OpenPose** — Pose-conditioned generation available via `--pose-ref` flag on `POST /jobs`
 
@@ -94,7 +94,7 @@ Plans:
 Plans:
 - [x] 08-01-PLAN.md — Fix sd-scripts submodule + write dataset TOML + MPS device check + 5-step smoke test
 - [x] 08-02-PLAN.md — Full training run (1840 steps / 4 epochs, 10 checkpoints saved every 200 steps; step 1400 is loss minimum)
-- [ ] 08-03-PLAN.md — Test step 1400 + 1200 checkpoints in ComfyUI, select best-generalizing, deploy to loras/
+- [x] 08-03-PLAN.md — v1 eval → v2 retrain (detailed captions, rejected) → v3 retrain (pose-only captions, deployed as spyke_plasma_v1_production.safetensors)
 
 ### Phase 9: LoRA Integration + Reproducibility
 **Goal**: The trained Spyke LoRA is wired into the Express service workflow templates with full parameter traceability, and 3 same-seed generations confirm visually consistent reproducibility — all 6 milestone acceptance criteria pass.
@@ -130,6 +130,6 @@ Plans:
 | 5. Environment Validation | v2.0 | Complete    | 2026-02-19 | 2026-02-19 |
 | 6. Spyke Dataset Preparation | 1/4 | In Progress|  | - |
 | 7. ComfyUI + Express Integration | 3/3 | Complete    | 2026-02-19 | - |
-| 8. Spyke LoRA Training | 2/3 | In Progress|  | - |
+| 8. Spyke LoRA Training | v2.0 | 3/3 | Complete | 2026-02-20 |
 | 9. LoRA Integration + Reproducibility | v2.0 | 0/? | Not started | - |
 | 10. ControlNet OpenPose | v2.0 | 0/? | Not started | - |
