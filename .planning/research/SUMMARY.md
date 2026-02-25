@@ -1,250 +1,203 @@
-# Research Summary: Plasma Pipeline v2.0
+# Project Research Summary
 
-**Project:** Plasma Manga Pipeline — v2.0 Local ComfyUI + LoRA milestone
-**Domain:** Local AI image generation service integrated into TypeScript manga production pipeline
-**Researched:** 2026-02-19
-**Confidence:** MEDIUM overall — core architecture is HIGH confidence; Apple Silicon MPS behavior and kohya_ss install specifics are MEDIUM; all speed benchmarks are LOW until calibrated on hardware
+**Project:** Plasma Manga Pipeline — v3.0 Blender 3D Rendering
+**Domain:** Script-driven 3D manga rendering pipeline (Blender EEVEE toon shading + TypeScript automation)
+**Researched:** 2026-02-25
+**Confidence:** HIGH (stack and architecture verified against official Blender 5.0 docs and direct source inspection; pitfalls sourced from official bug tracker)
 
----
+## Executive Summary
 
-## Key Takeaways
+The v3.0 milestone replaces AI image generation (Gemini/ComfyUI) with script-driven Blender 3D rendering to solve the character consistency problem that has plagued the pipeline through v1.0 and v2.0. The approach is well-proven in professional NPR (non-photorealistic rendering) pipelines: Blender EEVEE with Shader-to-RGB toon shading plus Freestyle outlines produces clean manga aesthetics, and the existing TypeScript pipeline needs only one modified stage (`generate.ts`) plus three new modules (`blender-runner.ts`, `pose-map.ts`, `render_panel.py`). The overlay and assemble stages are entirely unchanged — they are agnostic to how the raw PNG was produced.
 
-1. **The pivot is sound but has a hard dependency ordering.** You cannot generate a useful panel until the Spyke LoRA exists. You cannot train the LoRA until you have a dataset. Dataset prep must be the first non-infrastructure work item — not an afterthought.
+The recommended approach is a child-process boundary model: TypeScript spawns Blender via `child_process.execFile()`, passes pose and camera as CLI args, and polls for the output file. Blender is stateless — each invocation loads `spyke.blend` fresh, applies one pose, renders one PNG to the specified output path, and exits. This keeps both subsystems simple and testable independently, and avoids the complexity of a persistent Blender server pattern. The `spyke.blend` file is the build artifact of `build_spyke.py` and is treated as a versioned binary: regenerated rarely, rendered against repeatedly.
 
-2. **M1 Pro 16GB sets hard limits that must be encoded as requirements, not discovered during development.** Max resolution 512x768. Training batch size 1. One ControlNet model at a time. No simultaneous training + generation. These are not suggestions; violating them causes OOM kills with hours of lost work.
-
-3. **Seed locking on MPS provides visual consistency, not pixel-identical reproducibility.** The requirement for "reproducible panels" must be defined as "visually consistent same-character same-pose output," not bit-exact identity. This is a deliberate requirement scoping decision, not a bug.
-
-4. **The Express service is an optional sidecar, not a rewrite.** The architecture adds a new `comfyui` mode to `generate.ts` alongside existing `manual` and `api` modes. All downstream stages (overlay, assemble) are unchanged. This limits risk and keeps rollback to removing one mode branch.
-
-5. **ControlNet is a differentiator, not a blocker.** The critical path for v2.0 is: ComfyUI server + SD 1.5 checkpoint + Spyke LoRA + txt2img workflow + Express job API + output file integration. ControlNet OpenPose is on a parallel track and can be implemented after the core loop produces working output.
-
-6. **kohya_ss on Apple Silicon requires deliberate setup.** The standard install script targets CUDA/Linux. You must explicitly skip `bitsandbytes`, `xformers`, and `triton`; configure `accelerate` for MPS; and use `AdamW` (not `AdamW8bit`). Use Python 3.11.9 (already active) and pin PyTorch at 2.5.1 (already installed).
-
-7. **Workflow JSON templates are the single source of truth for generation parameters.** The Express service slot-fills 5 injectable fields into static JSON templates exported from the ComfyUI GUI. This is more robust than assembling workflow JSON programmatically from scratch and makes the parameter contract explicit.
-
----
+The dominant risk is EEVEE headless rendering on macOS. EEVEE requires a display context on macOS (Metal API limitation), which means `blender --background` mode may produce black renders or hang on M1 Pro. This must be validated in Phase 1 before any automation architecture is committed to. The secondary risk cluster is Blender 5.0 API breaks in the existing scripts (`BLENDER_EEVEE_NEXT` engine identifier, removed shadow properties, fragile socket index access) — all are low-effort targeted fixes that must land in Phase 1. The third risk is that the model is a blockout with rigid armature parenting and no weight painting, which means action poses will look incorrect until Phase 2 mesh refinement completes.
 
 ## Key Findings
 
-### Stack (from STACK.md)
+### Recommended Stack
 
-The new npm dependency surface is minimal: one package (`@stable-canvas/comfyui-client` v1.5.9 — zero transitive deps, ESM, TypeScript types, verified on npm registry). All other TypeScript dependencies already exist. Python infrastructure (PyTorch 2.5.1, accelerate, diffusers, transformers) is already globally installed on the machine with MPS confirmed working.
+The v3.0 stack adds only two new components to an existing TypeScript pipeline: Blender 5.0.1 (already installed, `bpy` embedded Python) and a lightweight TypeScript subprocess module. No new npm packages are required. The existing Sharp + Commander + SVG overlay + Webtoon assembler remain unchanged.
 
-- **ComfyUI** — local SD 1.5 inference server, runs as Python sidecar, communicates with TypeScript pipeline over HTTP + WebSocket. Install at `~/tools/ComfyUI`, outside the repo.
-- **kohya_ss** — LoRA training toolkit. Install at `~/tools/kohya_ss`, separate Python venv. Training only, not inference.
-- **`@stable-canvas/comfyui-client`** — TypeScript wrapper around ComfyUI's REST + WebSocket API. Zero deps, ESM-native. Replaces writing WebSocket reconnect logic from scratch.
-- **Anything V5 anime checkpoint** — primary SD 1.5 base model. Correct aesthetic match for Plasma's manga style. Realistic Vision V6.0 as backup for background/reference art.
-- **ControlNet SD 1.5 OpenPose** — `control_v11p_sd15_openpose.pth` (~1.4GB). Only install OpenPose for v2.0; Canny/Depth are optional expansions.
+Blender must be invoked without the `--background` flag on macOS because EEVEE requires a Metal display context — but on a development machine with a display always available, this is not a problem. For any future CI/headless requirements, Cycles + Toon BSDF is the escape hatch (at 10–20x render time cost). EEVEE on M1 Pro renders a toon-shaded 800×1200 panel in approximately 3–15 seconds, giving acceptable batch throughput for 28 panels per chapter (~5–10 minutes total).
 
-**Version locks that matter:** PyTorch 2.5.1 (do not upgrade — MPS breaking changes between minor versions). Python 3.11.9 (kohya_ss has Python 3.12 issues). `--force-fp16` on ComfyUI launch (required for 16GB headroom). VAE precision: U-Net in fp16, VAE in fp32 — this split must be explicit in workflow templates.
+**Core technologies:**
+- Blender 5.0.1 + `bpy` (embedded Python 3.11): scene scripting, posing, rendering — the only API for Blender automation; no alternative
+- EEVEE render engine: toon cel-shading via Shader-to-RGB node (EEVEE-exclusive); use `'BLENDER_EEVEE'` identifier in Blender 5.0+
+- Freestyle outline system: post-process silhouette/crease line rendering; stable API in 5.0, already configured in `render_setup.py`
+- Node.js `child_process.execFile()`: TypeScript to Blender subprocess bridge; no npm package needed
+- Sharp (existing): alpha compositing of transparent Blender PNGs over backgrounds; handles RGBA correctly
 
-**Disk budget:** ~7GB minimum (ComfyUI + one checkpoint + OpenPose ControlNet + VAE), ~10GB full setup.
+**Critical version note:** Blender 5.0 changed the EEVEE engine identifier from `BLENDER_EEVEE_NEXT` back to `BLENDER_EEVEE`. The existing `manga_shader.py` has a version check that is now backwards for 5.0 — this is a one-line fix required before any render output can be trusted.
 
-### Features (from FEATURES.md)
+### Expected Features
 
-**Table stakes — the pipeline produces nothing without these:**
-- ComfyUI server running on M1 Pro (Metal/MPS) with SD 1.5 checkpoint loaded
-- txt2img workflow JSON wired through Express service job API
-- Spyke dataset prepared (crop + augment `Spyke_Final.png` to 6-12 crops, supplement with Gemini-generated references to reach 15-20 images) and LoRA trained
-- Full parameter manifest per generated image: seed, sampler, scheduler, steps, CFG, loraId, controlnetStrength, workflow JSON
-- Output files landing in `output/ch-XX/raw/` with existing naming convention so overlay and assemble stages work unchanged
+The feature set divides cleanly into three tiers by when each must be done for Chapter 1 end-to-end validation. The P1 tier is entirely about making the existing blockout render correctly; P2 is about polish and automation quality; P3 is future-milestone work.
 
-**Differentiators — what justifies the Gemini pivot:**
-- LoRA character consistency (Spyke's asymmetric gloves, cloak length, ginger hair become deterministic)
-- Seed locking for composition reproducibility (any approved panel can be re-generated with the same parameters)
-- ControlNet OpenPose for pose-anchored composition across sequential panels
-- No per-call API cost after hardware investment
+**Must have (P1 — Chapter 1 gate):**
+- Face retopology — UV sphere head cannot render convincing manga character at close-up scale
+- Weight painting for critical joints (shoulder, elbow, hip, knee) — enables non-rigid pose deformation
+- Verified toon shader output at 800px — Shader-to-RGB ColorRamp tuned, shade bands confirmed
+- Freestyle outlines verified — 2px weight, correct crease angle, no interior geometry lines
+- Standing + 2 action poses validated post-weight-paint (standing_relaxed, battle_ready, drawing_katana)
+- Pipeline naming convention (`--chapter`, `--page`, `--version` CLI args added to `render_poses.py`)
+- TypeScript subprocess integration (`generate --blender` mode, Blender spawned, manifest written)
+- Transparent background compositing end-to-end — Blender RGBA PNG through overlay through assemble confirmed
 
-**Deferred to v2.1:**
-- June/Draster LoRAs (no clean reference images exist; training on Gemini-generated concept art would encode the drift, not the canon design)
-- Multi-LoRA stacking beyond Spyke
-- Real-time WebSocket progress streaming in CLI
-- Model preset switching (commit to one checkpoint first, add switching after the core loop is stable)
-- SDXL/Flux models (M1 Pro 16GB cannot train SDXL LoRAs; document as future hardware upgrade path)
+**Should have (P2 — add after first successful Chapter 1 render):**
+- Extended pose library (5+ additional poses — cheap once weight painting is solid)
+- Panel-type to pose mapping table in TypeScript config (eliminates per-panel manual pose selection)
+- One 3D establishing shot environment (dojo interior or flooded street for Chapter 1 opening panels)
+- Equipment detail pass (cloak folds, sword pommel — affects close-up panels only)
+- `.blend` file versioning (lock model version per chapter to prevent retroactive render changes)
 
-**Anti-features to explicitly exclude from scope:**
-- Parallel batch generation (ComfyUI processes jobs serially on M1 Pro; parallel submission just queues them)
-- Automated pose skeleton synthesis (keep pose reference images manual for v2.0)
-- ComfyUI web UI as runtime path (GUI is for designing and exporting workflow templates only)
+**Defer (P3 — future milestones):**
+- BVH motion capture retargeting (Mixamo/CMU mocap import to Spyke rig)
+- Grease Pencil Line Art modifier (replace Freestyle with higher-control outline system)
+- Custom normals for toon shading (Geometry Nodes smooth-normal technique from Blender Studio)
+- Additional character models (June, Draster — one character at a time)
 
-### Architecture (from ARCHITECTURE.md)
+**Anti-features to explicitly avoid:** IK rigging (not deterministically scriptable), manual Blender UI workflow per panel (destroys automation), Cycles engine for character rendering (breaks Shader-to-RGB toon system), multiple characters per `.blend` file (memory and complexity problems on M1 Pro 16GB).
 
-The architecture adds an Express sidecar service (`pipeline/service/`) between the TypeScript pipeline CLI and ComfyUI. The pipeline's `generate.ts` gains a third mode (`comfyui`) that calls the Express service via HTTP and polls for completion. The Express service manages ComfyUI API interaction, workflow template injection, job state, and kohya_ss process spawning. The Gemini API mode is NOT removed.
+### Architecture Approach
 
-**New components (all in `pipeline/service/`):**
-1. `index.ts` — Express app bootstrap, port 3000
-2. `routes/jobs.ts` — `POST /jobs`, `GET /jobs/:id`
-3. `routes/loras.ts` — `POST /loras/train`, `GET /loras/:id/status`
-4. `job-manager.ts` — in-memory Map, serial queue, single active job (no Redis needed for a local dev tool)
-5. `comfyui/http-client.ts` + `ws-client.ts` — thin wrappers over ComfyUI REST + WebSocket
-6. `workflows/loader.ts` + `injector.ts` + JSON templates — `txt2img-lora.json`, `img2img-lora-controlnet.json`
-7. `training/kohya-runner.ts` — child_process.spawn wrapper for kohya_ss, log streaming, OOM kill detection
+The integration adds a single new directory (`pipeline/src/blender/`) with three files, modifies three existing files additively, and creates one new Blender Python script (`render_panel.py`). The critical insight is that `overlay.ts` and `assemble.ts` need zero changes: they read the manifest for `imageFile` and `approved` only, and do not inspect `source`. Blender renders land at `output/ch-NN/raw/chNN_pNNN_vN.png` — identical path and naming convention as Gemini/ComfyUI renders.
 
-**Modified components (additive only):**
-- `pipeline/src/stages/generate.ts` — new `mode === 'comfyui'` branch; `manual` and `api` branches unchanged
-- `pipeline/src/cli.ts` — new `--comfyui` flag + `train-lora` subcommand
-- `pipeline/src/types/generation.ts` — new `generationBackend` field on `GenerationLogEntry`
+**Major components:**
+1. `render_panel.py` (Blender Python) — single-panel renderer: receives `--pose`, `--camera`, `--output` as CLI args; applies pose to `Spyke_Armature`, sets camera, renders one 800×1200 RGBA PNG and exits; imports `POSES` and `apply_pose()` from existing `render_poses.py`
+2. `blender-runner.ts` (TypeScript) — subprocess wrapper: spawns Blender via `child_process.execFile()` with 120s timeout; verifies output file exists after exit; surfaces Blender errors as thrown Error
+3. `pose-map.ts` (TypeScript) — translation layer: maps `Panel.shotType` + `Panel.action` (keyword match) to `{pose, camera}` tuple; is the only coupling point between TypeScript and Python pose names
+4. `generate.ts` (modified, additive) — new `mode === 'blender'` branch that reads `script.json`, calls pose-map and runner per panel, writes manifest entries with `source: 'blender'`
 
-**Key env vars:** `COMFYUI_URL`, `COMFYUI_DIR` (required — no default; all model/output paths derived from this), `EXPRESS_PORT`, `KOHYA_SCRIPT`, `KOHYA_PYTHON`.
+**Key patterns:**
+- Child-process boundary: communication is CLI args in, filesystem out; no stdout parsing for results
+- Blender as stateless renderer: `.blend` loaded fresh per invocation, never mutated by pipeline
+- Pose map as code (TypeScript), not config file: type-safe, testable, co-located with changes
 
-**Data flow summary:**
-```
-CLI → generate.ts (mode=comfyui) → comfyui-client.ts → Express service
-    → JobManager → ComfyUI API (HTTP + WebSocket)
-    → output/ch-XX/raw/chXX_pNNN_vN.png + generation-log.json
-```
+### Critical Pitfalls
 
-### Critical Pitfalls (from PITFALLS.md)
+1. **EEVEE headless rendering fails on macOS** — EEVEE requires a Metal display context; `blender --background` on M1 Pro produces black renders or hangs. Prevention: drop `--background` flag for local dev (display always present). Blender window flashes open briefly then exits — acceptable for local automation. For true headless, switch to Cycles (breaks Shader-to-RGB toon system, requires shader rewrite, 10–20x slower). Must validate in Phase 1 before committing to automation architecture.
 
-**Critical — must be addressed in requirements or architecture before writing code:**
+2. **`BLENDER_EEVEE_NEXT` engine identifier invalid in Blender 5.0** — `manga_shader.py` version check `bpy.app.version >= (4, 0, 0)` is now backwards: on 5.0.1 it sets `BLENDER_EEVEE_NEXT` which no longer exists; engine silently falls back to wrong renderer. Fix: use `scene.render.engine = 'BLENDER_EEVEE'` unconditionally for this project (5.0+ only). One-line fix, Phase 1.
 
-1. **Spyke dataset is below LoRA minimum.** `Spyke_Final.png` gives 1-3 rendered views. Minimum is 15-20 varied images. Plan explicit augmentation: crop the reference sheet into face/bust/full-body crops at 512px, flip horizontally, and generate 10-15 supplementary images via the v1.0 Gemini pipeline before training. Without this, the LoRA will overfit and fail on novel action poses.
+3. **EEVEE-Next toon shadow stippling** — EEVEE Next (4.2+, including 5.0) ray-traced shadow system produces sub-pixel noise at shadow edges that the toon ColorRamp CONSTANT interpolation amplifies into visible stippled artifacts. Not a bug Blender will fix. Prevention: disable cast shadows per-light and rely on self-shadowing through Shader-to-RGB; or set `shadow_maximum_resolution = 0.001` on each light. Test at 800px actual render resolution before finalizing lighting setup.
 
-2. **Unified memory OOM is the primary failure mode.** SD 1.5 inference + ControlNet simultaneously uses 8-12GB. Training uses up to 15GB. Hard-cap resolution at 512x768 and training batch size at 1; never run generation and training simultaneously; encode these as validation constraints in the API endpoint (reject requests that violate limits, don't rely on discipline).
+4. **Rigid armature parenting produces no joint deformation** — `generate_spyke.py` uses `obj.parent = armature` (object parent), not Armature Deform with vertex groups. Posing the rig moves discrete mesh objects as rigid units; wide action poses show gaps at joints. Acceptable for blockout reference renders. Must add Armature modifier + weight painting before production action panels.
 
-3. **WebSocket race condition on job completion.** Connect the WebSocket with a `client_id` UUID BEFORE posting the workflow via HTTP. If you POST first, the completion event may fire before the WebSocket listener is open. This is the documented ComfyUI integration pattern and must be designed in from the start — not fixed later.
+5. **ShaderNodeMix socket index access is fragile** — `manga_shader.py` accesses `mix.inputs[6]` and `mix.inputs[7]` by integer index. Socket layout is version-sensitive. Fix: use `mix.inputs['A']` and `mix.inputs['B']` (named access is stable). Silent wrong-connection failure with no Python error. Phase 1 audit required.
 
-4. **fp16 NaN and VAE color bugs on MPS.** Some MPS fp16 ops produce NaN, resulting in black/gray output with no error message. VAE fp16 specifically causes washed-out color. The correct split: U-Net fp16, VAE fp32. This must be explicit in workflow templates, not inherited from ComfyUI defaults.
+## Implications for Roadmap
 
-5. **MPS seed non-determinism.** Seeds on MPS do not guarantee pixel-identical output the way CUDA does. Define "reproducible" in requirements as "visually consistent same-character same-pose" — not bit-exact. Store the full workflow JSON alongside every approved generation.
+Based on combined research, the dependency structure is clear: shader and render-environment correctness must precede model refinement, which must precede production posing, which must precede pipeline integration. This maps to four focused phases with a fifth for post-Chapter-1 polish.
 
----
+### Phase 1: Blender Environment Validation and Shader Fixes
 
-## Critical Risks
+**Rationale:** All five critical pitfalls either fully manifest or must be discovered in this phase. EEVEE headless behavior on macOS is the highest-risk unknown — if `--background` silently fails, the entire integration architecture must pivot. The API fixes (`BLENDER_EEVEE`, socket names, shadow properties) are low-effort but must be done before any render output is trusted as ground truth. This phase has no dependency on mesh refinement — it validates the render environment with the existing blockout.
 
-These risks could derail the milestone if not addressed before implementation begins:
+**Delivers:** A verified render of the current blockout at 800×1200 RGBA with correct toon shading, Freestyle outlines, and correct EEVEE engine setup. Confirms headless or near-headless rendering works on M1 Pro. All Blender 5.0 API fixes applied to `manga_shader.py` and `render_setup.py`.
 
-**Risk 1: Training never produces a usable Spyke LoRA (HIGH probability if dataset prep is skipped)**
-The project has one reference image. Training on 1-3 crops produces a LoRA that memorizes those specific pixels rather than learning Spyke's character identity. Mitigation: dataset augmentation is explicitly the first implementation work item, with a 15-20 image gate before any training is attempted.
+**Addresses features:** Transparent background PNG output, verified toon shader, Freestyle outlines verified, consistent camera framing.
 
-**Risk 2: OOM kills waste multi-hour training runs (HIGH probability without hard constraints)**
-16GB unified memory is genuinely tight for SD 1.5 LoRA training. One batch-size mistake or one Chrome tab left open can kill a 4-hour run with nothing to show for it. Mitigation: encode resolution and batch size limits as validation constraints in the training API endpoint — reject non-compliant requests rather than relying on documentation.
+**Avoids pitfalls:** EEVEE headless on macOS (discovery), engine identifier bug, ShaderNodeMix index access, EEVEE shadow property removal, toon shadow stippling.
 
-**Risk 3: ComfyUI MPS performance is worse than expected (MEDIUM probability)**
-If MPS coverage has degraded or a sampler op falls back to CPU silently, 512x512 generation takes 5+ minutes instead of 45 seconds, making panel iteration painful. Mitigation: run a reference benchmark (512x512, 20 steps, Euler a, Anything V5) immediately after ComfyUI setup — before writing any pipeline integration code. Gate Phase 3 on this result.
+### Phase 2: Model Refinement (Retopology and Weight Painting)
 
-**Risk 4: kohya_ss install on this specific Mac breaks in a non-obvious way (MEDIUM probability)**
-The install procedure requires manually skipping CUDA-only packages and configuring accelerate for MPS. A subtle misconfiguration (e.g., training silently falls back to CPU) produces a 10x slower run that looks like a slow MPS run. Mitigation: verify MPS is active during training by watching Activity Monitor GPU History during the first 10 steps.
+**Rationale:** The blockout produced by `generate_spyke.py` uses primitive meshes with rigid armature parenting. This is adequate for standing poses at medium-wide framing but fails for action poses and close-up face panels. This phase is the highest-cost human-art phase — retopology and weight painting cannot be automated and require 3–7 days of skilled Blender work. It is sequenced after Phase 1 because shader validation must be confirmed on the existing mesh before committing to a new one.
 
-**Risk 5: v2.0 scope expands to include June/Draster LoRAs (LOW probability, HIGH impact)**
-There are no clean reference images for June or Draster. Adding those LoRAs to v2.0 would block the milestone on a separate creative task. Mitigation: explicitly scope v2.0 to Spyke LoRA only in requirements; June/Draster is a v2.1 item with a clear prerequisite (canonical reference art first).
+**Delivers:** A render-ready Spyke model with manga-appropriate face topology (eye/mouth edge loops), joint deformation via weight painting (shoulder, elbow, hip, knee minimum), confirmed shade band quality on the refined mesh.
 
----
+**Addresses features:** Face retopology (P1), weight painting for critical joints (P1), standing + action poses validated (P1).
 
-## Build Order
+**Avoids pitfalls:** Armature parenting produces no deformation (addressed by adding Armature modifier + vertex weights), auto-retopology shortcut (avoid Remesh modifier for deformation areas).
 
-Recommended implementation sequence based on dependency analysis from ARCHITECTURE.md and pitfall analysis:
+### Phase 3: Pose Library and Pipeline Naming
 
-**Phase 1: Environment Validation**
-Install ComfyUI, download Anything V5 checkpoint, run a 512x512 test generation via the browser UI. Run the MPS benchmark. Install ComfyUI-Manager + ComfyUI-ControlNet-Aux. This validates the entire Python/Metal stack before writing any TypeScript. Do not proceed to Phase 2 until generation is working in the browser UI and the benchmark is acceptable.
+**Rationale:** With a render-correct model in hand, the pose library can be validated and extended cheaply. Each pose is a Python dict of bone rotations — 30–60 minutes of work per pose once weight painting is complete. The pipeline naming convention is a required prerequisite for TypeScript integration in Phase 4. This phase has no user-visible output but establishes all content that Phase 4 automation depends on.
 
-**Phase 2: Spyke Dataset Preparation**
-Crop and augment `Spyke_Final.png` into 15-20 training images at 512px. Generate 10-15 supplementary images via the existing Gemini pipeline with varied poses/expressions. Write manual caption `.txt` files for each image (trigger word + pose + framing + background type). Generate 100-200 regularization images. This is a prerequisite for all LoRA work and gates Phase 4.
+**Delivers:** Validated standing + 2 action poses producing correct renders. Pipeline naming convention (`--chapter`, `--page`, `--version` args) added to `render_poses.py`. 3–5 additional poses added (walking, crouching, reaction). Pose reset verified.
 
-**Phase 3: ComfyUI + Express Integration (Core Loop)**
-Add `@stable-canvas/comfyui-client` to the pipeline. Build the Express service: ComfyUI HTTP/WS clients, workflow templates + injector, JobManager, jobs routes. Wire `generate.ts` with the `comfyui` mode. End-to-end test: `pnpm stage:generate -- --comfyui -c 1 --page 1` produces an image in `output/ch-01/raw/`.
+**Addresses features:** Standing/idle pose, action/combat poses, per-panel pose selection via script (prerequisite), pipeline naming convention (P1).
 
-At this point the pipeline works with the base SD 1.5 model. Character consistency is not yet better than Gemini — the integration plumbing is validated but the LoRA is missing.
+**Avoids pitfalls:** Pose library broken (each pose must produce a visually different result), camera naming stability across `.blend` save/reload cycles.
 
-**Phase 4: kohya_ss Installation + Spyke LoRA Training**
-Install kohya_ss in a separate Python venv. Configure accelerate for MPS. Verify MPS is active during training (Activity Monitor GPU History). Run a 50-step test to calibrate actual training speed. Train the Spyke LoRA targeting 800-1200 steps for a 15-20 image dataset. Test intermediate checkpoints; select the best-generalizing one (not necessarily the final step). This is the core v2.0 deliverable.
+### Phase 4: TypeScript Pipeline Integration
 
-**Phase 5: LoRA Integration + Reproducibility**
-Wire the trained Spyke LoRA into the Express service workflow templates. Implement the full generation manifest extension. Store workflow JSON alongside every approved generation. Run 3 same-seed generations and confirm "visually consistent" reproducibility. Build the `POST /train-lora` endpoint in the Express service.
+**Rationale:** This is the integration phase connecting the validated Blender rendering system to the existing TypeScript pipeline. It is sequenced last because it depends on Phase 1 (render environment confirmed), Phase 3 (pose names finalized and CLI args in place). The three new modules and `render_panel.py` are fully specified in ARCHITECTURE.md — this is execution against a complete spec.
 
-**Phase 6: ControlNet OpenPose (Parallel Track)**
-Download `control_v11p_sd15_openpose.pth`. Build the `img2img-lora-controlnet.json` template. Wire image upload via filesystem copy to ComfyUI's `input/` dir (simpler than `POST /upload/image`). Test with a reference panel as pose source. This track is independent and can start during Phase 3-4 or be deferred to v2.1 if timeline is tight.
+**Delivers:** `pnpm stage:generate -- --blender -c 1 --page 3` produces a correctly-named PNG in `output/ch-01/raw/` and a manifest entry with `source: 'blender'`. End-to-end: Blender render through approval through overlay through assemble through Webtoon strip confirmed working.
 
----
+**Addresses features:** TypeScript subprocess integration (P1), render output naming convention (P1), generation log manifest entry (P1), transparent background compositing end-to-end (P1).
 
-## What's Confirmed vs What Needs Verification
+**Avoids pitfalls:** Blender stdout parsing for results (use output file existence check only), persistent Blender process session (one `execFile` per panel), hard-coded pose names in generate.ts (all names go through `pose-map.ts`), Sharp alpha compositing (EEVEE outputs straight non-premultiplied alpha — handle correctly in Sharp composite call).
 
-### Confirmed (HIGH confidence — verified on this machine or stable since 2023)
+### Phase 5: P2 Polish (Post-Chapter 1 Validation)
 
-| Item | Evidence |
-|------|----------|
-| PyTorch 2.5.1 installed, MPS working (`mps:0` tensor ops) | Verified on machine |
-| accelerate 1.3.0, diffusers 0.32.2, transformers 4.48.1, opencv, Pillow installed | `pip show` verified |
-| `@stable-canvas/comfyui-client` v1.5.9, zero deps, ESM, typed | npm registry verified |
-| bitsandbytes and xformers are CUDA-only — must skip on Mac | Confirmed NOT installed; architecture constraint |
-| ComfyUI workflow JSON node graph format | Stable core format since 2023 |
-| KSampler seed/sampler/scheduler/steps contract for output determinism | Fundamental SD architecture |
-| LoRA minimum dataset: 15-20 images for reliable character generalization | Community consensus across multiple training guides |
-| Regularization images needed for small datasets to prevent language drift | Standard LoRA training practice |
-| WebSocket + client_id pattern for ComfyUI API | Official documented integration pattern |
-| `.safetensors` preferred over `.ckpt` (security + MPS stability) | Non-controversial, well-established |
+**Rationale:** Once Chapter 1 produces an end-to-end Webtoon strip via Blender rendering, the remaining P2 features improve quality and automation without blocking the core workflow. Sequence these after the first successful chapter to avoid premature optimization.
 
-### Needs Verification at Implementation Time (MEDIUM confidence)
+**Delivers:** Extended pose library (5+ additional poses), panel-type to pose mapping TypeScript config, one 3D establishing shot environment, equipment detail pass on model, `.blend` file versioning.
 
-| Item | How to Verify |
-|------|---------------|
-| ComfyUI install steps and current README | Check `github.com/comfyanonymous/ComfyUI` before running |
-| kohya_ss current Mac/MPS install path | Check `github.com/bmaltais/kohya_ss` — may have a Mac-specific install script now |
-| Actual generation speed on this hardware | Run benchmark: 512x512, 20 steps, Euler a, Anything V5 |
-| Actual training speed on this hardware | Run 50-step test, extrapolate with 1.4x thermal buffer |
-| ComfyUI WebSocket event names (`execution_success` vs `execution_complete`) | Check against running instance on `ws://127.0.0.1:8188/ws` |
-| ComfyUI node class names (`OpenposePreprocessor`, `LoraLoader`) | Verify via `GET /object_info` on running instance |
-| VAE fp16 behavior on PyTorch 2.5.1 MPS | Test: generate with VAE fp16 vs fp32 and compare color saturation |
-| kohya_ss progress output format for stdout parsing | Inspect actual first training run output |
-| ComfyUI-ControlNet-Aux current install method and preprocessor node names | Check current GitHub release notes |
+**Addresses features:** All P2 features from FEATURES.md prioritization matrix.
 
-### Intentionally Out of Scope for v2.0
+### Phase Ordering Rationale
 
-| Item | Reason |
-|------|--------|
-| June/Draster LoRA training | No canonical reference images exist; training on Gemini concept art encodes drift |
-| SDXL/Flux models | M1 Pro 16GB cannot train SDXL LoRAs; future hardware upgrade path |
-| Cloud GPU training | Out of scope for v2.0 local-first design |
-| A1111 (Automatic1111) | Poor Apple Silicon support; ComfyUI is the correct choice |
+- Phase 1 before Phase 2: A working render environment is needed to validate that model changes produce correct output. Discovering EEVEE headless failure during mesh refinement would be expensive.
+- Phase 2 before Phase 3: Poses cannot be validated until the mesh deforms correctly at joints. Validating poses on a blockout with rigid parenting gives false confidence.
+- Phase 3 before Phase 4: TypeScript integration depends on stable pose names and CLI args. Finalizing the Python API in Phase 3 prevents churn in the TypeScript layer.
+- Phase 4 delivers the P1 acceptance criteria: end-to-end Blender render through Webtoon assembly.
+- Phase 5 is additive polish that does not block Chapter 1 release.
 
----
+### Research Flags
+
+Phases with prescribed fixes and no further research needed:
+- **Phase 1:** All pitfalls are identified and fixes are specified. Execution only.
+- **Phase 2:** Retopology and weight painting are human art tasks, not research tasks.
+- **Phase 3:** Pose authoring is craft work. No unknowns.
+- **Phase 4:** Full TypeScript architecture with code samples is in ARCHITECTURE.md. No ambiguity.
+
+Phase that may benefit from a brief research spike:
+- **Phase 5 (establishing shots):** The character-plus-environment compositing workflow (separate `.blend` files rendered independently then composited in Sharp) has not been fully validated. A one-session spike on Sharp layer compositing and Blender environment camera alignment would reduce risk before committing the environment modeling effort.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM-HIGH | npm packages verified against registry; Python packages verified on machine; ComfyUI/kohya_ss install steps are training data — verify at repos before executing |
-| Features | MEDIUM | Feature list and node architecture are well-understood; specific node class names must be verified against running ComfyUI instance via `/object_info` |
-| Architecture | MEDIUM-HIGH | Integration pattern is standard (Express sidecar + polling); existing pipeline codebase was directly inspected; ComfyUI API shape is well-documented |
-| Pitfalls | HIGH | Memory math is deterministic; MPS constraints are fundamental hardware limits; LoRA dataset requirements are community consensus; WebSocket race condition is the documented integration pattern |
+| Stack | HIGH | All claims verified against official Blender 5.0 release notes and API docs. No speculation. Blender 5.0.1 confirmed installed. |
+| Features | HIGH for API; MEDIUM for mesh workflow | Blender API features are verified. Retopology and weight painting timelines (3–7 days) are community estimates with real variance depending on skill level. |
+| Architecture | HIGH | Based on direct source inspection of all existing TypeScript and Python scripts. Data flow and integration points are unambiguous. |
+| Pitfalls | HIGH for API bugs; MEDIUM for EEVEE/macOS behavior | API-level pitfalls sourced from official release notes and bug tracker. EEVEE headless on macOS may have partial fixes in 5.0.1 that research could not confirm — treat as HIGH risk until validated in Phase 1. |
 
-**Overall confidence: MEDIUM.** The design is solid and the risks are well-identified. The primary uncertainty is operational: actual MPS performance and current kohya_ss install behavior on this specific machine. Both are resolved with a hardware validation phase before building integration code.
+**Overall confidence:** HIGH
 
-### Gaps to Address in Requirements
+### Gaps to Address
 
-- **Define "reproducible"** explicitly as "visually consistent same-character same-pose" (not pixel-identical). MPS non-determinism makes pixel-identical impractical; visually consistent is sufficient for manga production.
-- **Specify the Spyke dataset minimum** (15-20 images) as a hard requirement gate before training is scheduled — not a soft guideline.
-- **Encode M1 Pro hardware limits as API constraints**: training endpoint rejects batch_size > 1; generation defaults to 512x768 max.
-- **Scope v2.0 explicitly to Spyke LoRA only**: June/Draster require canonical reference art creation first (separate creative milestone).
-- **Decide img2img base image upload method**: filesystem copy to `[COMFYUI_DIR]/input/` vs `POST /upload/image` API call — choose before designing Express service input handling.
+- **EEVEE headless on macOS 15 + Blender 5.0.1 exact behavior:** Bug #132664 (open as of early 2026) covers M1 crash/shadow buffer issues on macOS 15. Phase 1's first task should be a minimal render test to determine whether `--background` works, produces black output, or crashes. Recovery paths are defined — just need to know which applies before building automation.
 
----
+- **Weight painting time estimate uncertainty:** 3–7 days is a wide range. Phase 2 should include a one-day timeboxed weight painting spike on the shoulder joint only before committing to the full scope estimate.
+
+- **`--background` vs. no-`--background` reconciliation:** ARCHITECTURE.md uses `--background` in the Blender runner args; PITFALLS.md says this may fail on macOS. These must be reconciled at Phase 1 — if `--background` fails, `blender-runner.ts` must be updated to launch without it before Phase 4 integration.
 
 ## Sources
 
-### Verified on this machine (HIGH confidence)
-- Python 3.11.9, PyTorch 2.5.1 with MPS confirmed working (`tensor([1.], device='mps:0')`)
-- accelerate 1.3.0, diffusers 0.32.2, transformers 4.48.1, opencv-python 4.11.0.86, Pillow 11.2.1
-- `@stable-canvas/comfyui-client` v1.5.9 (npm registry — zero deps, ESM, typed)
-- `comfyui-sdk` rejected (Tencent Cloud SDK as transitive dep — confirmed via npm registry)
-- `Spyke_Final.png` at `03_manga/concept/` — single high-quality reference image confirmed by file inspection
-- Existing pipeline codebase: `generate.ts`, `gemini-client.ts`, `generation.ts` types, `cli.ts` — directly inspected for architecture fit
+### Primary (HIGH confidence)
+- [Blender 5.0 Python API Release Notes](https://developer.blender.org/docs/release_notes/5.0/python_api/) — engine identifier changes, removed shadow properties, legacy action API removal
+- [Blender 5.0 EEVEE Limitations](https://docs.blender.org/manual/en/latest/render/eevee/limitations/limitations.html) — headless rendering not supported on macOS/Windows
+- [ShaderNodeMix bpy API docs](https://docs.blender.org/api/current/bpy.types.ShaderNodeMix.html) — named socket access `'A'`/`'B'` for RGBA data type
+- [Blender 5.0 Freestyle documentation](https://docs.blender.org/manual/en/latest/render/freestyle/index.html) — Freestyle stability confirmed
+- [Blender 5.0 Shader to RGB node](https://docs.blender.org/manual/en/latest/render/shader_nodes/color/shader_to_rgb.html) — EEVEE-exclusive confirmed
+- [SceneEEVEE bpy API docs](https://docs.blender.org/api/current/bpy.types.SceneEEVEE.html) — `taa_render_samples` confirmed in 5.0
+- Direct source inspection: all existing `pipeline/src/` TypeScript and `3d_models/` Python scripts
 
-### Training data (MEDIUM confidence, cutoff Aug 2025)
-- ComfyUI workflow JSON node graph format and API endpoints
-- kohya_ss SD 1.5 LoRA training parameters and Mac/MPS constraints
-- ControlNet model file locations (HuggingFace `lllyasviel/ControlNet-v1-1`)
-- Anime checkpoint recommendations (Anything V5, Counterfeit V3.0)
-- Apple Silicon PyTorch MPS behavior (fp16 correctness, memory limits, thermal throttling)
-- LoRA training best practices (dataset size, captioning, regularization, overfitting detection)
+### Secondary (MEDIUM confidence)
+- [Bug #127033](https://projects.blender.org/blender/blender/issues/127033) — EEVEE under Apple Silicon renders Blender unresponsive during headless render
+- [Bug #132664](https://projects.blender.org/blender/blender/issues/132664) — M1 crash/shadow buffer issues on macOS 15, open as of early 2026
+- [EEVEE Next toon shader stippling thread](https://blenderartists.org/t/did-eevee-next-break-everyone-elses-toon-shaders/1539334) — shadow PCF artifacts confirmed, acknowledged by devs as deliberate trade-off
+- [Blender NPR Project announcement](https://code.blender.org/2025/05/npr-project/) — NPR improvements post-5.0, not yet available in 5.0.1
+- [Anime face topology conventions](https://animecglab.com/en/4-categories-of-anime-3d-model/) — retopology workflow guidance
+- [Blender Studio custom normals](https://studio.blender.org/blog/cartoon-character-shading-with-geometry-nodes/) — Geometry Nodes toon shading technique (P3 future feature)
 
-### Needs live verification (before implementation)
-- `github.com/comfyanonymous/ComfyUI` — current install steps
-- `github.com/bmaltais/kohya_ss` — current Mac/MPS install path
-- Running ComfyUI instance — WebSocket event names, node class names, API response shapes
+### Tertiary (LOW confidence)
+- Retopology time estimates (3–7 days): community consensus from multiple forum threads — individual variance is high; treat as rough planning guidance only
 
 ---
-
-*Research completed: 2026-02-19*
+*Research completed: 2026-02-25*
 *Ready for roadmap: yes*

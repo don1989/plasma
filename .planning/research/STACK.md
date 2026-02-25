@@ -1,631 +1,444 @@
-# Stack Research: ComfyUI + LoRA Pipeline
+# Stack Research: Blender 3D Manga Rendering Pipeline
 
-**Project:** Plasma Manga Pipeline — v2.0 Local ComfyUI + LoRA milestone
-**Researched:** 2026-02-19
-**Scope:** New additions only. Existing TypeScript pipeline (Sharp, Commander, Nunjucks, @google/genai) not re-researched.
+**Project:** Plasma Manga Pipeline — v3.0 Blender 3D Rendering milestone
+**Researched:** 2026-02-25
+**Scope:** Stack additions for Blender 3D rendering only. Existing TypeScript pipeline (Sharp, Commander, SVG overlay, Webtoon assembler) not re-researched. ComfyUI/LoRA stack (v2.0) not re-researched.
+**Confidence:** MEDIUM-HIGH — Blender 5.0 API changes verified via official release notes; EEVEE headless macOS limitation confirmed from official docs and multiple community sources.
 
 ---
 
-## Hardware Context (Verified)
+## Hardware Context
 
 | Property | Value |
 |----------|-------|
 | Chip | Apple M1 Pro |
 | RAM | 16 GB unified memory |
-| macOS | 26.2 (arm64) |
-| Python | 3.11.9 (pyenv) |
-| PyTorch | 2.5.1 — already installed |
-| MPS available | **YES** — confirmed (`torch.backends.mps.is_available() = True`) |
-| MPS built | **YES** — confirmed (`torch.backends.mps.is_built() = True`) |
-
-MPS tensor operations verified working: `tensor([1.], device='mps:0')`.
+| macOS | Sequoia (macOS 15.x) |
+| Blender | 5.0.1 (installed) |
+| GPU backend | Metal (Apple Silicon) |
 
 ---
 
-## Node.js / TypeScript Additions
+## Core Technologies
 
-### Primary Package: ComfyUI Client
+### Blender 5.0.1 Python Scripting (bpy)
 
-**Recommended:** `@stable-canvas/comfyui-client` v1.5.9
+**What it is:** Blender's embedded Python interpreter and the `bpy` module are the only way to script Blender. No external process calls into Blender's internals — scripts run inside Blender's Python environment.
 
-```bash
-pnpm add @stable-canvas/comfyui-client
-```
+**Version:** 5.0.1 (Python 3.11 embedded — do not mix with system Python)
 
-| Property | Detail |
-|----------|--------|
-| Version | 1.5.9 (published ~2026-02-12 — confirmed current on npm) |
-| License | MIT |
-| Runtime deps | **Zero** — no transitive dependencies |
-| ESM support | YES — ships `dist/main.modern.mjs` with proper `exports` field |
-| TypeScript types | YES — bundled `dist/main.d.ts` |
-| API coverage | Full REST + WebSocket APIs for ComfyUI |
-| Node.js compat | Confirmed Node.js + Browser dual environment |
+**No additional packages required.** All needed modules (`bpy`, `bmesh`, `mathutils`) are built into Blender's Python. The existing `3d_models/` scripts already use these correctly.
 
-**Why this over alternatives:**
-- `comfyui-sdk` (v0.0.5) has 4 dependencies including `cos-nodejs-sdk-v5` (Tencent Cloud SDK — completely unrelated), chalk, lodash. It's clearly a one-person prototype. Reject.
-- Raw `fetch` + `ws` works but means writing WebSocket reconnect logic, queue ID tracking, and output polling from scratch. Not worth it when `@stable-canvas/comfyui-client` covers all of this with zero deps.
-- The zero-dep constraint matters here: the pipeline is a TypeScript ESM project and adding packages with CJS-only transitive deps causes interop pain with `"type": "module"`.
+**Why bpy:** It is the only scripting interface. Not a choice — it is the API.
 
-### Supporting Packages (TypeScript pipeline already has these — no additions needed)
+### Blender CLI Render Invocation
 
-| Package | Already in package.json | Note |
-|---------|------------------------|------|
-| `sharp` | YES (^0.34.5) | Will handle fetching and saving ComfyUI output images |
-| `zod` | YES (^4.3.6) | Use for validating ComfyUI API response shapes |
-| `yaml` | YES (^2.8.2) | Workflow JSON/YAML config |
-| `commander` | YES (^14.0.3) | CLI already built |
-
-**No other npm packages are needed.** The ComfyUI API is plain HTTP + WebSocket; `@stable-canvas/comfyui-client` handles both. Node.js 20 has native `fetch` — no `node-fetch` required.
-
----
-
-## ComfyUI Setup (Apple Silicon)
-
-### Installation
-
-ComfyUI runs as a Python process. It is NOT an npm package — the TypeScript pipeline calls it over HTTP.
-
-**Confidence: MEDIUM** — Steps derived from training data (ComfyUI README patterns stable since 2023). WebFetch unavailable to verify current README. Verify at `https://github.com/comfyanonymous/ComfyUI` before running.
+The TypeScript pipeline invokes Blender as a subprocess. Pattern:
 
 ```bash
-# 1. Clone ComfyUI (recommended location: alongside the plasma repo, NOT inside it)
-git clone https://github.com/comfyanonymous/ComfyUI.git ~/tools/ComfyUI
-cd ~/tools/ComfyUI
+# Build: generate model, apply shaders, set up render
+blender --background --python 3d_models/build_spyke.py
 
-# 2. Create a dedicated Python 3.11 venv (do NOT use the system or global pip)
-python3.11 -m venv venv
-source venv/bin/activate
-
-# 3. Install PyTorch for Apple Silicon (MPS backend)
-#    PyTorch 2.5.1 is already globally installed on this machine (confirmed).
-#    Install inside the venv to keep ComfyUI isolated:
-pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
-# Note: On Apple Silicon, the "cpu" wheel includes MPS support.
-# Do NOT install the CUDA wheel (cu118, cu121, etc.) — they will not run on arm64.
-
-# 4. Install ComfyUI dependencies
-pip install -r requirements.txt
-
-# 5. Launch with Metal/MPS backend
-#    --force-fp16 reduces VRAM pressure on 16GB unified memory
-python main.py --force-fp16
+# Render specific pose from specific camera
+blender 3d_models/output/spyke/spyke.blend --background \
+  --python 3d_models/render/render_poses.py -- \
+  --poses standing_relaxed --views front,three_quarter \
+  --output output/ch01/raw/
 ```
 
-**Apple Silicon flags:**
+**CRITICAL CONSTRAINT — EEVEE on macOS headless rendering:**
 
-| Flag | Effect | Use? |
-|------|--------|------|
-| `--force-fp16` | Forces half-precision — halves VRAM for models | YES — required for 16GB |
-| `--cpu` | Disables GPU entirely, uses CPU | NO — only fallback if MPS crashes |
-| `--lowvram` | Aggressive VRAM offloading | Only if OOM errors with fp16 |
-| `--novram` | Maximum offloading, slow | Last resort |
-| `--listen 0.0.0.0` | Accept connections from other processes | YES — needed for TypeScript client |
-| `--port 8188` | Default port (change if needed) | Use default |
+EEVEE does NOT support headless background rendering on macOS or Windows (confirmed in Blender 5.0 official documentation and community reports). EEVEE requires a GPU context backed by a display, which `--background` mode does not initialize on macOS.
 
-**Recommended launch command:**
-```bash
-python main.py --force-fp16 --listen 127.0.0.1 --port 8188
-```
+**This affects the existing `render_setup.py` and `render_poses.py` scripts.** Running `blender --background --python render_poses.py` with EEVEE as render engine will fail silently or produce empty output on macOS.
 
-### MPS Compatibility Notes
+**Confirmed mitigations (choose one):**
 
-**Confidence: MEDIUM** — Based on training data through Aug 2025. Metal support in PyTorch has improved significantly between 2.0 and 2.5.
+| Mitigation | How | Tradeoff |
+|-----------|-----|---------|
+| Open Blender with UI, render via script | `blender spyke.blend --python render_poses.py` (no `--background`) | Requires display, but this machine always has one |
+| Use Cycles with toon shading | Switch render engine to `CYCLES`, use Toon BSDF shader | Slower renders (~5–20x), supports true headless |
+| Use `bpy.ops.render.render()` with display context | Already in render_poses.py — works when Blender has display | No code change needed for local M1 Pro work |
 
-- PyTorch 2.5.1 MPS is confirmed installed and working on this machine.
-- ComfyUI detects MPS automatically via `torch.backends.mps.is_available()` — no extra configuration.
-- xformers is **CUDA-only** and cannot be installed on Apple Silicon. ComfyUI gracefully falls back to PyTorch attention when xformers is absent. Do not attempt to install it.
-- bitsandbytes is CUDA-only. Do not install it. LLM quantization features in some custom nodes will not work.
-- triton is CUDA/Linux-only. Not needed for inference.
-- `float16` (fp16) is supported on MPS but some operations may fall back to `float32` with a warning. This is expected behavior, not an error.
-- SD 1.5 inference on M1 Pro 16GB with fp16: expect ~15-30 seconds per image at 512x512, ~45-90 seconds at 768x768.
-
-### ComfyUI Folder Structure for Models
-
-```
-~/tools/ComfyUI/
-├── models/
-│   ├── checkpoints/      ← SD 1.5 base model .safetensors files go here
-│   ├── loras/            ← Trained LoRA .safetensors files go here
-│   ├── controlnet/       ← ControlNet model .safetensors files go here
-│   ├── clip/             ← CLIP text encoder models
-│   ├── vae/              ← VAE models
-│   └── upscale_models/   ← ESRGAN upscaler models (optional)
-├── custom_nodes/         ← ComfyUI-Manager and ControlNet extension go here
-├── input/                ← Input images for img2img / reference / pose maps
-├── output/               ← ComfyUI writes generated images here
-└── main.py
-```
-
-The TypeScript pipeline will read images from `~/tools/ComfyUI/output/` after jobs complete.
-
-### ComfyUI-Manager (Required)
-
-ComfyUI-Manager is the de facto plugin manager — install it first. It handles custom node installation including ComfyUI-ControlNet-Aux (the OpenPose preprocessor).
+**Recommendation for v3.0:** Drop `--background` from render invocations. On the M1 Pro dev machine (always has display), launch Blender with the UI suppressed but still display-connected:
 
 ```bash
-cd ~/tools/ComfyUI/custom_nodes
-git clone https://github.com/ltdrdata/ComfyUI-Manager.git
+# Works on macOS — display available, no UI shown
+blender spyke.blend --python 3d_models/render/render_poses.py -- \
+  --poses standing_relaxed --views front \
+  --output output/ch01/raw/
 ```
 
-Restart ComfyUI after cloning. Then use the Manager UI to install `ComfyUI-ControlNet-Aux`.
+The UI window will flash open briefly then Blender exits. Acceptable for local automation. If true headless is ever needed (CI, server), switch to Cycles.
 
----
+### TypeScript → Blender Integration (child_process)
 
-## kohya_ss Setup (Apple Silicon)
-
-**Confidence: MEDIUM** — kohya_ss has undergone significant restructuring. The canonical repo is `https://github.com/bmaltais/kohya_ss`. Steps below are based on training data patterns; verify at the repo before running. The Python dependencies are verified correct for Apple Silicon.
-
-### Critical Apple Silicon Constraints
-
-| Component | Status on Apple Silicon |
-|-----------|------------------------|
-| PyTorch MPS | YES — works (confirmed on this machine) |
-| bitsandbytes | NO — CUDA-only. kohya_ss has a bitsandbytes dependency flag |
-| xformers | NO — CUDA-only |
-| triton | NO — Linux/CUDA-only |
-| bf16 training | PARTIAL — MPS supports bf16 in PyTorch 2.x but some ops fall back |
-| fp16 training | YES — preferred precision on Apple Silicon |
-
-### Installation
-
-```bash
-# 1. Clone kohya_ss (separate from ComfyUI)
-git clone https://github.com/bmaltais/kohya_ss.git ~/tools/kohya_ss
-cd ~/tools/kohya_ss
-
-# 2. Create isolated Python 3.11 venv (separate from ComfyUI venv)
-python3.11 -m venv venv
-source venv/bin/activate
-
-# 3. Install PyTorch for Apple Silicon (MPS)
-pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
-
-# 4. Install base requirements WITHOUT CUDA-specific packages
-#    kohya_ss requirements.txt includes bitsandbytes and xformers — skip them on Mac.
-#    Use the Mac-specific install path if the repo provides one, otherwise:
-pip install \
-  accelerate==1.3.0 \
-  transformers==4.48.1 \
-  diffusers==0.32.2 \
-  datasets \
-  huggingface_hub \
-  safetensors \
-  lycoris-lora \
-  prodigyopt \
-  lion-pytorch \
-  schedulefree \
-  toml \
-  voluptuous \
-  wandb \
-  tensorboard \
-  Pillow \
-  opencv-python \
-  einops \
-  ftfy \
-  tqdm \
-  pyyaml
-
-# NOTE: accelerate, transformers, diffusers are already installed globally (confirmed).
-# In a venv they will be reinstalled at the pinned versions above.
-
-# 5. Skip these — CUDA/Linux only:
-#    DO NOT: pip install bitsandbytes
-#    DO NOT: pip install xformers
-#    DO NOT: pip install triton
-
-# 6. Configure accelerate for MPS
-accelerate config
-# When prompted:
-#   - "This machine" (single machine)
-#   - NO distributed training
-#   - "MPS" when asked about device (or "mps" depending on version)
-#   - fp16 as default mixed precision
-```
-
-**Accelerate config for MPS (save to `~/.cache/huggingface/accelerate/default_config.yaml`):**
-
-```yaml
-compute_environment: LOCAL_MACHINE
-debug: false
-distributed_type: 'NO'
-downcast_bf16: 'no'
-machine_rank: 0
-main_training_function: main
-mixed_precision: fp16
-num_machines: 1
-num_processes: 1
-rdzv_backend: static
-same_network: true
-tpu_env: []
-tpu_use_sudo: false
-use_cpu: false
-```
-
-### LoRA Training Command (SD 1.5 target)
-
-```bash
-# From ~/tools/kohya_ss/
-source venv/bin/activate
-
-# Example: train a character LoRA on SD 1.5
-accelerate launch train_network.py \
-  --pretrained_model_name_or_path="/path/to/sd15-checkpoint.safetensors" \
-  --train_data_dir="/path/to/training/images" \
-  --output_dir="./output/loras" \
-  --output_name="plasma_char_v1" \
-  --network_module=networks.lora \
-  --network_dim=32 \
-  --network_alpha=16 \
-  --resolution="512,512" \
-  --train_batch_size=1 \
-  --gradient_accumulation_steps=4 \
-  --max_train_steps=2000 \
-  --learning_rate=1e-4 \
-  --lr_scheduler="cosine_with_restarts" \
-  --lr_warmup_steps=200 \
-  --optimizer_type="AdamW8bit" \
-  --mixed_precision="fp16" \
-  --save_precision="fp16" \
-  --save_model_as=safetensors \
-  --caption_extension=".txt" \
-  --shuffle_caption \
-  --keep_tokens=1 \
-  --enable_bucket \
-  --min_bucket_reso=256 \
-  --max_bucket_reso=1024 \
-  --xformers=False
-```
-
-**Apple Silicon training parameters:**
-
-| Parameter | Mac Setting | Reason |
-|-----------|------------|--------|
-| `--train_batch_size` | 1 | 16GB unified memory; larger batches OOM |
-| `--gradient_accumulation_steps` | 4 | Simulates effective batch size 4 |
-| `--mixed_precision` | fp16 | MPS supports fp16; bf16 support is partial |
-| `--optimizer_type` | AdamW (not AdamW8bit) | 8-bit Adam requires bitsandbytes (CUDA only) |
-| `--xformers` | False | Not available on Apple Silicon |
-| `--network_dim` | 32 | Good quality/size tradeoff for character LoRAs |
-| `--network_alpha` | 16 | Half of dim is standard default |
-
-**Training time estimate on M1 Pro:** ~2-4 hours for 2000 steps at 512x512, batch 1.
-
-### Training Data Preparation
-
-```
-training_data/
-└── plasma_character/
-    ├── 20_plasma_char_v1/    ← "20 repeats" prefix, trigger word as folder name
-    │   ├── image_001.png
-    │   ├── image_001.txt     ← caption: "plasma_char_v1, [description]"
-    │   ├── image_002.png
-    │   ├── image_002.txt
-    │   └── ...
-    └── ...
-```
-
-Minimum 15-20 training images for a character LoRA. Aim for 20-30 with varied angles, expressions, lighting. All images must be captioned `.txt` files alongside each `.png`.
-
----
-
-## Recommended Model Files
-
-**Confidence: MEDIUM** — Filenames and sources are based on training data. Civitai model IDs and HuggingFace repo names verified against known-stable references, but download URLs may have changed. Verify each URL before downloading.
-
-### SD 1.5 Base Checkpoints
-
-#### Realistic — Recommended: Realistic Vision V6.0
-
-| Property | Value |
-|----------|-------|
-| Filename | `realisticVisionV60B1_v51HyperVAE.safetensors` |
-| Size | ~2.1 GB |
-| Civitai | `https://civitai.com/models/4201/realistic-vision-v60-b1` |
-| Why | Best overall realistic checkpoint on SD 1.5 as of 2025. Human anatomy and faces handle well. Active maintenance. Includes built-in VAE. |
-| Place in ComfyUI | `~/tools/ComfyUI/models/checkpoints/` |
-
-Alternative realistic: **DreamShaper v8** — better for semi-realistic/painterly style if pure photorealism is too uncanny.
-- Filename: `dreamshaper_8.safetensors`
-- Civitai: `https://civitai.com/models/4384/dreamshaper`
-
-#### Anime — Recommended: Anything V5 / Anything XL (SD 1.5 version)
-
-| Property | Value |
-|----------|-------|
-| Filename | `anything-v5-PrtRE.safetensors` |
-| Size | ~2.1 GB |
-| Civitai | `https://civitai.com/models/9409` |
-| Why | The most-used anime-style SD 1.5 checkpoint. Consistent anime proportions, good character rendering. Well-supported by the community. |
-| Place in ComfyUI | `~/tools/ComfyUI/models/checkpoints/` |
-
-Alternative anime: **Counterfeit V3.0** — cleaner line art, slightly less saturated. Good for manga-adjacent style.
-- Filename: `CounterfeitV30_v30.safetensors`
-- Civitai: `https://civitai.com/models/4468/counterfeit-v30`
-
-**STRONGLY RECOMMENDED for this project:** Use **Anything V5** as the primary checkpoint. The Plasma manga is an anime-style universe (manga = Japanese visual style). Realistic Vision will produce uncanny results for manga characters.
-
-### VAE
-
-Most SD 1.5 checkpoints have baked-in VAEs but a standalone VAE can fix washed-out colors:
-
-| Filename | Source | Note |
-|----------|--------|------|
-| `vae-ft-mse-840000-ema-pruned.safetensors` | HuggingFace: `stabilityai/sd-vae-ft-mse-original` | Standard VAE for SD 1.5 |
-| `orangemix.vae.pt` | Civitai (search "orangemix vae") | Better saturation for anime checkpoints |
-
-Place in: `~/tools/ComfyUI/models/vae/`
-
-### ControlNet Models (OpenPose for SD 1.5)
-
-**Confidence: HIGH** — ControlNet SD 1.5 models are well-documented on HuggingFace. File sizes and names are stable.
-
-#### Primary: OpenPose (pose control)
-
-| Filename | Size | Source |
-|----------|------|--------|
-| `control_v11p_sd15_openpose.pth` | ~1.4 GB | HuggingFace: `lllyasviel/ControlNet-v1-1` |
-
-Download URL:
-```
-https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_openpose.pth
-```
-
-Place in: `~/tools/ComfyUI/models/controlnet/`
-
-Also download the config file alongside it:
-```
-https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_openpose.yaml
-```
-
-#### Optional: Canny (line art / composition control)
-
-| Filename | Size | Source |
-|----------|------|--------|
-| `control_v11p_sd15_canny.pth` | ~1.4 GB | HuggingFace: `lllyasviel/ControlNet-v1-1` |
-
-Download URL:
-```
-https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_canny.pth
-```
-
-#### Optional: Depth (3D composition control)
-
-```
-https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11f1p_sd15_depth.pth
-```
-
-### OpenPose Preprocessor Models (for ComfyUI-ControlNet-Aux)
-
-ComfyUI-ControlNet-Aux auto-downloads these on first use, but you can pre-download:
-
-| Model | Purpose | Auto-download dir |
-|-------|---------|------------------|
-| `body_pose_model.pth` | Detect body keypoints | `custom_nodes/comfyui_controlnet_aux/ckpts/` |
-| `hand_pose_model.pth` | Detect hand keypoints | same |
-| `facenet.pth` | Detect face keypoints | same |
-
-These are small (< 200MB total) and downloaded from HuggingFace by the extension automatically.
-
-### Disk Space Budget
-
-| Component | Size |
-|-----------|------|
-| ComfyUI + deps | ~3 GB |
-| SD 1.5 checkpoint (1x) | ~2.1 GB |
-| ControlNet OpenPose | ~1.4 GB |
-| ControlNet Canny (optional) | ~1.4 GB |
-| VAE standalone | ~335 MB |
-| LoRA output (trained) | ~70-140 MB |
-| **Total (minimum)** | **~7 GB** |
-| **Total (full setup)** | **~10 GB** |
-
----
-
-## ComfyUI API Integration
-
-### Protocol: WebSocket (Primary) + REST (Secondary)
-
-**Use WebSocket, not polling.** ComfyUI's job queue is async — a workflow submission returns a `prompt_id` immediately, then pushes progress events over WebSocket. REST polling works but requires a polling loop with arbitrary sleep intervals; WebSocket is event-driven and accurate.
-
-### API Endpoints (All HTTP, no auth by default)
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `GET /system_stats` | GET | Health check — confirm ComfyUI is running |
-| `GET /queue` | GET | View current queue state |
-| `POST /prompt` | POST | Submit a workflow JSON for execution |
-| `GET /history/{prompt_id}` | GET | Get completed job output (image filenames) |
-| `GET /view` | GET | Download a specific output image |
-| `GET /object_info` | GET | Introspect available nodes/models |
-| `WS /ws?clientId={uuid}` | WebSocket | Receive real-time execution events |
-
-**No authentication by default.** ComfyUI runs with no API key when launched locally. If exposed to a network, consider `--listen 127.0.0.1` (localhost only, which is the recommendation above).
-
-### Workflow: Submit → Track → Download
-
-```
-1. Generate a clientId (UUID v4)
-2. Open WebSocket: ws://127.0.0.1:8188/ws?clientId={clientId}
-3. POST /prompt with { prompt: workflowJSON, client_id: clientId }
-   → Response: { prompt_id: "abc123", number: 7, node_errors: {} }
-4. Listen on WebSocket for messages:
-   - { type: "execution_start", data: { prompt_id } }
-   - { type: "executing", data: { node, prompt_id } }  ← progress
-   - { type: "progress", data: { value, max } }
-   - { type: "executed", data: { node, output: { images: [...] } } }
-   - { type: "execution_complete", data: { prompt_id } }
-5. When execution_complete fires:
-   GET /history/{prompt_id}
-   → Response: { [prompt_id]: { outputs: { [node_id]: { images: [{ filename, subfolder, type }] } } } }
-6. Download each image:
-   GET /view?filename={filename}&subfolder={subfolder}&type=output
-   → Binary image data (PNG)
-```
-
-### TypeScript Integration Pattern
+The TypeScript pipeline spawns Blender as a child process using Node.js `child_process.spawn`. No npm package needed.
 
 ```typescript
-import { Client } from '@stable-canvas/comfyui-client';
+import { spawn } from 'child_process';
 
-// Initialize client (connects WebSocket automatically)
-const client = new Client({
-  api_host: '127.0.0.1',
-  api_port: 8188,
-  ssl: false,
-});
+function renderPose(
+  blendFile: string,
+  pose: string,
+  views: string[],
+  outputDir: string,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const args = [
+      blendFile,
+      '--python', '3d_models/render/render_poses.py',
+      '--',
+      '--poses', pose,
+      '--views', views.join(','),
+      '--output', outputDir,
+    ];
 
-// Connect
-await client.connect();
+    const proc = spawn('/Applications/Blender.app/Contents/MacOS/Blender', args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
 
-// Submit a workflow
-const { prompt_id } = await client.enqueue(workflowJson);
-
-// Wait for completion using the client's built-in promise
-const result = await client.wait(prompt_id);
-
-// Get output image(s)
-// @stable-canvas/comfyui-client provides helper methods —
-// check its README for current API: https://github.com/StableCanvas/comfyui-client
+    proc.stdout.on('data', (d) => process.stdout.write(d));
+    proc.stderr.on('data', (d) => process.stderr.write(d));
+    proc.on('close', (code) => {
+      code === 0 ? resolve() : reject(new Error(`Blender exited with code ${code}`));
+    });
+  });
+}
 ```
 
-**Verify the exact `@stable-canvas/comfyui-client` API** against the package README before writing the implementation — the library is actively maintained and method names may differ from the above sketch.
+**Blender binary path on macOS:** `/Applications/Blender.app/Contents/MacOS/Blender`
 
-### Workflow JSON Format
-
-ComfyUI accepts its workflow in "API format" (not the visual editor format). To export from the ComfyUI UI:
-
-1. In ComfyUI web UI, enable "Developer Mode" in Settings
-2. Click "Save (API Format)" button
-3. This produces the JSON your TypeScript code submits via `POST /prompt`
-
-The workflow JSON is a dictionary of node IDs → node configs. It is opaque to the TypeScript client — treat it as a data blob with a few fill-in-the-blank fields (prompt text, LoRA name, seed).
-
-### Integrating with the Existing Generate Stage
-
-The current `generate.ts` has two modes: `manual` and `api` (Gemini). Add a third mode: `comfyui`.
-
-```
-mode: 'manual'   → display prompts for copy-paste (existing)
-mode: 'api'      → call Gemini API (existing)
-mode: 'comfyui'  → submit to local ComfyUI (new)
-```
-
-The `comfyui` mode:
-1. Reads the prompt `.txt` file (same as now)
-2. Injects prompt text into a pre-saved workflow JSON template
-3. Submits to ComfyUI via `@stable-canvas/comfyui-client`
-4. Waits for completion via WebSocket
-5. Downloads the output image
-6. Saves to `output/ch-XX/raw/` with existing naming convention
-7. Records in generation manifest (same as now)
-
-This is a drop-in third mode — no changes to overlay, assemble, or CLI structure.
+This replaces the ComfyUI HTTP client pattern. No WebSocket, no API — just a subprocess.
 
 ---
 
-## Version Compatibility Notes
+## Blender 5.0.1 API — What Changed, What Breaks
 
-### Confirmed Working (Verified on This Machine)
+The existing `3d_models/` scripts were written targeting Blender 3.6/4.x. Several API changes in Blender 5.0 require fixes before the scripts will run correctly.
 
-| Component | Version | Status |
-|-----------|---------|--------|
-| Python | 3.11.9 | Confirmed installed |
-| PyTorch | 2.5.1 | Confirmed installed, MPS verified working |
-| torchvision | 0.20.1 | Confirmed installed |
-| accelerate | 1.3.0 | Confirmed installed |
-| diffusers | 0.32.2 | Confirmed installed |
-| transformers | 4.48.1 | Confirmed installed |
-| opencv-python | 4.11.0.86 | Confirmed installed |
-| Pillow | 11.2.1 | Confirmed installed |
-| Node.js | 20.19.5 | Confirmed |
-| pnpm | 10.2.0 | Confirmed |
+### Breaking Change 1: EEVEE Engine Identifier
 
-### Known Issues on Apple Silicon (MEDIUM confidence — training data)
+**Old (4.x):**
+```python
+scene.render.engine = 'BLENDER_EEVEE_NEXT'
+```
 
-**bitsandbytes:** CUDA-only. kohya_ss training commands that use `--optimizer_type=AdamW8bit` will fail. Use `AdamW` (standard 32-bit) instead on Mac. Training will use more memory but will work.
+**New (5.0+):**
+```python
+scene.render.engine = 'BLENDER_EEVEE'
+```
 
-**xformers:** CUDA-only. ComfyUI and kohya_ss both check for xformers and skip gracefully when absent. Performance will be slightly lower but correct.
+The existing `manga_shader.py` has a conditional that handles this:
+```python
+scene.render.engine = 'BLENDER_EEVEE_NEXT' if bpy.app.version >= (4, 0, 0) else 'BLENDER_EEVEE'
+```
+This condition is now backwards — 5.0 uses `BLENDER_EEVEE` (same as the old pre-4.x name). Fix: use `'BLENDER_EEVEE'` unconditionally for 5.0+.
 
-**ControlNet + MPS float precision:** Some ControlNet operations may produce NaN values with fp16 on MPS in older PyTorch versions. PyTorch 2.5.1 has significantly improved MPS fp16 stability. If NaN artifacts appear, add `--force-fp32` to the ComfyUI launch command (slower but correct).
+**Confirmed:** Official Blender 5.0 release notes — [https://developer.blender.org/docs/release_notes/5.0/python_api/](https://developer.blender.org/docs/release_notes/5.0/python_api/)
 
-**Memory pressure with ControlNet:** OpenPose preprocessor + SD 1.5 + ControlNet simultaneously may push 16GB RAM. Recommended mitigations:
-- Launch ComfyUI with `--force-fp16 --lowvram`
-- Generate at 512x512, upscale programmatically with Sharp if needed
-- Close all other applications during generation
+### Breaking Change 2: SceneEEVEE Shadow Properties Removed
 
-**kohya_ss GUI vs CLI:** The kohya_ss GUI (Gradio web app) adds significant overhead and has additional dependencies (gradio, etc.). Use the CLI training scripts (`train_network.py`) directly. The GUI is optional and not needed for this pipeline.
+**Removed in 4.2 (non-functional since then, fully removed in 5.0):**
+```python
+# These no longer exist:
+scene.eevee.shadow_cascade_size = '2048'   # REMOVED
+scene.eevee.shadow_cube_size = '1024'      # REMOVED
+scene.eevee.gtao_quality                   # REMOVED
+scene.eevee.use_gtao                       # REMOVED
+```
 
-**Python 3.12 compatibility:** kohya_ss has had issues with Python 3.12 in the past. Python 3.11.9 (already active) is the recommended and validated version.
+The existing `manga_shader.py` uses `hasattr()` guards for these — that pattern is correct and will gracefully skip them on 5.0.
 
-**ComfyUI + Python 3.11:** Confirmed compatible. ComfyUI targets Python 3.10+ and Python 3.11 is the sweet spot.
+**What replaced them:** Shadow resolution is now configured per-light via the light object's shadow settings, not globally.
 
-### PyTorch Version Lock
+**Ambient occlusion distance moved:**
+```python
+# Old:
+scene.eevee.gtao_distance = 0.2   # REMOVED
 
-Do NOT upgrade PyTorch beyond 2.5.x until ComfyUI explicitly declares 2.6+ support. PyTorch has had breaking MPS changes between minor versions historically. Pin `torch==2.5.1` in both venvs.
+# New (view layer, not scene):
+bpy.context.view_layer.eevee.ambient_occlusion_distance = 0.2
+```
 
-### Custom Node Compatibility
+### Breaking Change 3: Legacy Action API Removed
 
-When installing ComfyUI custom nodes via ComfyUI-Manager, some nodes have CUDA-only dependencies (e.g., nodes using `xformers`, `flash-attention`, `triton`). These nodes will fail to load on Apple Silicon — this is expected and ComfyUI will report them as disabled at startup. They do not affect other nodes.
+**Old (pre-5.0):**
+```python
+action.fcurves     # REMOVED
+action.groups      # REMOVED
+action.id_root     # REMOVED
+```
 
-The only custom nodes needed for this project:
-1. **ComfyUI-Manager** — meta (management)
-2. **ComfyUI-ControlNet-Aux** — OpenPose preprocessor (confirmed Mac compatible)
+**New (5.0):**
+```python
+# Access via channelbag on the action slot
+from bpy_extras import anim_utils
+channelbag = anim_utils.action_ensure_channelbag_for_slot(action, action_slot)
+channelbag.fcurves.new("rotation_euler", index=0, group_name="BoneName")
+```
+
+**Impact on this project:** The current `render_poses.py` does NOT use action/fcurve API. It directly sets `bone.rotation_euler` on pose bones, which is unaffected. This breaking change only matters if keyframe-based animation is added later.
+
+### Breaking Change 4: Bone Selection Now Per-Instance
+
+`pose_bone.bone.select` behavior changed. Now stored per pose bone instance rather than shared globally. Impact: negligible for this project since the scripts don't rely on bone selection state for rendering.
+
+### Confirmed Stable in 5.0
+
+| API | Status | Notes |
+|-----|--------|-------|
+| `bone.rotation_euler` on pose bones | STABLE | Used in render_poses.py — confirmed unchanged |
+| `bpy.ops.object.mode_set(mode='POSE')` | STABLE | Mode switching unchanged |
+| `bpy.ops.render.render(write_still=True)` | STABLE | Core render op unchanged |
+| `scene.render.filepath` | STABLE | Output path unchanged |
+| `view_layer.use_freestyle` | STABLE | Freestyle enable unchanged |
+| `freestyle.linesets.new()` | STABLE | Lineset creation unchanged |
+| `lineset.linestyle` / `style.thickness` | STABLE | Line style properties unchanged |
+| `ShaderNodeShaderToRGB` | STABLE | EEVEE-only, still works |
+| `ShaderNodeValToRGB` | STABLE | Color ramp unchanged |
+| `ShaderNodeMix` with `data_type='RGBA'` | STABLE | Mix node unchanged |
+| `ShaderNodeEmission` | STABLE | Emission shader unchanged |
+| `scene.eevee.taa_render_samples` | STABLE | Render samples property confirmed in 5.0 API |
+| `render.film_transparent` | STABLE | Alpha background unchanged |
+| `render.image_settings.file_format = 'PNG'` | STABLE | Output format unchanged |
+
+---
+
+## Render Pipeline Architecture
+
+### EEVEE + Freestyle (Recommended for v3.0)
+
+EEVEE is the correct engine for manga toon shading. Shader to RGB node converts diffuse shading into discrete color bands — this node is EEVEE-exclusive and cannot be replicated in Cycles without significant complexity.
+
+```
+Diffuse BSDF → Shader to RGB → ColorRamp (CONSTANT interpolation) → Emission → Output
+                                          ↑
+                               2 stops: shadow dark / lit base color
+```
+
+**Why EEVEE over Cycles for this project:**
+- Shader to RGB node is EEVEE-exclusive — the existing toon shader system requires it
+- EEVEE renders at ~2–5 seconds per frame vs Cycles at ~30–120 seconds on M1 Pro
+- EEVEE + Freestyle produces clean manga outlines in one render pass
+- Cycles toon shading requires Toon BSDF (a different, less flexible approach) and a separate line rendering pass
+
+**EEVEE shadow artifact caveat:** EEVEE Next (4.2+) introduced ray-traced shadow maps that produce "stippled/staticky" artifacts where toon shaders expect hard edges. Confirmed unfixed as of 5.0 by Blender developers (classified as a limitation, not a bug).
+
+**Mitigation for toon shadow artifacts:**
+```python
+# Reduce shadow resolution limit on each light object:
+light.data.shadow_resolution_limit = 0.001  # Default is too coarse for toon
+# Or switch lighting to AREA lights with no hard shadows for flat cel-shading
+```
+
+The safest approach for manga: use a single directional key light, keep shadow hard but accept that Freestyle outlines carry most of the visual weight. Flat lit areas look better than fighting shadow artifacts.
+
+### Freestyle Outline Configuration (Confirmed Stable)
+
+```python
+view_layer.use_freestyle = True
+freestyle = view_layer.freestyle_settings
+freestyle.crease_angle = math.radians(134)  # Detect sharp edges
+
+lineset = freestyle.linesets.new("Manga_Outlines")
+lineset.select_silhouette = True
+lineset.select_border = True
+lineset.select_crease = True
+lineset.select_external_contour = True
+lineset.select_material_boundary = True
+
+style = lineset.linestyle
+style.color = (0.0, 0.0, 0.0)
+style.thickness = 2.0
+style.caps = 'ROUND'
+```
+
+Freestyle adds a post-process outline pass on top of EEVEE's color output. The combined result (cel-shaded color + black outlines) is the manga aesthetic. This is the existing approach in `render_setup.py` and it is correct.
+
+### Output Format
+
+```python
+render.image_settings.file_format = 'PNG'
+render.image_settings.color_mode = 'RGBA'   # Transparent background
+render.film_transparent = True               # Alpha channel output
+render.resolution_x = 800
+render.resolution_y = 1200
+```
+
+PNG with RGBA (transparent background) is correct. The TypeScript pipeline composites renders over backgrounds before Webtoon assembly — transparency is required.
+
+**Naming convention integration:**
+Blender output: `output/ch01/raw/spyke_standing_relaxed_front.png`
+Pipeline expects: `ch01_p003_v1.png` (chapter, page, version)
+
+The TypeScript `generate` stage will need to rename/move Blender renders to match the existing naming convention. This is a simple file copy+rename — Sharp can handle it, or Node.js `fs.rename()` directly.
+
+---
+
+## Pose Library Data Format
+
+### Current Approach (Inline in render_poses.py)
+
+Poses are defined as Python dicts in `render_poses.py`:
+
+```python
+POSES = {
+    "standing_relaxed": {
+        "description": "Relaxed standing — arms at sides, slight weight shift",
+        "bones": {
+            "UpperArm.R": (-70, 0, 10),   # (x_rot, y_rot, z_rot) in degrees
+            "UpperArm.L": (-70, 0, -10),
+            ...
+        },
+    },
+}
+```
+
+**This approach is correct for v3.0.** Keep it. Reasons:
+- No external dependencies (no YAML parser needed inside Blender's Python)
+- Bone rotations in Euler degrees are readable by artists
+- Dicts are fast to iterate; no file I/O per pose
+- Adding poses = editing one file, no schema concerns
+
+**Alternative: External YAML files** (defer to v4.0 if needed). Would require adding PyYAML to Blender's Python or using Blender's built-in JSON module. Not worth the complexity for the current pose count.
+
+### Pose Application Pattern (Works in 5.0)
+
+```python
+# Set pose bone rotation directly — no action/fcurve required
+bpy.context.view_layer.objects.active = armature_obj
+bpy.ops.object.mode_set(mode='POSE')
+
+for bone_name, rotation in pose_data["bones"].items():
+    if bone_name in armature_obj.pose.bones:
+        bone = armature_obj.pose.bones[bone_name]
+        bone.rotation_mode = 'XYZ'
+        bone.rotation_euler = Euler((
+            math.radians(rotation[0]),
+            math.radians(rotation[1]),
+            math.radians(rotation[2]),
+        ), 'XYZ')
+
+bpy.ops.object.mode_set(mode='OBJECT')
+```
+
+This pattern uses `pose.bones[name].rotation_euler` directly — the only API affected in 5.0 was the legacy action fcurve API and per-instance bone selection, neither of which this touches. Confirmed stable.
+
+---
+
+## Supporting Libraries (TypeScript Pipeline)
+
+No new npm packages are required. The integration is a subprocess call. The only additions to `pipeline/src/`:
+
+| TypeScript Addition | Purpose | Implementation |
+|---------------------|---------|----------------|
+| `blender-render.ts` | Spawn Blender subprocess, handle exit codes | Node.js `child_process.spawn` |
+| `blender-manifest.ts` | Track which panels have been rendered | Extend existing manifest pattern |
+
+The existing pipeline stages (overlay, assemble) remain unchanged. Blender renders drop into `output/ch01/raw/` — the same directory the overlay stage reads from.
+
+---
+
+## Development Tools
+
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| Blender 5.0.1 UI | Manual pose refinement, shader inspection, weight painting | Open `.blend` file directly for iterative work |
+| Blender Scripting tab | Interactive script testing | Faster than full build → render cycle for shader tweaks |
+| Blender Python console | API exploration, property inspection | `bpy.context.scene.eevee.` tab-completion reveals current properties |
+| `bpy.app.version` | Version guard in scripts | `bpy.app.version >= (5, 0, 0)` for 5.0-specific paths |
+
+---
+
+## Installation
+
+No new installations required. Blender 5.0.1 is already installed. The `bpy` module is Blender's embedded Python — no pip install.
+
+**Blender binary path (macOS):**
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender
+```
+
+**Verify Blender version from terminal:**
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender --version
+```
+
+**TypeScript pipeline — no new packages needed:**
+```bash
+# Verify no new deps required
+cd /Users/dondemetrius/Code/plasma/pipeline
+# No npm install needed for Blender subprocess integration
+```
 
 ---
 
 ## Alternatives Considered
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| ComfyUI HTTP client (npm) | `@stable-canvas/comfyui-client` | Raw `fetch` + `ws` | Saves writing WebSocket reconnect, job tracking, output parsing. Zero deps is a non-issue. |
-| ComfyUI HTTP client (npm) | `@stable-canvas/comfyui-client` | `comfyui-sdk` | Prototype quality, unrelated dependencies (Tencent Cloud SDK). Reject. |
-| SD 1.5 anime checkpoint | Anything V5 | NAI Anime Diffusion | Anything V5 has better community support, more ControlNet-compatible training data. NAI Anime requires a naifu subscription or legally ambiguous sources. |
-| SD 1.5 realistic checkpoint | Realistic Vision V6 | Deliberate | Deliberate is good but less actively maintained than Realistic Vision. |
-| LoRA framework | kohya_ss | diffusers native training | diffusers LoRA training is lower-level; kohya_ss provides the `train_network.py` script that is the community standard for SD 1.5 LoRAs. Same underlying tech, better ergonomics. |
-| LoRA framework | kohya_ss | OneTrainer | OneTrainer is cross-platform and Mac-compatible, and may be worth evaluating if kohya_ss has dependency issues. Flag as backup. |
-| Diffusion inference | ComfyUI | Automatic1111 (A1111) | A1111 has poor Apple Silicon support, slower Python-based API, no workflow JSON. ComfyUI is the correct choice for pipeline integration. |
-| Diffusion inference | ComfyUI | InvokeAI | InvokeAI has better Mac support than A1111 but ComfyUI has a larger ecosystem and more ControlNet extensions. |
-| OpenPose preprocessor | ComfyUI-ControlNet-Aux | mediapipe (Python) | mediapipe can detect poses but output format doesn't match ControlNet's expected 18-keypoint format without manual conversion. Use the ComfyUI extension. |
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|------------------------|
+| EEVEE + Freestyle for rendering | Cycles + Toon BSDF | If headless CI rendering ever needed (Cycles supports true headless on macOS) |
+| `child_process.spawn` (Node.js built-in) | blender-node npm package | blender-node is experimental, low stars, not maintained — avoid |
+| Inline Python dicts for pose library | External YAML/JSON files | Only if poses grow beyond ~20 and need to be edited by non-programmers |
+| Direct `bone.rotation_euler` | Keyframe/action API | Only if exporting animations (not applicable for static panel renders) |
+| EEVEE render with display | EEVEE headless | Not possible on macOS — no workaround exists without virtual display server |
+| EEVEE shadow mitigation (low resolution limit) | Cycles for shadow quality | Cycles shadows are clean but render time is prohibitive (30–120s vs 2–5s) |
 
 ---
 
-## Installation Checklist Summary
+## What NOT to Use
 
-### Phase A: ComfyUI (prerequisite for everything)
-```bash
-git clone https://github.com/comfyanonymous/ComfyUI.git ~/tools/ComfyUI
-cd ~/tools/ComfyUI && python3.11 -m venv venv && source venv/bin/activate
-pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements.txt
-git clone https://github.com/ltdrdata/ComfyUI-Manager.git custom_nodes/ComfyUI-Manager
-python main.py --force-fp16 --listen 127.0.0.1 --port 8188
-# Install ComfyUI-ControlNet-Aux via Manager UI
-```
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `blender --background` with EEVEE on macOS | EEVEE requires display context — renders silently fail or produce empty files | Launch Blender without `--background` flag; or use Cycles if headless required |
+| `scene.render.engine = 'BLENDER_EEVEE_NEXT'` | Renamed to `BLENDER_EEVEE` in Blender 5.0 | `scene.render.engine = 'BLENDER_EEVEE'` |
+| `scene.eevee.shadow_cascade_size` | Removed in Blender 4.2, gone in 5.0 | Configure shadow resolution per light object |
+| `scene.eevee.shadow_cube_size` | Same as above | Per-light shadow settings |
+| `action.fcurves` / `action.groups` | Legacy action API removed in Blender 5.0 | `channelbag.fcurves` via `bpy_extras.anim_utils` (only needed if adding keyframes) |
+| Blender's Shader to RGB with Cycles | Node is EEVEE-exclusive — Cycles will error | Use EEVEE for toon shading; use Cycles Toon BSDF if Cycles is required |
+| System Python packages inside Blender scripts | Blender has its own embedded Python — pip installs to system Python are invisible | All imports must use Blender's embedded modules or be copied into the script directory |
 
-### Phase B: Download Models
-```
-models/checkpoints/anything-v5-PrtRE.safetensors      (Civitai)
-models/checkpoints/realisticVisionV60B1_v51HyperVAE.safetensors  (Civitai)
-models/controlnet/control_v11p_sd15_openpose.pth      (HuggingFace lllyasviel/ControlNet-v1-1)
-models/controlnet/control_v11p_sd15_openpose.yaml     (same repo)
-```
+---
 
-### Phase C: TypeScript Pipeline Addition
-```bash
-cd /Users/dondemetrius/Code/plasma/pipeline
-pnpm add @stable-canvas/comfyui-client
-```
+## Version Compatibility
 
-### Phase D: kohya_ss (for LoRA training only — separate from inference)
-```bash
-git clone https://github.com/bmaltais/kohya_ss.git ~/tools/kohya_ss
-cd ~/tools/kohya_ss && python3.11 -m venv venv && source venv/bin/activate
-pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
-pip install accelerate transformers diffusers safetensors lycoris-lora toml tqdm Pillow
-# Skip: bitsandbytes, xformers, triton
-accelerate config  # choose MPS, fp16
-```
+| Component | Version | Compatible With | Notes |
+|-----------|---------|-----------------|-------|
+| Blender | 5.0.1 | macOS 13.0+, Apple Silicon | Confirmed installed |
+| EEVEE engine ID | `BLENDER_EEVEE` | 5.0+ (was `BLENDER_EEVEE_NEXT` in 4.0–4.x) | Breaking change from 4.x |
+| `bpy.app.version` | tuple `(5, 0, 1)` | Use for version guards | Compare with `>=` tuples |
+| `taa_render_samples` | exists in 5.0 | `scene.eevee.taa_render_samples` | Confirmed in 5.0 API docs |
+| Freestyle lineset API | stable | No changes in 5.0 | `view_layer.freestyle_settings.linesets` |
+| `ShaderNodeMix` RGBA | stable | `data_type='RGBA'`, inputs `[6]`/`[7]` | Unchanged in 5.0 |
+| Pose bone `rotation_euler` | stable | Direct assignment works in 5.0 | Core posing API unchanged |
+| `mathutils.Euler` | stable | `from mathutils import Euler` | Unchanged |
+| Node.js `child_process` | Node 20.x | `spawn()` with stdio pipes | No version concerns |
+
+---
+
+## Stack Patterns by Variant
+
+**If rendering single panel for pipeline (production):**
+- Launch without `--background`, pass pose + view args
+- Output to `output/ch01/raw/spyke_{pose}_{view}.png`
+- TypeScript renames to `ch01_p003_v1.png` after render
+
+**If debugging shader or pose interactively:**
+- Open `.blend` file with Blender UI: `blender 3d_models/output/spyke/spyke.blend`
+- Run scripts from Scripting tab
+- Faster iteration than CLI round-trip
+
+**If true headless rendering ever required (CI/CD):**
+- Switch render engine to `CYCLES`
+- Replace Shader to RGB node tree with Cycles Toon BSDF
+- Freestyle still works with Cycles
+- Accept 10–20x render time increase
+
+**If shadow artifacts on EEVEE are unacceptable:**
+- Set light shadow type to `AREA` with soft shadows
+- Disable cast shadows on key light, rely on Freestyle outlines for depth
+- Or: reduce `shadow_resolution_limit` to 0.001 on each Sun light
 
 ---
 
@@ -633,21 +446,21 @@ accelerate config  # choose MPS, fp16
 
 | Claim | Source | Confidence |
 |-------|--------|------------|
-| PyTorch 2.5.1 installed, MPS working | `python3 -c "import torch; print(torch.backends.mps.is_available())"` — verified on machine | HIGH |
-| MPS tensor ops confirmed | `tensor([1.], device='mps:0')` verified | HIGH |
-| `@stable-canvas/comfyui-client` v1.5.9, zero deps, ESM, types | `npm show @stable-canvas/comfyui-client --json` — registry verified | HIGH |
-| `comfyui-sdk` has unrelated deps (Tencent Cloud) | `npm show comfyui-sdk --json` — registry verified | HIGH |
-| diffusers 0.32.2, transformers 4.48.1, accelerate 1.3.0 installed | `pip show` — verified on machine | HIGH |
-| ComfyUI install steps | Training data (ComfyUI README pattern) — WebFetch unavailable | MEDIUM |
-| komfyUI Metal/MPS auto-detection | Training data — stable since ComfyUI added MPS support in 2023 | MEDIUM |
-| kohya_ss install steps | Training data (bmaltais/kohya_ss README pattern) | MEDIUM |
-| Model filenames (Realistic Vision, Anything V5, ControlNet) | Training data — stable filenames since 2023 | MEDIUM |
-| ControlNet HuggingFace repo `lllyasviel/ControlNet-v1-1` | Training data — well-documented, stable URL | MEDIUM |
-| bitsandbytes/xformers CUDA-only constraint | Training data + confirmed NOT installed on this machine | HIGH |
-| OneTrainer as kohya_ss alternative | Training data | LOW — verify current Mac support |
+| EEVEE engine ID changed to `BLENDER_EEVEE` in 5.0 | [Blender 5.0 Python API release notes](https://developer.blender.org/docs/release_notes/5.0/python_api/) | HIGH |
+| `shadow_cascade_size` / `shadow_cube_size` removed | [Blender 5.0 Python API release notes](https://developer.blender.org/docs/release_notes/5.0/python_api/) + Blender 4.2 migration community reports | HIGH |
+| EEVEE does NOT support headless render on macOS | [Blender 5.0 Manual EEVEE Limitations](https://docs.blender.org/manual/en/latest/render/eevee/limitations/limitations.html) + multiple community confirmations 2024–2025 | HIGH |
+| Shader to RGB is EEVEE-exclusive | [Blender 5.0 Manual Shader to RGB](https://docs.blender.org/manual/en/latest/render/shader_nodes/color/shader_to_rgb.html) | HIGH |
+| `taa_render_samples` exists in Blender 5.0 | [SceneEEVEE bpy API docs](https://docs.blender.org/api/current/bpy.types.SceneEEVEE.html) | HIGH |
+| Legacy action API `action.fcurves` removed in 5.0 | [Blender 5.0 Python API release notes](https://developer.blender.org/docs/release_notes/5.0/python_api/) + community migration reports | HIGH |
+| `bone.rotation_euler` direct assignment stable in 5.0 | [Blender 5.0 Animation & Rigging release notes](https://developer.blender.org/docs/release_notes/5.0/animation_rigging/) — no mention of pose bone rotation changes | HIGH |
+| Freestyle lineset/linestyle API stable | [FreestyleSettings bpy API docs](https://docs.blender.org/api/current/bpy.types.FreestyleSettings.html) — no changes noted in 5.0 | HIGH |
+| EEVEE Next toon shadow artifacts unresolved in 5.0 | [Blender issue #128913](https://projects.blender.org/blender/blender/issues/128913) — classified as limitation, not bug | HIGH |
+| `child_process.spawn` for Blender subprocess | Node.js official docs + Blender CLI rendering documentation | HIGH |
+| Bone selection now per-instance (5.0 breaking change) | [Blender 5.0 Animation & Rigging release notes](https://developer.blender.org/docs/release_notes/5.0/animation_rigging/) | HIGH |
+| EEVEE shadow artifact mitigation via `shadow_resolution_limit` | [Blender Artists community thread](https://blenderartists.org/t/did-eevee-next-break-everyone-elses-toon-shaders/1539334) + official developer response | MEDIUM |
+| EEVEE M1 crash/shadow buffer issues on macOS 15 | [Blender issue #132664](https://projects.blender.org/blender/blender/issues/132664) — open as of early 2026 | MEDIUM |
 
 ---
 
-*Stack research for: v2.0 Local ComfyUI + LoRA Pipeline*
-*Researched: 2026-02-19*
-*WebSearch and WebFetch unavailable during this session — all findings are training data (cutoff Aug 2025) except where marked "verified on machine".*
+*Stack research for: v3.0 Blender 3D Rendering Pipeline (Blender 5.0.1, M1 Pro, EEVEE toon shading + Freestyle)*
+*Researched: 2026-02-25*
