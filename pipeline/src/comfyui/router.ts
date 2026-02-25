@@ -5,8 +5,8 @@
  *   GET  /health          — Probe ComfyUI reachability
  *   POST /jobs            — Submit a generation job
  *   GET  /jobs/:id        — Poll job status
- *   POST /loras/train     — 501 stub (Phase 9)
- *   GET  /loras/:id/status — 501 stub (Phase 9)
+ *   POST /loras/train     — Validate and accept training request (GEN-06)
+ *   GET  /loras/:id/status — 501 stub (out of scope for Phase 9)
  */
 import { Router } from 'express';
 import { z } from 'zod';
@@ -17,6 +17,24 @@ import { mkdir } from 'node:fs/promises';
 import { PATHS } from '../config/paths.js';
 
 const COMFYUI_URL = 'http://127.0.0.1:8188';
+
+// ---------------------------------------------------------------------------
+// In-memory flag for GEN-06 concurrency detection.
+// Must be module-level to survive across request handlers within a process lifetime.
+// ---------------------------------------------------------------------------
+let trainingJobActive = false;
+
+// ---------------------------------------------------------------------------
+// Zod validation schema for POST /loras/train (GEN-06)
+// ---------------------------------------------------------------------------
+
+const loraTrainSchema = z.object({
+  datasetDir: z.string().min(1),
+  outputName: z.string().min(1),
+  steps: z.number().int().min(100).max(2000).optional(),
+  resolution: z.number().int().optional(),
+  batch_size: z.number().int().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // Zod validation schema for POST /jobs (GEN-03)
@@ -35,6 +53,7 @@ export const jobRequestSchema = z.object({
     height: z.number().int().min(1),
   }),
   checkpoint_name: z.string().optional(),
+  loraId: z.string().optional(),
   chapter: z.number().int().min(1).optional(),
   page: z.number().int().min(1).optional(),
 });
@@ -130,15 +149,19 @@ export function createJobRouter(): Router {
 
         updateJob(job.jobId, { status: 'running' });
 
+        // Generate resolved seed now so it can be stored in job state
+        const resolvedSeed = body.seed ?? randomInt(2_147_483_647);
+
         const result = await submitJob({
           promptText: body.prompt_text,
           negativePrompt: body.negative_prompt,
-          seed: body.seed ?? randomInt(2_147_483_647),
+          seed: resolvedSeed,
           steps: body.steps ?? 20,
           cfg: body.cfg ?? 7,
           sampler: body.sampler,
           scheduler: body.scheduler,
           checkpointName: body.checkpoint_name,
+          loraName: body.loraId,  // undefined → client defaults to spyke_plasma_v1_production
           destDir: comfyuiDir,
           chapter,
           page,
@@ -150,6 +173,13 @@ export function createJobRouter(): Router {
           promptId: result.promptId,
           imagePath: result.imagePath,
           imageFile: result.imageFile,
+          seed: result.seed,
+          loraId: body.loraId ?? 'spyke_plasma_v1_production',
+          sampler: body.sampler ?? 'euler_ancestral',
+          scheduler: body.scheduler ?? 'normal',
+          steps: body.steps ?? 20,
+          cfg: body.cfg ?? 7,
+          workflowJson: result.workflowJson,
         });
 
         console.log(`[service] Job ${job.jobId} complete -> ${result.imageFile}`);
@@ -178,10 +208,48 @@ export function createJobRouter(): Router {
   });
 
   // -------------------------------------------------------------------------
-  // POST /loras/train — GEN-01 stub (Phase 9)
+  // POST /loras/train — GEN-06 validation + async stub
   // -------------------------------------------------------------------------
-  router.post('/loras/train', (_req, res) => {
-    res.status(501).json({ error: 'Not implemented — Phase 9' });
+  router.post('/loras/train', async (req, res) => {
+    // Validate request body
+    const parsed = loraTrainSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      res.status(400).json({
+        error: issue?.message ?? 'Invalid request body',
+        field: issue?.path.join('.') ?? '',
+      });
+      return;
+    }
+
+    const body = parsed.data;
+
+    // GEN-06: batch_size > 1 is not supported
+    if (body.batch_size !== undefined && body.batch_size > 1) {
+      res.status(400).json({ error: 'batch_size must be 1 or omitted', field: 'batch_size' });
+      return;
+    }
+
+    // GEN-06: reject concurrent training requests
+    if (trainingJobActive) {
+      res.status(409).json({ error: 'A training job is already running' });
+      return;
+    }
+
+    // Async stub — sets flag, returns 202, clears flag when done
+    trainingJobActive = true;
+    res.status(202).json({ status: 'accepted', outputName: body.outputName });
+
+    // Fire-and-forget stub (Phase 9 does not implement actual training invocation —
+    // training is done manually via kohya_ss CLI as established in Phase 8)
+    setImmediate(() => {
+      console.log(`[service] POST /loras/train stub: outputName=${body.outputName}`);
+      // In production, this would invoke kohya_ss. For Phase 9, just clear the flag.
+      setTimeout(() => {
+        trainingJobActive = false;
+        console.log('[service] Training job stub complete, flag cleared');
+      }, 5000);
+    });
   });
 
   // -------------------------------------------------------------------------

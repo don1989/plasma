@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v2.0 — Phase 9: LoRA Integration + Reproducibility
+**Current focus:** v2.0 — Phase 10: ControlNet OpenPose
 
 ## Current Position
 
-Phase: 9 — LoRA Integration + Reproducibility
-Plan: 0 of TBD (Phase 9 not yet planned)
-Status: Phase 8 complete (3/3 plans done). Phase 9 ready to plan.
-Last activity: 2026-02-20 — 08-03 complete: v3 LoRA trained (1200 steps, loss 0.0698), deployed as spyke_plasma_v1_production.safetensors. Phase 8 gate PASS.
+Phase: 9 — LoRA Integration + Reproducibility — COMPLETE
+Plan: 4 of 4 (09-04 complete)
+Status: Phase 9 complete. Phase 10 (ControlNet OpenPose) is next.
+Last activity: 2026-02-20 — Phase 9 complete: all 6 acceptance criteria verified. Three seed-42 generations byte-identical (md5 match). Manifest has all PIPE-04 fields. PIPE-05 workflow.json exists alongside promoted image. GEN-06 HTTP 400/409 confirmed.
 
-Progress: [##########] ~93% (v2.0 Phase 8 complete — Phase 9 next)
+Progress: [##########] ~97% (v2.0 Phase 9 complete — Phase 10 next)
 
 ## Performance Metrics
 
@@ -35,10 +35,11 @@ Progress: [##########] ~93% (v2.0 Phase 8 complete — Phase 9 next)
 | 6. Spyke Dataset Prep | 1 | 3 min | 3.0 min |
 | 7. ComfyUI + Express | 3 | 16 min | 5.3 min |
 | 8. Spyke LoRA Training | 3 | 324 min | 108 min |
+| 9. LoRA Integration | 4 | 82 min | 20.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 07-01 (3 min — Express scaffold), 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring)
-- Trend: Stable at 3-5 min for integration plans
+- Last 5 plans: 07-02 (5 min — WebSocket client + job dispatch), 07-03 (8 min — generate.ts CLI wiring), 09-01 (2 min — types/template), 09-03 (2 min — router validation), 09-02 (7 min — inference param wiring)
+- Trend: Stable at 2-5 min for integration plans
 
 *Updated after each plan completion*
 
@@ -134,6 +135,15 @@ Recent decisions affecting current work:
 - [08-03]: accelerate launch --num_cpu_threads_per_process=4 is required for MPS training speed (~2s/step). Raw python3 causes 10–40x slowdown.
 - [08-03]: AdamW8bit fails on MPS (bitsandbytes blockwise update uses CPU fallback). Use plain AdamW on Apple Silicon.
 - [08-03]: Production LoRA: spyke_plasma_v1_production.safetensors (v3 final, 72MB). Phase 9 must use this filename in workflow templates. LoRA strength: 0.8.
+- [09-01]: CLIPSetLastLayer stop_at_clip_layer=-2 (CLIP skip 2) is standard SD 1.5 LoRA inference setting — hardcoded in template, not a runtime slot
+- [09-01]: LoRA strength 0.8 locked from Phase 8 production results — hardcoded in workflow template, not configurable per-job
+- [09-01]: ComfyJobResult.seed and workflowJson are required fields — every ComfyUI job must capture these for PIPE-05 reproducibility
+- [09-01]: loraName on ComfyJobInput is optional — Phase 9-02 router defaults it to spyke_plasma_v1_production
+- [Phase 09-03]: loraTrainSchema keeps batch_size optional so handler can reject > 1 while silently passing omitted values — cleaner than schema-level refine for this semantic rule
+- [Phase 09-03]: trainingJobActive is module-level (not inside createJobRouter) so it persists across all request handlers within a process lifetime
+- [09-02]: generate.ts hardwires loraId: 'spyke_plasma_v1_production' in POST /jobs body — no CLI flag needed in Phase 9; simplest path to GEN-04 compliance
+- [09-02]: resolvedSeed extracted before submitJob call so the value passed to ComfyUI matches what is stored in JobState and manifest entry
+- [09-02]: workflow.json written at approve time, not generation time — workflowTemplate stored in manifest entry for deferred write at approval (PIPE-05)
 
 ### Pending Todos
 
@@ -142,10 +152,9 @@ None.
 ### Blockers/Concerns
 
 - Gemini API image generation access status is unknown — IGEN-02 code is complete but untested with real API key (requires Cloud Billing setup)
-- Phase 9 LoRA slot currently uses empty string in Express service templates — Phase 9 must wire in `spyke_plasma_v1_production` as lora_name
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Phase 8 complete — 08-03 done, v3 LoRA deployed as spyke_plasma_v1_production.safetensors. Phase 9 is next.
-Resume file: .planning/phases/09-lora-integration/ (Phase 9 not yet planned — run /gsd:plan-phase 9)
+Stopped at: Phase 9 complete. All 6 acceptance criteria verified. Phase 10 (ControlNet OpenPose) is next.
+Resume file: .planning/phases/10-controlnet-openpose/ (not yet created)

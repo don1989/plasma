@@ -23,7 +23,7 @@
 - [ ] **Phase 6: Spyke Dataset Preparation** — 15–20 captioned training images + regularization set, ready for kohya_ss
 - [x] **Phase 7: ComfyUI + Express Integration** — End-to-end generation via `--comfyui` flag produces output in correct directory (completed 2026-02-19)
 - [x] **Phase 8: Spyke LoRA Training** — v3 LoRA trained (1200 steps, pose-only captions) and deployed as spyke_plasma_v1_production.safetensors (completed 2026-02-20)
-- [ ] **Phase 9: LoRA Integration + Reproducibility** — LoRA wired into pipeline with full parameter traceability and manifest extension
+- [x] **Phase 9: LoRA Integration + Reproducibility** — LoRA wired into pipeline with full parameter traceability and manifest extension (completed 2026-02-20)
 - [ ] **Phase 10: ControlNet OpenPose** — Pose-conditioned generation available via `--pose-ref` flag on `POST /jobs`
 
 ## Phase Details
@@ -106,7 +106,13 @@ Plans:
   3. The complete workflow JSON for each approved generation is stored as `chXX_pNNN_vN.workflow.json` alongside the raw image
   4. `POST /loras/train` with `batch_size=2` returns HTTP 400; `POST /loras/train` while a training job is already active returns HTTP 409
   5. All 6 acceptance criteria from REQUIREMENTS.md pass end-to-end
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Update workflow template (add LoraLoader + CLIPSetLastLayer) + extend all TypeScript types with PIPE-04 fields
+- [ ] 09-02-PLAN.md — Wire LoRA name + inference params through comfyui-client → router → generate.ts; write workflow.json on approve-and-copy
+- [ ] 09-03-PLAN.md — Implement POST /loras/train with batch_size validation and concurrency guard (GEN-06)
+- [ ] 09-04-PLAN.md — End-to-end reproducibility checkpoint: 3 same-seed generations + manifest + workflow.json + GEN-06 curl tests
 
 ### Phase 10: ControlNet OpenPose
 **Goal**: Pose-conditioned img2img generation is available via `poseImagePath` on `POST /jobs` — the `--pose-ref` workflow uses an img2img+ControlNet template and demonstrably affects panel composition.
@@ -131,5 +137,5 @@ Plans:
 | 6. Spyke Dataset Preparation | 1/4 | In Progress|  | - |
 | 7. ComfyUI + Express Integration | 3/3 | Complete    | 2026-02-19 | - |
 | 8. Spyke LoRA Training | v2.0 | 3/3 | Complete | 2026-02-20 |
-| 9. LoRA Integration + Reproducibility | v2.0 | 0/? | Not started | - |
+| 9. LoRA Integration + Reproducibility | 3/4 | In Progress|  | - |
 | 10. ControlNet OpenPose | v2.0 | 0/? | Not started | - |

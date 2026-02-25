@@ -44,6 +44,7 @@ export interface ComfyJobInput {
   sampler?: string;
   scheduler?: string;
   checkpointName?: string;
+  loraName?: string;
   destDir: string; // absolute path to raw/comfyui/ directory
   chapter: number;
   page: number;
@@ -54,6 +55,10 @@ export interface ComfyJobResult {
   promptId: string;
   imagePath: string; // absolute path to copied image in raw/comfyui/
   imageFile: string; // bare filename e.g. ch01_p001_v1.png
+  /** The resolved seed actually used in this generation. */
+  seed: number;
+  /** The filled workflow JSON string as submitted to ComfyUI. */
+  workflowJson: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,13 +133,20 @@ export async function submitJob(input: ComfyJobInput): Promise<ComfyJobResult> {
   const templateJson = readFileSync(templatePath, 'utf-8');
   const seed = input.seed ?? Math.floor(Math.random() * 2_147_483_647);
 
+  // Ensure lora_name has .safetensors extension — ComfyUI LoraLoader requires the full filename.
+  // loraName may be passed as a bare id (e.g. 'spyke_plasma_v1_production') without extension.
+  const rawLoraName = input.loraName ?? 'spyke_plasma_v1_production';
+  const loraNameWithExt = rawLoraName.endsWith('.safetensors')
+    ? rawLoraName
+    : `${rawLoraName}.safetensors`;
+
   // slotFill uses lowercase key names matching its internal token map
   const filledJson = slotFill(templateJson, {
     prompt_text: input.promptText,
     negative_prompt:
       input.negativePrompt ?? 'lowres, bad anatomy, bad hands, text, error, missing fingers',
     seed,
-    lora_name: '', // Phase 7: no LoRA — Phase 9 wires this
+    lora_name: loraNameWithExt,
     checkpoint_name: input.checkpointName ?? 'AnythingXL_inkBase.safetensors',
   });
   const workflow = JSON.parse(filledJson) as Record<string, unknown>;
@@ -194,5 +206,5 @@ export async function submitJob(input: ComfyJobInput): Promise<ComfyJobResult> {
   await copyFile(srcPath, destPath);
   console.log(`[comfyui-client] Image saved: ${destPath}`);
 
-  return { promptId, imagePath: destPath, imageFile };
+  return { promptId, imagePath: destPath, imageFile, seed, workflowJson: filledJson };
 }
