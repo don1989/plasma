@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Local ComfyUI + LoRA Pipeline
-status: complete
+milestone: v3.0
+milestone_name: Blender 3D Rendering Pipeline
+status: defining_requirements
 last_updated: "2026-02-25"
 progress:
-  total_phases: 10
-  completed_phases: 9
-  total_plans: 29
-  completed_plans: 29
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** A repeatable system that transforms any Plasma story chapter into publish-ready Webtoon manga pages with consistent character visuals across panels.
-**Current focus:** v3.0 Blender 3D Rendering Pipeline — planning
+**Current focus:** v3.0 Blender 3D Rendering Pipeline — defining requirements
 
 ## Current Position
 
-Phase: v2.0 COMPLETE — pivoting to v3.0
-Plan: N/A — milestone boundary
-Status: v2.0 archived. v3.0 Blender 3D milestone needs `/gsd:new-milestone` to define requirements and roadmap.
-Last activity: 2026-02-25 — v2.0 milestone completed and archived. Phase 10 (ControlNet) pivoted to Blender approach. Context captured for v3.0.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-25 — Milestone v3.0 started
 
-Progress: [##########] 100% (v2.0 complete)
+Progress: [░░░░░░░░░░] 0% (v3.0 requirements in progress)
 
 ## Accumulated Context
 
