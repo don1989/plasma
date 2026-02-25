@@ -71,29 +71,29 @@ Requirements for the Blender 3D rendering pipeline milestone. Each maps to roadm
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENV-01 | TBD | Pending |
-| ENV-02 | TBD | Pending |
-| ENV-03 | TBD | Pending |
-| ENV-04 | TBD | Pending |
-| MDL-01 | TBD | Pending |
-| MDL-02 | TBD | Pending |
-| MDL-03 | TBD | Pending |
-| MDL-04 | TBD | Pending |
-| MDL-05 | TBD | Pending |
-| POSE-01 | TBD | Pending |
-| POSE-02 | TBD | Pending |
-| POSE-03 | TBD | Pending |
-| POSE-04 | TBD | Pending |
-| INTG-01 | TBD | Pending |
-| INTG-02 | TBD | Pending |
-| INTG-03 | TBD | Pending |
-| INTG-04 | TBD | Pending |
+| ENV-01 | Phase 11 | Pending |
+| ENV-02 | Phase 11 | Pending |
+| ENV-03 | Phase 11 | Pending |
+| ENV-04 | Phase 11 | Pending |
+| MDL-01 | Phase 12 | Pending |
+| MDL-02 | Phase 12 | Pending |
+| MDL-03 | Phase 12 | Pending |
+| MDL-04 | Phase 12 | Pending |
+| MDL-05 | Phase 12 | Pending |
+| POSE-01 | Phase 13 | Pending |
+| POSE-02 | Phase 13 | Pending |
+| POSE-03 | Phase 13 | Pending |
+| POSE-04 | Phase 13 | Pending |
+| INTG-01 | Phase 14 | Pending |
+| INTG-02 | Phase 14 | Pending |
+| INTG-03 | Phase 14 | Pending |
+| INTG-04 | Phase 14 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 (pending roadmap creation)
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after initial definition*
+*Last updated: 2026-02-25 — traceability updated with phase mappings*
