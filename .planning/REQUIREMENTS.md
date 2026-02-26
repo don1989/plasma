@@ -9,9 +9,9 @@ Requirements for the Blender 3D rendering pipeline milestone. Each maps to roadm
 
 ### ENV — Environment Validation
 
-- [ ] **ENV-01**: Blender 5.0.1 API fixes applied — engine identifier corrected to `BLENDER_EEVEE`, `ShaderNodeMix` socket access changed to named (`'A'`/`'B'`), deprecated shadow properties guarded
+- [x] **ENV-01**: Blender 5.0.1 API fixes applied — engine identifier corrected to `BLENDER_EEVEE`, `ShaderNodeMix` socket access changed to named (`'A'`/`'B'`), deprecated shadow properties guarded
 - [ ] **ENV-02**: EEVEE headless rendering validated on M1 Pro macOS — confirmed whether `--background` produces correct output or requires workaround (no `--background` flag)
-- [ ] **ENV-03**: `build_spyke.py` runs successfully on Blender 5.0.1 and produces `3d_models/output/spyke/spyke.blend` with blockout model, armature, toon shaders, cameras, and Freestyle outlines
+- [x] **ENV-03**: `build_spyke.py` runs successfully on Blender 5.0.1 and produces `3d_models/output/spyke/spyke.blend` with blockout model, armature, toon shaders, cameras, and Freestyle outlines
 - [ ] **ENV-04**: A test render of the blockout at 800×1200 produces a correct RGBA PNG with toon shading, Freestyle outlines, and transparent background
 
 ### MDL — Model Refinement
@@ -71,9 +71,9 @@ Requirements for the Blender 3D rendering pipeline milestone. Each maps to roadm
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENV-01 | Phase 11 | Pending |
+| ENV-01 | Phase 11 | Complete |
 | ENV-02 | Phase 11 | Pending |
-| ENV-03 | Phase 11 | Pending |
+| ENV-03 | Phase 11 | Complete |
 | ENV-04 | Phase 11 | Pending |
 | MDL-01 | Phase 12 | Pending |
 | MDL-02 | Phase 12 | Pending |
