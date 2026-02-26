@@ -5,7 +5,7 @@ Run after generate_spyke.py to convert all materials to manga-style
 cel-shaded materials with hard shadow edges and flat color bands.
 
 Uses EEVEE's Shader to RGB node for clean toon shading.
-Works with Blender 3.x and 4.x.
+Targets Blender 5.0.1.
 
 Usage:
   1. Open the .blend file with Spyke generated
@@ -120,8 +120,8 @@ def convert_to_toon_shader(material, metallic=False):
     mix.location = (250, 100)
     mix.blend_type = 'ADD'
     mix.inputs['Factor'].default_value = RIM_LIGHT_STRENGTH
-    links.new(ramp.outputs['Color'], mix.inputs[6])       # A
-    links.new(rim_ramp.outputs['Color'], mix.inputs[7])    # B
+    links.new(ramp.outputs['Color'], mix.inputs['A'])
+    links.new(rim_ramp.outputs['Color'], mix.inputs['B'])
 
     # ---- METALLIC SPECULAR (optional) ----
     if metallic:
@@ -149,12 +149,12 @@ def convert_to_toon_shader(material, metallic=False):
         spec_mix.location = (450, 100)
         spec_mix.blend_type = 'ADD'
         spec_mix.inputs['Factor'].default_value = METALLIC_SPEC_STRENGTH
-        links.new(mix.outputs[2], spec_mix.inputs[6])
-        links.new(spec_ramp.outputs['Color'], spec_mix.inputs[7])
+        links.new(mix.outputs['Result'], spec_mix.inputs['A'])
+        links.new(spec_ramp.outputs['Color'], spec_mix.inputs['B'])
 
-        final_color_output = spec_mix.outputs[2]
+        final_color_output = spec_mix.outputs['Result']
     else:
-        final_color_output = mix.outputs[2]
+        final_color_output = mix.outputs['Result']
 
     # ---- OUTPUT ----
     output = nodes.new('ShaderNodeOutputMaterial')
@@ -191,9 +191,11 @@ def apply_toon_to_all():
 def setup_eevee_for_toon():
     """Configure EEVEE render settings optimized for toon shading."""
     scene = bpy.context.scene
-    scene.render.engine = 'BLENDER_EEVEE_NEXT' if bpy.app.version >= (4, 0, 0) else 'BLENDER_EEVEE'
+    scene.render.engine = 'BLENDER_EEVEE'
 
-    # Shadows
+    # Shadow map properties were removed in Blender 4.2+ (replaced by
+    # Virtual Shadow Maps).  The hasattr guards keep this safe on 5.0.1
+    # where these attributes no longer exist.
     if hasattr(scene.eevee, 'shadow_cascade_size'):
         scene.eevee.shadow_cascade_size = '2048'
     if hasattr(scene.eevee, 'shadow_cube_size'):
