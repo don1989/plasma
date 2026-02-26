@@ -32,7 +32,7 @@
 
 ### 🚧 v3.0 Blender 3D Rendering Pipeline
 
-- [ ] **Phase 11: Blender Environment Validation** — Fix Blender 5.0.1 API breaks, resolve EEVEE headless rendering on macOS, produce verified test render from blockout model
+- [x] **Phase 11: Blender Environment Validation** — Fix Blender 5.0.1 API breaks, resolve EEVEE headless rendering on macOS, produce verified test render from blockout model
 - [ ] **Phase 12: Spyke Model Refinement** — Retopologize face and body, weight paint armature deformation, add equipment detail, validate toon shader on refined mesh
 - [ ] **Phase 13: Pose Library and Render Automation** — Validate existing poses on refined mesh, expand to 10+ poses, add panel-type mapping, implement CLI naming convention
 - [ ] **Phase 14: TypeScript Pipeline Integration** — Connect Blender subprocess to generate stage, extend manifest, end-to-end Chapter 1 validation through overlay and assembly
@@ -48,7 +48,9 @@
   2. A test render at 800x1200 produces a correct RGBA PNG with toon shading (shade bands visible), Freestyle outlines (silhouette + crease lines), and transparent background
   3. EEVEE headless rendering behavior on M1 Pro macOS is documented — either `--background` works or the no-background workaround is confirmed and coded into the render scripts
   4. All Blender 5.0 API fixes are applied: engine identifier is `BLENDER_EEVEE`, ShaderNodeMix uses named socket access (`'A'`/`'B'`), deprecated shadow properties are guarded
-**Plans**: TBD
+**Plans**: 2/2 complete
+  - Plan 01: Blender 5.0.1 API Fixes and Build Validation (2min)
+  - Plan 02: Headless Render Validation, Test Render, and Automated Pixel Checks (4min)
 
 ### Phase 12: Spyke Model Refinement
 **Goal**: Spyke's 3D model is refined from blockout to render-ready quality with proper mesh topology and armature deformation at joints
@@ -98,7 +100,7 @@
 | 8. Spyke LoRA Training | v2.0 | 3/3 | Complete | 2026-02-20 |
 | 9. LoRA Integration + Reproducibility | v2.0 | 4/4 | Complete | 2026-02-20 |
 | 10. ControlNet OpenPose | v2.0 | 0/0 | Pivoted | 2026-02-25 |
-| 11. Blender Environment Validation | v3.0 | 1/? | In progress | - |
+| 11. Blender Environment Validation | v3.0 | 2/2 | Complete | 2026-02-26 |
 | 12. Spyke Model Refinement | v3.0 | 0/? | Not started | - |
 | 13. Pose Library and Render Automation | v3.0 | 0/? | Not started | - |
 | 14. TypeScript Pipeline Integration | v3.0 | 0/? | Not started | - |
