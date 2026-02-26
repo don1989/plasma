@@ -20,6 +20,8 @@ After running, use render_poses.py to batch-render:
 import bpy
 import os
 import sys
+import time
+import traceback
 
 # Add script directories to path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -36,30 +38,59 @@ import render_setup
 def main():
     print("\n" + "=" * 60)
     print("  PLASMA 3D PIPELINE — Full Build: Spyke Tinwall")
-    print("=" * 60 + "\n")
+    print("=" * 60)
 
-    # Step 1: Generate character
-    print(">>> STEP 1: Generating character blockout...\n")
-    generate_spyke.main()
+    # Blender version check
+    version = bpy.app.version_string
+    print(f"\n  Blender version: {version}")
+    if not version.startswith("5."):
+        print(f"  WARNING: Expected Blender 5.x but found {version}")
 
-    # Step 2: Apply toon shaders
-    print("\n>>> STEP 2: Applying manga toon shaders...\n")
-    manga_shader.main()
+    print()
 
-    # Step 3: Set up render pipeline
-    print("\n>>> STEP 3: Setting up render pipeline...\n")
-    render_setup.main()
+    # Pipeline steps
+    steps = [
+        ("Generating character blockout", generate_spyke.main),
+        ("Applying manga toon shaders", manga_shader.main),
+        ("Setting up render pipeline", render_setup.main),
+    ]
 
-    # Step 4: Save .blend file
+    total_start = time.time()
+
+    for step_name, step_fn in steps:
+        print(f"\n>>> {step_name}...")
+        t0 = time.time()
+        try:
+            step_fn()
+        except Exception as e:
+            print(f"\nFATAL: '{step_name}' failed: {e}")
+            traceback.print_exc()
+            sys.exit(1)
+        elapsed = time.time() - t0
+        print(f"<<< {step_name} complete ({elapsed:.1f}s)")
+
+    # Save step (also wrapped in fail-fast)
     output_dir = os.path.join(SCRIPT_DIR, "output", "spyke")
     os.makedirs(output_dir, exist_ok=True)
     blend_path = os.path.join(output_dir, "spyke.blend")
 
-    print(f"\n>>> STEP 4: Saving to {blend_path}...")
-    bpy.ops.wm.save_as_mainfile(filepath=blend_path)
+    step_name = "Saving .blend file"
+    print(f"\n>>> {step_name}...")
+    t0 = time.time()
+    try:
+        bpy.ops.wm.save_as_mainfile(filepath=blend_path)
+    except Exception as e:
+        print(f"\nFATAL: '{step_name}' failed: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+    elapsed = time.time() - t0
+    print(f"<<< {step_name} complete ({elapsed:.1f}s)")
+
+    total_elapsed = time.time() - total_start
 
     print("\n" + "=" * 60)
     print("  BUILD COMPLETE")
+    print(f"  Total time: {total_elapsed:.1f}s")
     print("=" * 60)
     print(f"""
   Saved: {blend_path}
