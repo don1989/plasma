@@ -1,793 +1,331 @@
-# Pitfalls Research: ComfyUI + LoRA on Apple Silicon
+# Pitfalls Research: Blender 3D Manga Rendering Pipeline
 
-**Domain:** Local AI image generation pipeline — ComfyUI + kohya_ss on M1 Pro 16GB
-**Researched:** 2026-02-19
-**Confidence:** MEDIUM overall — training data through Aug 2025, no live web search available this session. Apple Silicon / MPS behavior patterns are well-documented in the community through mid-2025; flag specifics for verification against current ComfyUI and kohya_ss changelogs.
+**Domain:** Blender 5.0.1 + EEVEE toon shading + Freestyle outlines + script-driven posing on Apple Silicon M1 Pro
+**Researched:** 2026-02-25
+**Confidence:** HIGH for API-level findings (verified against official Blender release notes and docs). MEDIUM for EEVEE/Apple Silicon behavior (verified against official bug tracker, community may evolve). LOW items are flagged inline.
 
-**Note on confidence calibration:**
-- HIGH = stable behavior confirmed across multiple sources in training data, unlikely to have changed
-- MEDIUM = documented behavior as of mid-2025, may have improved in recent releases
-- LOW = community anecdote, single source, or extrapolated from adjacent behavior
+**Scope:** Pitfalls specific to adding Blender 3D rendering to THIS project (Plasma manga pipeline v3.0). The scripts analyzed are: `generate_spyke.py`, `manga_shader.py`, `render_setup.py`, `render_poses.py`.
 
 ---
 
-## Apple Silicon / Metal Pitfalls
+## Critical Pitfalls
 
-### Pitfall 1: MPS Fallback to CPU for Unsupported Operations (CRITICAL)
+### Pitfall 1: EEVEE Headless Rendering Does Not Work on macOS
 
 **What goes wrong:**
-PyTorch MPS does not implement every CUDA operation. When ComfyUI or a sampler calls an unsupported op, PyTorch silently falls back to CPU for that op (or raises an error), causing generation to run 3-10x slower than expected. You may not notice this without profiling — the output looks normal but takes 5 minutes for a 512x512 image instead of 45 seconds.
+EEVEE rendering in `--background` mode is **not supported on macOS**. The project's entire automated pipeline (`blender --background --python render_poses.py`) relies on headless rendering. On macOS, EEVEE requires a display context (the Metal GPU API on macOS does not support compute-only rendering without a window). Running `blender --background` with EEVEE on M1 Pro will either silently produce black renders or fail to initialize the GPU renderer, falling back to CPU-only software rasterization — or hang indefinitely.
 
 **Why it happens:**
-MPS backend coverage has been growing steadily but is not 100% CUDA-equivalent. Certain attention variants, some custom nodes, and specific sampler math hit unimplemented ops. Silent fallback is the default behavior (MPS_FALLBACK_ENABLED).
+Blender's EEVEE uses the Metal rendering backend on macOS. The Metal API on macOS has historically required a display/window context for rasterization. Headless rendering (no display, no window) is a Linux-only capability for EEVEE. This is documented in Blender's official limitations page and confirmed in multiple bug reports (issue #127033 — "EEVEE under Apple Silicon renders Blender completely unresponsive during render").
 
-**Consequences:**
-- "GPU acceleration" that is actually mostly CPU
-- Generation times that feel wrong (first 5-10 steps fast, then dramatically slow)
-- Battery drain and thermal throttling masking the real problem
+**How to avoid:**
+Option A (Recommended for v3.0): Use a dummy display. On macOS, run Blender with a virtual framebuffer by connecting a display or using `launchctl` to provide a CGSSession. The most reliable workaround is to NOT use `--background` — instead launch Blender with its window minimized and render through the Python API with `bpy.ops.render.render(write_still=True)`. This is less elegant but works on macOS.
 
-**Prevention:**
-- Set `PYTORCH_ENABLE_MPS_FALLBACK=1` explicitly (prevents errors vs the alternative which is a crash)
-- Set `PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0` to help with memory management
-- Time a known reference run (512x512, 20 steps, Euler a) after setup — benchmark is ~30-60s on M1 Pro. If it takes 5+ minutes, something is falling back to CPU.
-- Install ComfyUI and run `python main.py --force-fp16` — fp16 has better MPS coverage than fp32
+Option B: Switch the render engine to Cycles for all headless renders. Cycles supports Metal GPU headless rendering on Apple Silicon. Toon shading requires using Cycles-compatible toon nodes (Diffuse BSDF + LightPath for shadow separation) instead of Shader to RGB. This changes the shader architecture in `manga_shader.py`.
 
-**Detection:**
-```bash
-# Check if Metal is actually being used
-python -c "import torch; print(torch.backends.mps.is_available()); print(torch.backends.mps.is_built())"
-# Activity Monitor → GPU History — should show GPU load during generation
-```
+Option C: Run the headless renders on a Linux machine or CI runner and pull back outputs. The TypeScript pipeline could shell out to a remote Blender instance.
 
-**Confidence:** HIGH — well-documented MPS limitation, fundamental to PyTorch MPS architecture.
+**Warning signs:**
+- Render produces all-black or all-transparent PNGs
+- `blender --background --python render_poses.py` exits with code 0 but no files written
+- Console shows "GPUContextError" or "Metal: headless" errors
+- Render completes instantly (no actual GPU work done)
+
+**Phase to address:** Phase 1 (Model Build and Render Setup Validation). Discover this constraint before building the automated pipeline, not after. Prototype a single render in the actual environment before committing to the architecture.
 
 ---
 
-### Pitfall 2: Unified Memory Exhaustion Kills the Process (CRITICAL)
+### Pitfall 2: EEVEE Engine Identifier Name Change in Blender 5.0
 
 **What goes wrong:**
-On M1 Pro 16GB, RAM is shared between CPU, GPU, and OS. ComfyUI + the model + your Node.js service + macOS UI can together exhaust RAM, causing macOS to kill the Python process mid-generation with a cryptic error, or swap to disk causing 10-100x slowdown.
+`manga_shader.py` line 194 uses this version check:
+```python
+scene.render.engine = 'BLENDER_EEVEE_NEXT' if bpy.app.version >= (4, 0, 0) else 'BLENDER_EEVEE'
+```
+In **Blender 5.0**, the engine identifier was **changed back** from `BLENDER_EEVEE_NEXT` to `BLENDER_EEVEE`. This means on Blender 5.0.1 (the project's target), the condition `bpy.app.version >= (4, 0, 0)` is true, and the script sets the engine to `'BLENDER_EEVEE_NEXT'` — which is **no longer a valid identifier** in Blender 5.0. The render engine silently falls back to the default or raises an error, rendering with the wrong engine.
 
 **Why it happens:**
-SD 1.5 fp16 model: ~2GB. VAE: ~335MB. ControlNet model: ~1.4GB. Sampler working memory: 1-4GB for 512x512. OS baseline: 3-5GB. Node.js service: 200-400MB. That's 8-12GB for a basic generation run, leaving only 4-8GB buffer. At 768x768 or with multiple ControlNets loaded simultaneously, the buffer disappears.
+In Blender 4.2, EEVEE-Next replaced the old EEVEE and used the internal code name `BLENDER_EEVEE_NEXT`. In Blender 5.0, the identifier was simplified back to `BLENDER_EEVEE` now that EEVEE-Next is the only EEVEE. The existing script's version check covers Blender 4.x correctly but overshoots into 5.0.
 
-**Consequences:**
-- OOM kill during generation (the worst case — you get a corrupt partial output or nothing)
-- macOS memory pressure causing thermal throttling across the whole system
-- Generation quality degradation due to swap (some samplers behave differently when memory is paged)
+**How to avoid:**
+Tighten the version check to explicitly gate on 4.x:
+```python
+if (4, 0, 0) <= bpy.app.version < (5, 0, 0):
+    scene.render.engine = 'BLENDER_EEVEE_NEXT'
+else:
+    scene.render.engine = 'BLENDER_EEVEE'
+```
+Or, since the project targets only Blender 5.0.1, simplify to:
+```python
+scene.render.engine = 'BLENDER_EEVEE'  # Blender 5.0+ only
+```
 
-**Prevention (requirements-level):**
-- Maximum resolution: **512x768** as the hard default. Never attempt 768x768 or larger as a routine operation.
-- Load ONE ControlNet at a time. Never chain two ControlNet models simultaneously in a workflow.
-- Use fp16 everywhere: model, VAE, ControlNet. fp32 doubles VRAM usage.
-- Close other heavy processes (Chrome tabs, VS Code with large TS projects) before training runs.
-- Set ComfyUI `--lowvram` flag or `--medvram` flag to enable CPU offloading for model layers not in active use.
+**Warning signs:**
+- `setup_eevee_for_toon()` runs without error but render uses wrong engine
+- Console shows "Unknown render engine" or output looks photorealistic (Cycles fallback)
+- Verify with: `print(bpy.context.scene.render.engine)` after assignment
 
-**Prevention (architecture-level):**
-- Implement memory pressure detection in the Express service: poll `vm_stat` (macOS) before accepting a generation job. If swap usage is growing, queue rather than run.
-- Limit ComfyUI to a single worker process (no parallel generation).
-
-**Confidence:** HIGH — RAM math is deterministic; the limits are well understood.
+**Phase to address:** Phase 1 (Model Build and Shader Setup). Fix before any render output is trusted.
 
 ---
 
-### Pitfall 3: fp16 vs fp32 Correctness Bugs on MPS
+### Pitfall 3: EEVEE-Next Shadow System Breaks Toon Shading
 
 **What goes wrong:**
-Some MPS operations produce numerically incorrect results in fp16 that they do not in fp32 (or CUDA fp16). This manifests as NaN (not-a-number) propagation through the denoising steps, producing black images, pure gray images, or images with large corrupted patches. It's the most confusing failure mode because the pipeline runs without errors.
+EEVEE Next (Blender 4.2+, including 5.0) uses a rewritten ray-traced shadow system. Toon shaders with `Shader to RGB` and hard `ColorRamp` steps exhibit "stippling" or "fuzziness" artifacts along shadow edges — where the hard shadow line should be a clean binary step (lit vs. shadow), EEVEE Next produces hundreds of sub-pixel varying values from the PCF shadow filtering. The toon shader's `CONSTANT` interpolation on the color ramp amplifies this into visible noise.
+
+This is a **confirmed regression** from legacy EEVEE. The Blender Artists community confirmed this broke between 4.1 and 4.2, and Blender developers acknowledged it as a deliberate trade-off prioritizing physical accuracy over NPR compatibility. The issue persists in Blender 5.0.
+
+**How to avoid:**
+Prevention strategy (pick one):
+1. **Disable cast shadows in EEVEE**: In render settings, set shadow resolution to minimum or turn off shadow evaluation per-light. Toon manga shading often looks better without cast shadows anyway — use only self-shadowing via `Shader to RGB`.
+2. **Use flat lighting**: Position the key light so it creates a broad lit region and the toon threshold falls inside a stable lit zone, not near a shadow boundary.
+3. **Post-process the stippling**: After rendering, apply a median or bilateral filter in Sharp (TypeScript pipeline) to clean up sub-pixel shadow noise along edges.
+4. **GooEngine**: A custom Blender build maintained specifically for NPR toon work. Requires distributing a separate Blender binary — HIGH cost, use only if stippling is unacceptable.
+
+**Warning signs:**
+- Toon shadow edges look "grainy" or "staticky" in renders
+- Problem is visible at 800px width but might be subtle at lower previews
+- Issue is worse with SUN lights than with directional lights very far away
+
+**Phase to address:** Phase 1 (Shader validation) — test renders with your actual lighting setup before refining the model. This must be solved before the production render pipeline is locked.
+
+---
+
+### Pitfall 4: `ShaderNodeMix` Input Index Numbering (RGBA Data Type)
+
+**What goes wrong:**
+`manga_shader.py` accesses `ShaderNodeMix` inputs by **integer index** (lines 123-124 and 152-153):
+```python
+links.new(ramp.outputs['Color'], mix.inputs[6])   # A
+links.new(rim_ramp.outputs['Color'], mix.inputs[7])  # B
+```
+The `ShaderNodeMix` node changed its socket layout when `data_type` was added in Blender 3.4+. The socket indices for the A and B inputs vary depending on `data_type`. For `RGBA`, inputs[6] and inputs[7] map to the correct RGBA A/B sockets in Blender 3.x/4.x but this is fragile: any socket insertion, data_type change, or future Blender version that rearranges sockets silently breaks the connections. When connections are wrong, the node tree produces no output or incorrect colors without raising an exception.
+
+**How to avoid:**
+Access sockets by name, not index:
+```python
+links.new(ramp.outputs['Color'], mix.inputs['A'])
+links.new(rim_ramp.outputs['Color'], mix.inputs['B'])
+```
+For `ShaderNodeMix` with `data_type = 'RGBA'`, the named inputs are `'Factor'`, `'A'`, and `'B'`. Name-based access is stable across versions. Apply the same fix to the spec_mix section.
+
+**Warning signs:**
+- Materials appear solid grey or wrong color
+- Color ramp output not affecting final material appearance
+- No Python error raised — silent wrong-connection
+
+**Phase to address:** Phase 1 (Shader Setup). Audit all `mix.inputs[N]` index accesses and replace with named socket access before first production render.
+
+---
+
+### Pitfall 5: `Specular IOR Level` Input Name (Principled BSDF)
+
+**What goes wrong:**
+`generate_spyke.py` line 125 accesses:
+```python
+bsdf.inputs['Specular IOR Level'].default_value = 0.1
+```
+This was renamed from `'Specular'` to `'Specular IOR Level'` in Blender 4.0. The current code uses the new name, which is CORRECT for Blender 5.0.1. However, the `create_material()` function creates intermediate materials that are immediately replaced by `manga_shader.py` (toon shader), so these Principled BSDF materials serve only as placeholders to extract base color. Accessing `'Specular IOR Level'` on a Principled BSDF in Blender 5.0 is valid and will not error.
+
+**Residual risk:** If anyone runs `generate_spyke.py` alone against Blender 3.6 (as the README mentions "Blender 3.6+ (4.x recommended)"), the name `'Specular IOR Level'` does NOT exist in Blender 3.6 where it was called `'Specular'`. This will raise a `KeyError`.
+
+**How to avoid:**
+Update README to remove the "Blender 3.6+" claim — v3.0 targets Blender 5.0.1 exclusively. Guard the property access:
+```python
+if 'Specular IOR Level' in bsdf.inputs:
+    bsdf.inputs['Specular IOR Level'].default_value = 0.1
+elif 'Specular' in bsdf.inputs:
+    bsdf.inputs['Specular'].default_value = 0.1
+```
+
+**Warning signs:**
+- `KeyError: 'Specular IOR Level'` when running on Blender 3.6
+- No error on 5.0.1 (this is the target version)
+
+**Phase to address:** Phase 1. Update documentation. Add guard if backward compatibility matters.
+
+---
+
+### Pitfall 6: Armature Parenting Without Vertex Weights Produces No Deformation
+
+**What goes wrong:**
+`generate_spyke.py`'s `parent_to_armature()` function (lines 878-882) parents mesh objects to the armature using `obj.parent = armature` and sets `matrix_parent_inverse`. This is **object parenting**, not **armature deform parenting**. Without vertex groups with bone weight assignments, posing the armature moves the mesh objects as rigid children — the entire mesh moves as a unit when a bone moves, rather than deforming smoothly. Arms, legs, and clothing parts will "teleport" rather than bend at joints.
+
+For a blockout model with discrete separate meshes per body part (which is what the script builds), rigid parenting is actually workable for initial posing — each body part IS a separate object. However, when the model is refined into a unified mesh (e.g., sculpted torso + connected arms), rigid parenting will fail entirely. The `render_poses.py` pose data assumes the armature controls actual deformation, which it won't do correctly against these rigid parents.
 
 **Why it happens:**
-MPS fp16 implementation has had correctness bugs in specific operations (LayerNorm, some attention variants) that produce NaN outputs in edge cases. These accumulate through the U-Net denoising loop.
+The script uses `obj.parent = armature` (generic parent) instead of adding an Armature modifier with vertex group weighting. Generic parent moves the whole object — it cannot deform a mesh. Weight painting is a manual step that was flagged in the README's "Refinement Guide" but not implemented in the scripts.
 
-**Consequences:**
-- Black or gray output image with no error message
-- Intermittent failures (only happens with certain seeds, schedulers, or step counts)
-- Corrupted LoRA outputs during training
+**How to avoid:**
+For the blockout phase (discrete mesh parts), rigid parenting is acceptable and poses will work correctly because each body part is already separated. Do NOT merge body parts into a single mesh before weight painting. When moving to production-quality (refined mesh), the required workflow is:
+1. Merge body parts into contiguous regions
+2. Add Armature modifier to each merged mesh
+3. Weight paint vertex groups for each bone
+4. Only then does `render_poses.py` produce correct deformation
 
-**Prevention:**
-- If you see a black/gray output, first attempt: switch to fp32 for just that run to confirm the issue is fp16-related.
-- Use `--force-fp16` for ComfyUI inference (generally works fine) but test the specific checkpoint + VAE combination.
-- For **VAE specifically**: run VAE in fp32 even if the U-Net runs fp16. VAE fp16 on MPS has a documented history of producing washed-out or gray outputs. Set `--fp16-vae` only after explicitly testing.
-- Some community members recommend `--upcast-sampling` for MPS — this runs the final sampling step in fp32 even in an fp16 workflow.
-
-**Detection:**
-- Black output → suspect fp16 NaN
-- Washed out / gray output → suspect VAE fp16 issue
-- Works on one seed, fails on another → fp16 numerical instability
-
-**Confidence:** MEDIUM — documented through community reports mid-2025, may have improved in PyTorch 2.4+/2.5+.
-
----
-
-### Pitfall 4: ComfyUI Custom Nodes That Require CUDA (MEDIUM)
-
-**What goes wrong:**
-Many popular ComfyUI custom nodes include inline CUDA kernels (`.cu` files) that will not compile or run on MPS. Installing them silently poisons the ComfyUI node graph — the node appears in the UI but fails at runtime.
-
-**Why it happens:**
-Custom node authors target NVIDIA first. CUDA extensions are common for performance-critical ops (fast attention, efficient sampling). The custom node manager may show the node as "installed" even though it cannot execute.
-
-**Consequences:**
-- Workflow that works on CUDA breaks silently on Mac
-- Some nodes will error on load, crashing the whole ComfyUI server
-- Dependency on a specific community node creates a portability cliff
-
-**Prevention (requirements-level):**
-- Maintain a whitelist of MPS-confirmed custom nodes. Only install from this whitelist.
-- MPS-safe nodes as of mid-2025: ComfyUI-Manager (management only), ComfyUI_IPAdapter_plus (broadly tested on Mac), ComfyUI-Advanced-ControlNet (pure Python, MPS-compatible).
-- Before installing any custom node, check its issues/README for "MPS support" or "Mac support" mention.
-
-**Confidence:** MEDIUM — pattern is well-established; specific node compatibility list evolves.
-
----
-
-### Pitfall 5: Thermal Throttling Under Sustained Load
-
-**What goes wrong:**
-M1 Pro is fanless in passive cooling conditions and has an aggressive thermal governor. During a 500-image training run or extended batch generation, the chip will thermal throttle, dropping from ~peak performance to ~60% after 20-40 minutes. Training that starts at 1 minute/iteration slows to 1.8 minutes/iteration by hour 2.
-
-**Why it happens:**
-The M1 Pro's efficiency cores and Neural Engine run hot under sustained ML workloads. macOS dynamically reduces clock speed to prevent thermal damage. The MBP fans do run but the M1 Pro was not designed for sustained 100% utilization.
-
-**Consequences:**
-- Training time estimates made from the first 10 iterations are optimistic by 30-50%
-- Overnight training jobs can take 2x longer than expected
-
-**Prevention:**
-- Run training sessions in the evening (lower ambient temp, lid open)
-- Use the `caffeinate` command to prevent sleep but accept the thermal cost
-- Plan training time with a 1.5x buffer (e.g., if iteration 1 says "2 hours", plan for 3)
-- Do NOT run ComfyUI generation during training — both compete for MPS and RAM
-
-**Confidence:** HIGH — hardware thermal behavior is well understood.
-
----
-
-## kohya_ss on Mac Pitfalls
-
-### Pitfall 1: kohya_ss Installation Is Fragile on Mac (CRITICAL)
-
-**What goes wrong:**
-kohya_ss has complex Python dependency chains (PyTorch, bitsandbytes, xformers) that are not all available for Apple Silicon without manual patching. The standard install script targets CUDA Linux. Running it on Mac produces either: import errors at training start, or a silently degraded training path (CPU instead of MPS).
-
-**Why it happens:**
-- `bitsandbytes` (8-bit optimizer) requires CUDA and does not have an MPS backend. Attempting to use it causes immediate crash.
-- `xformers` is CUDA-only. MPS uses standard PyTorch attention instead.
-- The install script assumes CUDA and may pull wrong PyTorch builds.
-
-**Consequences:**
-- Training fails immediately at import time
-- Training runs on CPU (takes 10x longer), and you may not notice
-
-**Prevention (requirements-level):**
-- Use the **simplified-trainer** alternative or use kohya_ss with explicit `--use_8bit_adam=False` and `--no_xformers` flags.
-- Install PyTorch via the Apple Silicon-specific channel: `pip install torch torchvision torchaudio` from the Apple MPS wheel, NOT the CUDA wheel.
-- Verify training is using MPS: monitor Activity Monitor → GPU History during the first training step.
-- Consider **sd-scripts** (the upstream of kohya_ss) directly — it's easier to configure for MPS than the GUI wrapper.
-
-**Prevention (architecture-level):**
-- Wrap training in a shell script that sets environment variables before calling kohya_ss:
-```bash
-PYTORCH_ENABLE_MPS_FALLBACK=1 \
-PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 \
-python train_network.py --network_module networks.lora \
-  --no_xformers \
-  --mixed_precision no \
-  ...
+Script fix for proper armature modifier (per mesh part):
+```python
+def add_armature_modifier(obj, armature_obj):
+    mod = obj.modifiers.new("Armature", 'ARMATURE')
+    mod.object = armature_obj
+    mod.use_vertex_groups = True
 ```
 
-**Confidence:** MEDIUM — known issues documented widely; the ecosystem improves, so verify current state at implementation.
+**Warning signs:**
+- Posing the armature moves whole body parts correctly but the connections between parts show gaps
+- No deformation at joints — limbs rotate as rigid blocks
+- After mesh merge: limb geometry stays in place when bone rotates
+
+**Phase to address:** Phase 2 (Model Refinement). Must be addressed before any production render that requires non-rigid deformation. Blockout renders for reference sheet are acceptable with rigid parenting.
 
 ---
 
-### Pitfall 2: LoRA Training OOM on 16GB Unified Memory (CRITICAL)
+### Pitfall 7: EEVEE Shadow Properties Removed in Blender 4.2+
 
 **What goes wrong:**
-SD 1.5 LoRA training at typical settings (batch size 4, 512x512, fp16) requires approximately 8-12GB of unified memory, leaving almost no headroom. With the OS baseline (~3-5GB), you are right at the limit. macOS will swap or kill the process.
-
-**Memory breakdown for SD 1.5 LoRA training (approximate):**
-- Base model loaded for training: ~3-4GB
-- Training optimizers and gradients: ~2-4GB
-- Batch images and augmentation: ~1-2GB (scales with batch size)
-- OS + background: ~3-5GB
-- **Total: 9-15GB** — dangerously close to 16GB limit
-
-**Consequences:**
-- OOM mid-training (after 30-60 minutes) loses the entire run
-- Swap-induced slowdown produces corrupted or low-quality LoRA weights
-
-**Prevention (hard constraints):**
-- **Batch size: 1.** Not 2, not 4. Batch size 1 is the only safe default on 16GB.
-- **Resolution: 512x512.** Training at 768x768 doubles GPU memory for activations.
-- **Mixed precision: bf16** if the PyTorch version supports it on MPS, otherwise fp32. fp16 on MPS has correctness issues noted above.
-- **Gradient accumulation: 4-8** to compensate for batch size 1 (simulate larger effective batch without memory cost).
-- Close all other heavy processes before training. Close Chrome, VS Code, Slack.
-- Use a dedicated user session for training (log out of other accounts).
-
-**Settings that cause OOM:**
+`manga_shader.py` lines 197-201 attempt to set shadow resolution properties:
+```python
+if hasattr(scene.eevee, 'shadow_cascade_size'):
+    scene.eevee.shadow_cascade_size = '2048'
+if hasattr(scene.eevee, 'shadow_cube_size'):
+    scene.eevee.shadow_cube_size = '1024'
 ```
---batch_size 2+          → OOM
---resolution 768         → OOM
---train_batch_size 4     → OOM
-Multiple ControlNets     → OOM
+These properties (`shadow_cascade_size`, `shadow_cube_size`) were removed entirely from `scene.eevee` in Blender 4.2 as part of the EEVEE-Next rewrite. Shadow resolution is now controlled per-light in `light.data.shadow_maximum_resolution`. The `hasattr` guard prevents a crash, but the shadow quality configuration is silently skipped — EEVEE uses defaults, which may produce lower quality or incorrect shadow appearance for toon shading.
+
+Similarly, `gtao_distance` was moved from `scene.eevee.gtao_distance` to `view_layer.eevee.ambient_occlusion_distance` and the `gtao_quality` and `use_gtao` properties were removed from `SceneEEVEE` entirely in Blender 5.0.
+
+**How to avoid:**
+Replace the legacy shadow block with EEVEE-Next equivalents:
+```python
+# Blender 5.0+: shadow resolution is per-light
+for obj in bpy.data.objects:
+    if obj.type == 'LIGHT':
+        if hasattr(obj.data, 'shadow_maximum_resolution'):
+            obj.data.shadow_maximum_resolution = 0.001  # Higher = better quality
 ```
+Remove all `scene.eevee.shadow_cascade_size` and `shadow_cube_size` references. Remove `gtao_*` property accesses.
 
-**Confidence:** HIGH — memory math is deterministic; these limits are well-established for M1 Pro 16GB.
+**Warning signs:**
+- Script runs without error but shadow quality is not configured
+- Toon shading looks noisier than expected — shadow resolution is too low
+- `AttributeError` if the `hasattr` guards are ever removed
 
----
-
-### Pitfall 3: Speed Expectations on Mac vs. Community Benchmarks (MEDIUM)
-
-**What goes wrong:**
-Community LoRA training tutorials reference speeds like "30 minutes for 1000 steps." Those benchmarks are on RTX 3090/4090 with CUDA. On M1 Pro MPS, expect **5-10x slower**. A 2000-step training run that "should take 30 minutes" takes 3-5 hours.
-
-**Actual M1 Pro training estimates (LOW confidence — extrapolated):**
-- 1000 steps, 512x512, batch 1: ~2-4 hours
-- 2000 steps, 512x512, batch 1: ~4-8 hours
-
-**Consequences:**
-- Scheduling overnight runs that don't finish by morning
-- Thermal throttling making estimates based on early steps inaccurate
-- Abandoning training mid-run due to unexpected duration
-
-**Prevention:**
-- Run a 50-step test with the full training configuration and extrapolate: `50_step_time * (target_steps / 50) * 1.4` (for thermal overhead).
-- Schedule 1000-step runs as the minimum (enough to produce a usable LoRA), 2000 steps as a quality target.
-- Training does NOT need GPU while sleeping — do NOT close the lid (may suspend MPS).
-
-**Confidence:** LOW on specific numbers — requires a hardware test to confirm. Use test run to calibrate.
+**Phase to address:** Phase 1 (Render Setup Validation). Audit all `scene.eevee.*` property accesses against the Blender 5.0 `SceneEEVEE` API.
 
 ---
 
-### Pitfall 4: Dataset Size with Only 1-10 Images of Spyke (CRITICAL for this project)
-
-**What goes wrong:**
-LoRA training with fewer than 10-15 images of a character is insufficient to learn the character's identity robustly. With 1-5 reference images, the LoRA will overfit to those specific poses/expressions and fail to generalize to new compositions. The character will look correct only when the base prompt closely matches the training image's composition.
-
-**Why it happens:**
-LoRA is learning the "delta" that maps the base model's concept space to the target character. With too few images, it memorizes specific pixels rather than learning the underlying concept (face, outfit, body proportions).
-
-**Consequences:**
-- LoRA produces Spyke's face only when the pose exactly matches the reference
-- Novel action poses (required for manga panels) produce a character-Spyke hybrid
-- Overfitting: the training loss looks great but real-world outputs are wrong
-
-**The project's reality:**
-The project has `Spyke_Final.png` (a character reference sheet). That is likely 1-3 actual rendered views of the character. That is **below the minimum** for reliable LoRA.
-
-**Prevention strategies:**
-1. **Data augmentation from the reference sheet** — crop individual panels from the reference sheet (face closeup, upper body, full body) to produce 6-10 distinct training crops from one reference sheet.
-2. **Synthetic augmentation** — generate 10-20 additional reference images of Spyke using Gemini (the v1.0 pipeline) before training. These don't need to be perfect — they're training data, not production output. Use existing fingerprints with varied poses/expressions/backgrounds.
-3. **Use the manga script panels** — any panel images that were generated in v1.0 that show Spyke can become training data. Even imperfect generations help if they're consistent on key features.
-4. **Target 15-20 images minimum** — all showing the same character, varied poses and crops, consistent key visual features (white cloak, red bandana, ginger hair, massive broadsword).
-
-**Confidence:** HIGH — LoRA data requirements are well-researched; these minimums are well-established.
-
----
-
-### Pitfall 5: Caption Quality Determines LoRA Generalization
-
-**What goes wrong:**
-Training without captions (or with poor captions) teaches the LoRA to bake the training images' style/background/pose into the trigger word itself. The trigger word then only "works" in contexts similar to the training images. With well-captioned data, the LoRA learns only the character identity, leaving everything else to the prompt.
-
-**Example of bad captioning:**
-```
-spyke_v2
-(all training images get the same single trigger word with no description)
-```
-
-**Example of good captioning:**
-```
-spyke_v2, white cloak, red bandana, ginger hair, full body, standing, white background, simple background
-```
-
-**Consequences:**
-- Trigger word also activates the training background (white background bleeds into all generations)
-- Trigger word activates specific training pose (always standing, never sitting)
-- NSFW or unintended concepts in training images get associated with the trigger word
-
-**Prevention:**
-- Caption every training image individually with: trigger word + character features present + pose + background type + framing (close-up / full body / bust).
-- Use `--no_token_padding` and proper token budgets.
-- Tools for auto-captioning: WD14-tagger (produces booru-style tags, good for anime characters) — run on each training image and manually review/edit output.
-- If using a character reference sheet as a single image: caption the sheet as a whole, noting it's a reference sheet.
-
-**Confidence:** HIGH — well-established LoRA training best practice.
-
----
-
-### Pitfall 6: Trigger Word Bleeding (MEDIUM)
-
-**What goes wrong:**
-Choosing a trigger word that shares tokens with common SD 1.5 vocabulary contaminates the LoRA. A trigger word like `spyke` may partially activate if the base model has seen "spike" in training data. This causes the LoRA character to "bleed" into unrelated prompts at low strength.
-
-**Prevention:**
-- Choose an uncommon trigger token: `spyke_plasma_v1` or `sypke_lora` (deliberate misspelling) is better than `spyke` alone.
-- Test the trigger word without the LoRA loaded — if the base model produces anything recognizable, choose a different word.
-- Use LoRA at moderate strength (0.6-0.8) rather than 1.0 — reduces bleed while preserving character.
-
-**Confidence:** MEDIUM — documented community behavior; severity varies by base model.
-
----
-
-## Node.js to ComfyUI Integration Pitfalls
-
-### Pitfall 1: WebSocket Race Condition on Job Completion (CRITICAL)
-
-**What goes wrong:**
-ComfyUI's API uses a two-channel pattern: you POST the workflow via HTTP, then listen for completion via WebSocket. If you connect to the WebSocket AFTER posting the job, you may miss the completion event entirely (the image was already done). If you connect BEFORE posting, you receive events from other clients' jobs mixed with yours.
-
-**Consequences:**
-- Job appears to hang indefinitely (Express service waiting for an event that already fired)
-- Occasional spurious "completion" from a previous job
-
-**Prevention (architecture-level):**
-1. **Always connect WebSocket BEFORE submitting the prompt.** Use the client_id pattern: generate a UUID, connect WebSocket with `ws://localhost:8188/ws?clientId={uuid}`, THEN POST the prompt with that same `client_id` in the payload.
-2. Filter WebSocket messages by `client_id` — ComfyUI sends all execution events to all connected clients; only process events matching your UUID.
-3. Implement a timeout on the WebSocket listener (30-60 seconds for generation). If no completion event fires, poll `GET /queue` and `GET /history` to check job status.
-
-**Reference pattern (TypeScript):**
-```typescript
-const clientId = crypto.randomUUID();
-const ws = new WebSocket(`ws://localhost:8188/ws?clientId=${clientId}`);
-await waitForOpen(ws);
-
-// Only THEN submit the prompt
-const response = await fetch('http://localhost:8188/prompt', {
-  method: 'POST',
-  body: JSON.stringify({ prompt: workflow, client_id: clientId })
-});
-const { prompt_id } = await response.json();
-
-// Filter events
-ws.on('message', (data) => {
-  const msg = JSON.parse(data.toString());
-  if (msg.type === 'executing' && msg.data?.prompt_id === prompt_id && msg.data?.node === null) {
-    // generation complete
-  }
-});
-```
-
-**Confidence:** HIGH — this is the documented ComfyUI API pattern; the race condition is a well-known integration mistake.
-
----
-
-### Pitfall 2: ComfyUI HTTP API Has No Built-In Authentication or CORS (MEDIUM)
-
-**What goes wrong:**
-ComfyUI runs on localhost with no auth. If Node.js and ComfyUI are on the same machine (they are here), this is fine. The pitfall is if you ever try to expose the Express service beyond localhost — the ComfyUI API remains open and unauthenticated.
-
-**Prevention:**
-- Bind ComfyUI to `127.0.0.1` explicitly (not `0.0.0.0`): `python main.py --listen 127.0.0.1`
-- Express service should be the only external entry point
-- This is acceptable for single-developer local use; document the constraint
-
-**Confidence:** HIGH — standard network security pattern.
-
----
-
-### Pitfall 3: File Paths Between Node.js and ComfyUI (MEDIUM)
-
-**What goes wrong:**
-ComfyUI expects model paths relative to its own directory structure (`models/checkpoints/`, `models/lora/`, `models/controlnet/`). Your Node.js service will need to reference these paths to: trigger model loading, reference uploaded images for img2img, and locate output files after generation. Hardcoded absolute paths break when ComfyUI's install location changes.
-
-**Consequences:**
-- "Model not found" errors when ComfyUI's models directory path doesn't match what Node.js sends
-- Generated images not found by Node.js because output path differs from what the workflow specified
-- Workflow JSON files referencing wrong paths when copied between machines
-
-**Prevention:**
-- Store ComfyUI's base directory as a single env variable (`COMFYUI_BASE_PATH`).
-- Derive all model paths from this base: `${COMFYUI_BASE_PATH}/models/lora/spyke_v1.safetensors`
-- Use ComfyUI's `/object_info` API to discover available models at startup rather than hardcoding model names.
-- For generated outputs: use ComfyUI's `SaveImage` node with a predictable filename pattern, then read from `${COMFYUI_BASE_PATH}/output/`.
-
-**Confidence:** HIGH — basic path management; well-understood pattern.
-
----
-
-### Pitfall 4: Long-Running Training Jobs and Process Management (MEDIUM)
-
-**What goes wrong:**
-Spawning a kohya_ss training job from Node.js via `child_process.spawn()` creates a long-running process (hours) that can:
-- Silently die without triggering the Node.js `'exit'` event if killed by OOM
-- Leave zombie processes if Node.js itself restarts
-- Produce no meaningful status updates during training (only final loss curves)
-
-**Prevention (implementation-level):**
-
-```typescript
-// Use spawn (not exec) for streaming output
-const trainingProcess = spawn('python', ['train_network.py', ...args], {
-  stdio: ['ignore', 'pipe', 'pipe'],
-  env: { ...process.env, PYTORCH_ENABLE_MPS_FALLBACK: '1' }
-});
-
-// Stream logs to a file for inspection
-const logStream = fs.createWriteStream(`training-${jobId}.log`);
-trainingProcess.stdout.pipe(logStream);
-trainingProcess.stderr.pipe(logStream);
-
-// Parse progress from training output (kohya_ss outputs step/loss to stderr)
-trainingProcess.stderr.on('data', (chunk) => {
-  const line = chunk.toString();
-  const match = line.match(/step (\d+)\/(\d+)/);
-  if (match) updateJobProgress(jobId, parseInt(match[1]), parseInt(match[2]));
-});
-
-// Handle OOM kills (SIGKILL from macOS memory pressure)
-trainingProcess.on('exit', (code, signal) => {
-  if (signal === 'SIGKILL') {
-    // macOS killed the process (OOM or manual)
-    markJobFailed(jobId, 'OOM_KILL');
-  }
-});
-
-// Persist PID for crash recovery
-fs.writeFileSync(`training-${jobId}.pid`, trainingProcess.pid.toString());
-```
-
-**Recovery:**
-- On Node.js restart, check for orphaned PID files. If the PID is still running, reattach. If not, mark job as failed.
-- Partially completed training checkpoints are saved by kohya_ss — check `output_dir` for `*.safetensors` files at intermediate save intervals.
-
-**Confidence:** MEDIUM — standard Node.js child process patterns; the OOM/SIGKILL detection is Mac-specific.
-
----
-
-### Pitfall 5: ComfyUI Startup Time and Health Check Timing
-
-**What goes wrong:**
-ComfyUI takes 10-30 seconds to start (model loading), then additional time to load the first checkpoint into memory. If the Node.js service sends the first generation request before ComfyUI is ready, the request fails with a connection refused or a queue error.
-
-**Prevention:**
-- Implement a startup health check loop: poll `GET /system_stats` until it returns 200 before accepting any generation requests.
-- Apply a backoff: check every 2 seconds for up to 60 seconds. If not up by 60s, fail loudly.
-- Start ComfyUI as a managed background process that the Express service can restart: use a process manager (PM2, or simple Node.js spawn with restart logic) rather than assuming it's already running.
-
-```typescript
-async function waitForComfyUI(maxWaitMs = 60000): Promise<void> {
-  const deadline = Date.now() + maxWaitMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch('http://127.0.0.1:8188/system_stats');
-      if (res.ok) return;
-    } catch { /* not ready yet */ }
-    await sleep(2000);
-  }
-  throw new Error('ComfyUI did not start within 60 seconds');
-}
-```
-
-**Confidence:** HIGH — fundamental integration pattern for HTTP services with non-trivial startup time.
-
----
-
-### Pitfall 6: WebSocket Reconnection on ComfyUI Crash
-
-**What goes wrong:**
-If ComfyUI crashes mid-generation (OOM, NaN propagation, manual kill), the WebSocket connection closes. If the Node.js service doesn't implement reconnection, it enters a dead state where all future generation requests hang waiting for a WebSocket that will never deliver results.
-
-**Prevention:**
-- Implement WebSocket reconnection with exponential backoff.
-- Tag all in-flight jobs — on reconnect, query `GET /history` to check if the job completed before the crash.
-- Implement a generation timeout: if a 512x768 image at 20 steps hasn't completed in 120 seconds, assume something failed and query the queue.
-
-**Confidence:** HIGH — standard WebSocket resilience pattern.
-
----
-
-## ControlNet on Mac Pitfalls
-
-### Pitfall 1: Which ControlNet Models Are Safe on M1 Pro 16GB
-
-**Memory overhead per ControlNet model loaded:** ~1.2-1.5GB (fp16 safetensors format).
-
-**MPS-compatible ControlNet models (MEDIUM confidence — mid-2025 state):**
-
-| Model | Memory | MPS Status | Notes |
-|-------|---------|------------|-------|
-| control_v11p_sd15_openpose | ~1.4GB | Compatible | Pure Python inference, well-tested on Mac |
-| control_v11f1p_sd15_depth | ~1.4GB | Compatible | Depth estimation; MPS-compatible |
-| control_v11p_sd15_canny | ~1.4GB | Compatible | Edge detection; low compute, safe on MPS |
-| control_v11p_sd15_lineart | ~1.4GB | Compatible | Good for manga style; MPS-compatible |
-| control_v11p_sd15_scribble | ~1.4GB | Compatible | Sketch input; low risk |
-| T2I-Adapter (any) | ~300MB | Mostly compatible | Lighter than full ControlNet |
-
-**Models to avoid on 16GB:**
-- Do NOT load two ControlNet models simultaneously — 2 × 1.4GB + SD 1.5 2GB + working memory = OOM.
-- Inpainting ControlNet variants tend to use more working memory.
-
-**Recommended approach for this project:**
-Use **OpenPose** as the primary ControlNet (poses drive manga panel composition). Lineart as secondary if needed for panel-to-panel style consistency. Never both at once.
-
-**Confidence:** MEDIUM — model compatibility based on community reports through mid-2025.
-
----
-
-### Pitfall 2: ControlNet Preprocessors Require Separate Models
-
-**What goes wrong:**
-ControlNet conditioning requires running a preprocessor first (OpenPose detection extracts pose data from an input image). The preprocessor models are separate downloads from the ControlNet weights. Forgetting to download them causes silent failures: ControlNet receives empty conditioning and has no effect on the output.
-
-**Prevention:**
-- OpenPose preprocessor: download `openpose.onnx` (or the PyTorch variant) to `models/controlnet/annotators/`.
-- Test the preprocessor chain explicitly: upload a test image, verify pose skeleton is detected before connecting to generation workflow.
-- ComfyUI-Advanced-ControlNet node handles the preprocessor call within the workflow — use this node rather than manual preprocessing.
-
-**Confidence:** MEDIUM — documented requirement; specific file paths depend on ComfyUI-Advanced-ControlNet version.
-
----
-
-### Pitfall 3: ControlNet Strength vs. Prompt Strength Balance
-
-**What goes wrong:**
-With ControlNet strength too high (> 0.8-0.9), the model follows the pose skeleton exactly but ignores the character prompt — generating the pose with wrong character features. With too low (< 0.4), the pose is ignored and the LoRA generates what it wants.
-
-**For manga panels:**
-Optimal range is typically 0.6-0.75 for pose conditioning. Test with reference pose images before production.
-
-**Prevention:**
-- Expose ControlNet strength as a configurable parameter per generation request (not hardcoded).
-- Default to 0.65, allow per-call override.
-
-**Confidence:** MEDIUM — these ranges are established community practice; may vary by model combination.
-
----
-
-## LoRA Training Data Pitfalls
-
-### Pitfall 1: The "1-10 Images" Dataset Problem (CRITICAL for this project)
-
-This is covered in depth in the kohya_ss section. Short summary:
-
-**Minimum viable dataset:** 15-20 images showing the character from varied angles and poses.
-**For Spyke specifically:** The project likely has 1-3 reference images. You must augment.
-
-**Augmentation strategy:**
-1. Crop the character reference sheet (Spyke_Final.png) into: face closeup, bust, upper body, full body — 4-6 crops.
-2. Use v1.0 Gemini pipeline to generate 10-15 additional Spyke images (varied poses, expressions, backgrounds). Quality doesn't need to be perfect — training data needs to be consistent on key features, not beautiful.
-3. Aim for: 50% full-body, 30% upper-body/bust, 20% face closeup — this distribution teaches the LoRA to generalize across framing.
-
-**Confidence:** HIGH — LoRA dataset requirements are well-researched.
-
----
-
-### Pitfall 2: Overfitting to Training Images
-
-**What goes wrong:**
-With a small dataset (15-20 images), training too many steps causes the LoRA to memorize rather than generalize. At step 500, the character might look right in varied poses. At step 2000, it only looks right when the prompt closely matches the training image composition.
-
-**Signs of overfitting:**
-- Loss drops very low (< 0.001) before training ends
-- Character looks correct only for training-image-like prompts
-- Novel poses produce distorted anatomy while the character's face is still recognizable
-
-**Prevention:**
-- For datasets of 15-20 images: target **800-1200 training steps total** (not 2000+)
-- Rule of thumb for small datasets: `(num_images * 100) = roughly correct step count`
-- Use validation prompts (if supported) to check generalization during training
-- Save checkpoints every 200 steps, test each checkpoint, use the one that generalizes best (not the final one)
-
-**Confidence:** MEDIUM — the step count formula is a community heuristic, requires calibration to your specific data.
-
----
-
-### Pitfall 3: Regularization Images and Why You Need Them
-
-**What goes wrong:**
-Training without regularization images causes "language drift" — the base model's understanding of common prompts degrades in the areas the LoRA affects. After training without regularization, prompts for unrelated concepts that share tokens with the training captions will produce distorted outputs.
-
-**Prevention:**
-- Generate 100-200 regularization images using the base SD 1.5 model (no LoRA) with a general prompt: `anime character, male, full body, white background`. These teach the model "here is what a normal character looks like — only update the delta for spyke_plasma_v1."
-- kohya_ss supports this via `--reg_data_dir` parameter.
-- With a tiny dataset (15-20 images), regularization images are critical — without them, the LoRA will corrupt the base model's concept space.
-
-**Confidence:** HIGH — regularization is a standard LoRA training technique with well-understood effects.
-
----
-
-## Seed Reproducibility Pitfalls
-
-### Pitfall 1: MPS Seed Behavior Is NOT Fully Deterministic (CRITICAL)
-
-**What goes wrong:**
-Locking the seed in ComfyUI does NOT guarantee identical output on repeated runs on MPS the way it does on CUDA. Two runs with the same seed, same model, same workflow on M1 Pro may produce visually similar but not pixel-identical images. This undermines the "deterministic panel regeneration" requirement.
-
-**Why it happens (MEDIUM confidence):**
-- MPS does not guarantee operation ordering for some parallel operations — the same floating-point operations executed in different order produce different rounding
-- Some PyTorch MPS kernels have non-deterministic behavior by default
-- Thermal throttling changes the computation schedule (less likely to affect output, but theoretically possible)
-
-**Practical impact:**
-- Seed locking provides **strong consistency** (same character, same pose, very similar composition) but NOT **pixel-identical reproducibility**.
-- For manga panel production, "visually equivalent" is sufficient — you don't need pixel-identical outputs.
-- If you need to regenerate a panel weeks later and it looks "same enough to be consistent," seeds work adequately.
-- If you need to prove pixel-level reproducibility (e.g., for detecting unauthorized copies), MPS cannot guarantee this.
-
-**Prevention:**
-- Document that seed locking provides "character and composition consistency" not "bit-exact reproducibility."
-- In requirements: define "reproducible" as "same character, same pose, visually indistinguishable" rather than "pixel-identical."
-- Store the full workflow JSON (not just the seed) for every approved panel, so any regeneration uses the exact same workflow.
-- Test: run the same seed 3 times and visually compare — if the outputs are consistent enough for your use case, you're fine.
-
-**Confidence:** MEDIUM — MPS non-determinism is documented for some ops; the degree of variance in practice depends on the specific workflow and PyTorch version.
-
----
-
-### Pitfall 2: Seeds From Community Are CUDA Seeds — They Do Not Transfer
-
-**What goes wrong:**
-Online resources share "good seeds" for specific styles or character types. These seeds are generated on CUDA hardware. Due to MPS non-determinism and different random number generation paths, CUDA seeds do not produce the same output on MPS. Don't waste time trying to replicate CUDA seed outputs on Mac.
-
-**Prevention:**
-- Develop your own seed library through testing on your hardware.
-- Run 50-100 generations with random seeds, save the ones that produce good character consistency, catalog them.
-- Your seed library is hardware-specific: `seeds-m1pro.json`.
-
-**Confidence:** HIGH — fundamental difference in random number generation between CUDA and MPS.
-
----
-
-### Pitfall 3: Workflow JSON Must Be Versioned for Reproducibility
-
-**What goes wrong:**
-Storing only the seed is insufficient for reproducibility. If the model checkpoint changes (updated safetensors), the LoRA is retrained (new version), or any node in the ComfyUI workflow is updated, the same seed produces a different result.
-
-**Prevention:**
-- Store the complete workflow JSON alongside every approved generation: `ch01_p003_v1.workflow.json`
-- Record: checkpoint name + hash, LoRA name + version + strength, ControlNet model + strength, sampler, steps, CFG scale, seed
-- This is the production-traceability requirement — equivalent to committing a lock file
-
-**Confidence:** HIGH — standard reproducibility practice.
-
----
-
-## Model File Management Pitfalls
-
-### Pitfall 1: VAE Is Not Optional for SD 1.5 (CRITICAL)
-
-**What goes wrong:**
-Some SD 1.5 checkpoints do not bake in a VAE (or include an older/lower-quality VAE). Generating with no VAE or the wrong VAE produces desaturated, washed-out images with blown-out highlights — a symptom often blamed on fp16 issues but actually a VAE mismatch.
-
-**The correct VAE for SD 1.5 anime-style outputs:**
-Use `vae-ft-mse-840000-ema-pruned.safetensors` (MSE-trained VAE). This is the standard VAE for SD 1.5 and produces correct color saturation. Size: ~335MB.
-
-**Prevention:**
-- Always load the VAE explicitly in the ComfyUI workflow (do not rely on the checkpoint's baked VAE).
-- Add VAE selection to the Express service API — make it a required parameter, not optional.
-- If outputs look washed out or desaturated: first check VAE before blaming fp16 or generation settings.
-
-**Confidence:** HIGH — VAE requirement for SD 1.5 is well-established, specific file name confirmed.
-
----
-
-### Pitfall 2: Model File Integrity on Download (MEDIUM)
-
-**What goes wrong:**
-Large model files (2-7GB) downloaded from HuggingFace or CivitAI can be partially corrupted during download. A corrupted safetensors file may load without error but produce garbage outputs. This is particularly frustrating because the error appears to be in the generation settings, not the file.
-
-**Prevention:**
-- Always verify SHA256 hashes after downloading: most models publish expected hashes on their HuggingFace/CivitAI page.
-- If you get consistently wrong outputs that don't respond to prompt changes: re-download the model.
-- Use `huggingface-cli download` or `aria2c` for large files (handles interrupted downloads and resumes).
-
-**Confidence:** HIGH — standard file integrity issue for large downloads.
-
----
-
-### Pitfall 3: fp16 vs fp32 for Inference on Mac
-
-**Recommendation:**
-- Checkpoint (U-Net): fp16. Saves ~2GB RAM with minimal quality difference for inference.
-- VAE: **fp32**. As noted in the MPS section, VAE fp16 has known correctness issues on MPS.
-- ControlNet: fp16. Same reasoning as checkpoint.
-- LoRA: stored in fp16 (standard), loaded at the precision of the base model.
-
-**The `--fp16` flag in ComfyUI** applies to the U-Net, not the VAE. VAE precision is controlled separately.
-
-**Concrete risk:** If you set everything to fp16 including VAE, you may get washed-out images that look like a style problem but are actually a VAE computation error. Test VAE fp32 explicitly if you see color issues.
-
-**Confidence:** MEDIUM — behavior observed through mid-2025 on MPS; may have improved in PyTorch 2.4+.
-
----
-
-### Pitfall 4: Checkpoint Format — .ckpt vs .safetensors
-
-**Recommendation:** Always use `.safetensors` format. Avoid `.ckpt` files.
-
-**Why:**
-- `.ckpt` files can execute arbitrary Python code during loading (security risk, even for local use)
-- `.safetensors` loading is ~5-10x faster and does not allow code execution
-- Modern checkpoints are distributed in `.safetensors` format; `.ckpt` is legacy
-
-**On Mac specifically:** `.ckpt` loading with MPS can trigger memory management issues during deserialization. `.safetensors` is strictly better.
-
-**Confidence:** HIGH — well-established recommendation, not controversial.
-
----
-
-## Prevention Checklist
-
-### Requirements Phase (Before Writing Any Code)
-
-- [ ] **Define "reproducible"** as "visually consistent" not "pixel-identical" — update requirements doc accordingly
-- [ ] **Hard-cap resolution** at 512x768 for generation, 512x512 for training — document this as a hardware constraint, not a quality choice
-- [ ] **Hard-cap training batch size** at 1 — document this as the only safe value for 16GB
-- [ ] **Plan dataset augmentation** before requirements sign-off — 15-20 images minimum for Spyke LoRA
-- [ ] **Specify VAE explicitly** in the generation API spec — required field, not optional
-- [ ] **Define ComfyUI startup dependency** — Express service health check must gate on ComfyUI readiness
-- [ ] **List which ControlNets** will be used — budget their memory into the 16GB budget explicitly
-
-### Architecture Phase (Before Implementation Planning)
-
-- [ ] **WebSocket + client_id pattern** designed before any integration code — prevents the race condition from being baked in
-- [ ] **Process management design** for training jobs — how OOM kills are detected and surfaced to the job status API
-- [ ] **Path resolution strategy** — single env variable for ComfyUI base, all paths derived from it
-- [ ] **Model version tracking** — how checkpoint/LoRA version is recorded alongside every generated image
-- [ ] **Memory pressure monitoring** — architecture for detecting swap/memory pressure before accepting jobs
-- [ ] **Workflow JSON storage** — where approved generation workflows are persisted alongside output images
-- [ ] **LoRA trigger word naming convention** — decided before any training runs
-
-### Implementation Phase (Code-Level)
-
-- [ ] **PyTorch MPS verification** — health check endpoint confirms `torch.backends.mps.is_available()` returns True
-- [ ] **WebSocket reconnection** implemented before integration testing — not added later as a "nice to have"
-- [ ] **Training job log streaming** — stdout/stderr piped to files, not buffered in memory
-- [ ] **Generation timeout** — hardcoded 120s timeout for 512x768 at 20 steps; fail loudly rather than hang
-- [ ] **VAE fp32 / U-Net fp16** — workflow defaults are explicitly set, not inherited from ComfyUI defaults
-- [ ] **PYTORCH_ENABLE_MPS_FALLBACK=1** — set in the environment before any Python subprocess is spawned
-- [ ] **Batch size validation** — training API endpoint rejects batch_size > 1 rather than letting it silently OOM
-- [ ] **Checkpoint hash logging** — log the safetensors hash when a model is loaded for the first time
-
-### Warning Signs to Watch During Development
-
-| Symptom | Likely Cause | First Check |
-|---------|--------------|-------------|
-| Generation takes > 3 minutes for 512x512/20 steps | CPU fallback from MPS | Check GPU History in Activity Monitor |
-| Black or gray output image | fp16 NaN or wrong VAE | Test fp32 VAE first |
-| Washed out / desaturated output | VAE fp16 issue | Switch VAE to fp32 |
-| Training loses progress mid-run | OOM kill | Check macOS Console for "killed by jetsam" |
-| WebSocket hangs indefinitely | Missed completion event | Check if client_id is in POST body |
-| ComfyUI responses time out on first request | Not started yet | Implement startup health check |
-| LoRA produces correct face but wrong pose | Overfitting or too few training steps | Test earlier checkpoints |
-| Trigger word bleeds into unrelated prompts | Token collision | Change trigger word to more unique string |
-| Model load time > 60s | Likely loading fp32 model | Verify checkpoint is fp16 safetensors |
-
----
-
-## Phase-to-Pitfall Mapping
-
-| Phase | Pitfalls to Address | Priority |
-|-------|--------------------|---------|
-| Requirements | MPS memory limits, dataset size minimum, "reproducible" definition, VAE requirement | Critical — requirements must encode these as hard constraints |
-| Architecture | WebSocket race condition, process management, path resolution, memory pressure monitoring | Critical — architecture mistakes here cause rewrites |
-| ComfyUI Setup | fp16/fp32 correctness, MPS verification, model file integrity, VAE loading | High — catch before writing any integration code |
-| LoRA Data Prep | Dataset augmentation strategy, caption quality, regularization images, trigger word | Critical — wrong data means wasted training time |
-| LoRA Training | OOM prevention (batch size 1), step count, checkpoint interval, speed expectations | High — training runs are the longest operations |
-| Integration | WebSocket reconnection, timeout handling, log streaming, health check timing | High — integration bugs cause the most confusing failures |
-| ControlNet | Single model at a time, preprocessor download, strength calibration | Medium — important but easier to fix post-implementation |
-| Reproducibility | Workflow JSON storage, seed library, version tracking | Medium — correctness issue but not a blocker |
-
----
+## Technical Debt Patterns
+
+Shortcuts that seem reasonable but create long-term problems.
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Rigid armature parenting (no vertex weights) | Blockout renders work immediately | Cannot produce organic joint deformation at production quality | Acceptable for blockout reference sheet; must fix before production renders |
+| Hard-coded camera names ("Cam_Front") in render script | Simple to implement | Breaks silently if camera was renamed in .blend session | Never — use scene camera lookup with fallback error |
+| Socket access by integer index (`mix.inputs[6]`) | Matches exact node inspector display | Breaks on any socket count change or Blender version | Never — always use named socket access |
+| Rendering without checking output file exists | Fast iteration | Silent failure when path is wrong, wrong permissions, or disk full | Never in automated pipeline |
+| Building on Blender 3.6-era README assumptions | Old docs available | API mismatch on 5.0.1, wasted debugging time | Never — pin docs to actual Blender version |
+
+## Integration Gotchas
+
+Common mistakes when connecting Blender rendering to the existing TypeScript pipeline.
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| TypeScript → Blender subprocess | `child_process.spawn('blender', [...])` succeeds but renders are black | Verify EEVEE headless limitation first; check exit code AND output file existence separately |
+| Blender output path | Setting `scene.render.filepath` without calling `write_still=True` | Always use `bpy.ops.render.render(write_still=True)` for single-frame renders |
+| PNG transparency | Assuming output has transparent background | Must set `render.film_transparent = True` AND `render.image_settings.color_mode = 'RGBA'` — both required |
+| File naming convention | Blender appends frame number to filepath by default (`image0001.png`) | Set `scene.render.use_file_extension = False` and `scene.render.use_stamp = False`, or account for the appended number in TypeScript filename parsing |
+| Sharp (TypeScript) alpha compositing | Assuming Blender PNG alpha is premultiplied | EEVEE outputs straight (non-premultiplied) alpha — Sharp's `composite()` needs `premultiplied: false` or use `.premultiply()` on the Blender layer before compositing |
+| Render resolution mismatch | Blender outputs 800×1200 but TypeScript overlay assumes different dimensions | Lock `RENDER_WIDTH = 800` in `render_setup.py` as canonical — TypeScript overlay reads actual PNG dimensions, never assumes |
+
+## Performance Traps
+
+Patterns that slow the render pipeline to unacceptable batch throughput.
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Subdivision surfaces at render time on blockout | Each render takes 2-3x longer than expected | Set subdivision `render_levels = 1` on blockout objects, increase only on final mesh | Immediately — blockout objects have Subsurf with `render_levels = 2` |
+| Freestyle enabled for every render | Freestyle adds 30-60% to render time via post-processing pass | Disable Freestyle for quick iteration renders; re-enable for production output | Always — control with `--freestyle` flag in batch script |
+| Re-initializing EEVEE scene per batch render | Shader compilation runs once per scene load, but recreating the scene in-process re-triggers it | Load scene once, change camera/pose, re-render — never reload .blend between same-session renders | 10+ poses batch — this is the most expensive step |
+| 64 EEVEE samples for every panel render | Full sample count for iteration renders | Use 8-16 samples for iteration, 64 only for final production renders | Single renders are fine; 28 panel renders at 64 samples is ~4 hours vs. ~45 min at 16 |
+| High EEVEE shadow resolution limit | Long shadow computation on M1 Pro | Set per-light `shadow_maximum_resolution` to 0.01 (lower quality) for iteration, 0.001 for production | Iteration renders only |
+
+## "Looks Done But Isn't" Checklist
+
+Things that appear complete but are missing critical pieces.
+
+- [ ] **Armature posing works:** Verify mesh parts actually follow armature — check that individual bones moving their corresponding mesh parts correctly, not that the armature just moves in the viewport
+- [ ] **Toon shading looks correct at 800px:** Verify at output resolution (800px wide), not viewport preview — EEVEE viewport and final render can differ for toon shaders
+- [ ] **Freestyle outlines visible:** Outlines only render in final render mode, not viewport — must actually run `bpy.ops.render.render()` to see them
+- [ ] **Transparent background works:** Check PNG alpha channel — `render.film_transparent = True` does not guarantee correct RGBA output without `color_mode = 'RGBA'`
+- [ ] **Pose library works correctly:** Validate that EVERY pose in `POSES` dict produces a different visible result — "neutral" being T-pose and "standing" looking identical is a sign bone rotations are not being applied
+- [ ] **Camera naming is stable:** Confirm cameras survive a `.blend` save/reload cycle with the same names — `blender --background` starts from saved state, not from script-generated state
+- [ ] **Headless render actually works:** Run the full `blender --background` command on the M1 Pro and verify PNG files were created, non-empty, and contain correct content (not black/transparent)
+- [ ] **TypeScript can parse output filenames:** Confirm the file naming produced by Blender exactly matches what the TypeScript `generate` stage expects to consume
+
+## Recovery Strategies
+
+When pitfalls occur despite prevention, how to recover.
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| EEVEE headless fails on macOS | HIGH | Pivot to Option A (interactive Blender minimized window) or Option B (Cycles toon) — requires shader rewrite if choosing Cycles |
+| Engine identifier wrong | LOW | 1-line fix in `manga_shader.py`, re-run setup script, re-render |
+| Toon shadow stippling | MEDIUM | Disable cast shadows per-light, test render, adjust if still visible — 1-2 hours |
+| ShaderNodeMix index access breaks | LOW | Find all `inputs[N]` accesses, replace with `inputs['A']`/`inputs['B']`, re-run `manga_shader.py` |
+| Armature parenting wrong type | MEDIUM | Re-parent with "Armature Deform with Empty Groups" via `bpy.ops.object.parent_set(type='ARMATURE_NAME')`, manually weight paint critical deformation zones |
+| EEVEE shadow properties silently skip | LOW | Add per-light shadow resolution config block, re-run `render_setup.py`, verify render |
+| Wrong output filename format from Blender | LOW | Adjust TypeScript glob pattern to match actual Blender output naming including frame suffix |
+
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| EEVEE headless on macOS | Phase 1 — Environment Validation | Run `blender --background --python render_setup.py` and confirm at least one PNG produced |
+| Engine identifier (BLENDER_EEVEE_NEXT) | Phase 1 — Shader Setup | `print(bpy.context.scene.render.engine)` confirms `'BLENDER_EEVEE'` |
+| EEVEE-Next toon shadow stippling | Phase 1 — Shader Validation | Render toon test at 800px and inspect shadow edges at 1:1 pixel view |
+| ShaderNodeMix index access | Phase 1 — Shader Setup | Audit code; test render shows correct colors on all materials |
+| Specular IOR Level name | Phase 1 — Model Build | Runs without KeyError; update README |
+| Armature parenting type | Phase 2 — Model Refinement | Apply each pose, confirm limb deformation at joints |
+| EEVEE shadow property removal | Phase 1 — Render Setup | `hasattr` audit; replace with per-light equivalents |
+| TypeScript filename parsing | Phase 3 — Pipeline Integration | End-to-end test: Blender render → TypeScript overlay → output PNG |
+| Alpha compositing in Sharp | Phase 3 — Pipeline Integration | Inspect composited panel for fringing/incorrect transparency |
+
+## Blender 5.0 API Migration Reference
+
+Quick-reference for the specific APIs used in this project that changed between 3.x/4.x and 5.0.
+
+| Old API (3.x / 4.x) | Blender 5.0 API | Scripts Affected |
+|---------------------|-----------------|------------------|
+| `scene.render.engine = 'BLENDER_EEVEE_NEXT'` (4.x) | `scene.render.engine = 'BLENDER_EEVEE'` | `manga_shader.py:194` |
+| `scene.eevee.shadow_cascade_size` | Removed — use per-light `light.data.shadow_maximum_resolution` | `manga_shader.py:197` |
+| `scene.eevee.shadow_cube_size` | Removed — use per-light `light.data.shadow_maximum_resolution` | `manga_shader.py:200` |
+| `scene.eevee.gtao_distance` | Moved to `view_layer.eevee.ambient_occlusion_distance` | Not currently used |
+| `scene.eevee.use_gtao` / `gtao_quality` | Removed from SceneEEVEE in 5.0 | Not currently used |
+| `scene.node_tree` | `scene.compositing_node_group` | Not currently used |
+| `scene.use_nodes` | Deprecated (removed in 6.0) | Not currently used |
+| `bpy.types.GreasePencil` | `bpy.types.Annotation` | Not currently used |
+| `inputs['Specular']` on Principled BSDF | `inputs['Specular IOR Level']` (changed in 4.0 — code already uses new name) | `generate_spyke.py:125` — already correct |
+| `mix.inputs[6]` / `inputs[7]` for ShaderNodeMix RGBA | `mix.inputs['A']` / `mix.inputs['B']` | `manga_shader.py:123-124, 152-153` |
 
 ## Sources
 
-- Training data (MEDIUM confidence, through Aug 2025): PyTorch MPS documentation, Apple Silicon ML community reports, ComfyUI GitHub issues, kohya_ss README and issues
-- Hardware specifications: MacBook Pro M1 Pro 16GB unified memory architecture — deterministic RAM math (HIGH confidence)
-- ComfyUI API pattern (client_id + WebSocket): ComfyUI official API documentation examples (HIGH confidence — this is the documented integration pattern)
-- LoRA training data requirements: Well-established community consensus across multiple LoRA training guides (HIGH confidence on minimums)
-- MPS non-determinism: PyTorch MPS documentation noting non-deterministic behavior for some operations (MEDIUM confidence — may have improved)
-- VAE fp32 recommendation: Multiple community reports of VAE fp16 issues on MPS (MEDIUM confidence)
-- Safety note: ALL speed benchmarks are LOW confidence — require a hardware test on this specific machine to calibrate
-
-**Verification priorities at implementation time:**
-1. Confirm current PyTorch version's MPS coverage (may have improved since mid-2025)
-2. Verify kohya_ss current Mac/MPS install instructions against the current README
-3. Test actual generation speed (512x512, 20 steps) to calibrate timeout values
-4. Verify ComfyUI-Advanced-ControlNet current MPS compatibility
+- [Blender 5.0 Python API Release Notes](https://developer.blender.org/docs/release_notes/5.0/python_api/) — engine identifier `BLENDER_EEVEE_NEXT` → `BLENDER_EEVEE`, render pass renames, compositor changes (HIGH confidence)
+- [Blender 5.0 EEVEE Release Notes](https://developer.blender.org/docs/release_notes/5.0/eevee/) — `gtao_distance` moved to view layer, engine identifier change (HIGH confidence)
+- [EEVEE Migration Guide for 4.2](https://developer.blender.org/docs/release_notes/4.2/eevee_migration/) — shadow settings reorganization, property removals (HIGH confidence)
+- [EEVEE Next Toon Shader Issue](https://blenderartists.org/t/did-eevee-next-break-everyone-elses-toon-shaders/1539334) — shadow stippling in toon shaders confirmed broken in 4.2+ (MEDIUM confidence — community report, acknowledged by devs)
+- [Bug #127033 — EEVEE under Apple Silicon renders Blender completely unresponsive](https://projects.blender.org/blender/blender/issues/127033) — headless EEVEE on Apple Silicon issue (MEDIUM confidence — verified bug report, may have partial fixes in 5.0.1)
+- [Bug #125030 — Toon Shader not working in EEVEE render](https://projects.blender.org/blender/blender/issues/125030) — toon shader regression (MEDIUM confidence)
+- [ShaderNodeMix Python API](https://docs.blender.org/api/current/bpy.types.ShaderNodeMix.html) — socket names for RGBA data type (HIGH confidence)
+- [Blender Armature Gotchas](https://docs.blender.org/api/current/info_gotchas_armatures_and_bones.html) — posing in background mode, bone constraint refresh issues (HIGH confidence)
+- [Render Operators API](https://docs.blender.org/api/current/bpy.ops.render.html) — `write_still` parameter required for single-frame saves (HIGH confidence)
+- [Blender Principled BSDF Input Rename](https://projects.staging.blender.org/blender/blender/commit/1d265eed5dcc09d26a90e11e02a00e18e00c4a965ec00f99e) — `'Specular'` → `'Specular IOR Level'` in Blender 4.0 (HIGH confidence)
+- [EEVEE Next + Toon Shader shadow PCF issue](https://projects.blender.org/blender/blender/issues/113839) — aliased shadow edges on EEVEE Next (HIGH confidence — official bug tracker)
 
 ---
-*Pitfalls research for: ComfyUI + LoRA pipeline on Apple Silicon (v2.0 milestone)*
-*Researched: 2026-02-19*
-*Context: Adding local ComfyUI + kohya_ss to existing TypeScript manga pipeline — M1 Pro 16GB*
+*Pitfalls research for: Blender 3D manga rendering pipeline (Plasma v3.0)*
+*Researched: 2026-02-25*

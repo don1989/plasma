@@ -11,5 +11,10 @@ pipeline/dist/
 # LoRA dataset images (regeneratable — not committed; caption .txt files ARE committed)
 dataset/**/*.png
 
+# Blender build artifacts
+*.blend
+*.blend1
+3d_models/output/
+
 # OS files
 *.DS_Store

@@ -1,614 +1,673 @@
-# Architecture Research: ComfyUI + LoRA Pipeline
+# Architecture Research: Blender 3D Rendering Pipeline Integration
 
-**Domain:** Local AI image generation service — ComfyUI + LoRA integration for TypeScript manga pipeline
-**Researched:** 2026-02-19
-**Confidence:** MEDIUM — ComfyUI API behaviour based on training data (cutoff Aug 2025) + direct inspection of existing pipeline codebase. WebSearch/WebFetch unavailable. Verify ComfyUI API endpoint shape at `http://127.0.0.1:8188/` before implementing.
+**Domain:** Blender 3D rendering integrated into an existing TypeScript manga production pipeline
+**Researched:** 2026-02-25
+**Confidence:** HIGH — based on direct inspection of all existing source files. No external verification needed for the integration architecture; the TypeScript pipeline code and Python Blender scripts are fully readable.
 
 ---
 
-## Data Flow
+## System Overview
 
 ```
-CLI (pipeline/src/cli.ts)
-    │
-    │  pnpm stage:generate -- --comfyui -c 1 --page 3
-    ▼
-generate.ts (stage)
-    │  mode = 'comfyui'
-    │  reads prompt file: output/ch-01/prompts/page-03.txt
-    │  reads base image (optional): output/ch-01/processed/ch01_p003_v1.png
-    ▼
-comfyui-client.ts  (new, replaces gemini-client.ts for this mode)
-    │  POST http://localhost:3000/jobs
-    │  body: { promptText, chapter, page, version, baseImagePath? }
-    ▼
-Express service  (pipeline/service/)
-    │
-    ├── POST /jobs  → JobManager.enqueue(job)
-    │       │
-    │       ▼  immediately returns { jobId, status: 'queued' }
-    │
-    ├── GET  /jobs/:id  → returns { status, outputPath?, error? }
-    │
-    └── JobManager (in-memory queue, single active job)
-            │
-            │  1. resolve workflow template for job type
-            │  2. inject prompt text, LoRA name, ControlNet image
-            │  3. POST http://127.0.0.1:8188/prompt  { prompt: workflowJSON, client_id }
-            │  4. listen on WebSocket ws://127.0.0.1:8188/  for execution events
-            │  5. on "executed" event: GET http://127.0.0.1:8188/view?filename=&subfolder=&type=output
-            │  6. copy image to ./outputs/images/<jobId>.png
-            │  7. write ./outputs/images/<jobId>.json  (metadata)
-            │  8. mark job complete
-            ▼
-output/ch-01/raw/ch01_p003_v2.png   (copied back by generate.ts after polling)
-output/ch-01/generation-log.json    (manifest updated by generate.ts)
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          MANGA PIPELINE (v3.0)                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│  STAGE 1          STAGE 2          STAGE 3 (MODIFIED)                   │
+│  ┌──────────┐    ┌──────────┐    ┌──────────────────────────────────┐   │
+│  │  script  │───▶│  prompt  │───▶│            generate              │   │
+│  │ (no chg) │    │ (no chg) │    │  mode: blender | manual | api    │   │
+│  └──────────┘    └──────────┘    └─────────────┬────────────────────┘   │
+│                                                 │                        │
+│                             ┌───────────────────┘                        │
+│                             │  output/ch-NN/raw/chNN_pNNN_vN.png         │
+│                             ▼                                            │
+│  STAGE 4          STAGE 5                                                │
+│  ┌──────────┐    ┌──────────┐                                           │
+│  │  overlay │───▶│ assemble │───▶ output/ch-NN/webtoon/                 │
+│  │ (no chg) │    │ (no chg) │                                           │
+│  └──────────┘    └──────────┘                                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                        BLENDER SUBSYSTEM (NEW)                           │
+│                                                                          │
+│  ┌──────────────┐   ┌─────────────────┐   ┌────────────────────────┐   │
+│  │ pose-map.ts  │   │  blender-        │   │  render_panel.py       │   │
+│  │ (new)        │   │  runner.ts (new) │   │  (new Blender script)  │   │
+│  │              │   │                 │   │                        │   │
+│  │ script.json  │   │  child_process  │   │  • applies pose        │   │
+│  │ shotType +   │──▶│  .execFile()    │──▶│  • selects camera      │   │
+│  │ action       │   │  blender --bg   │   │  • renders to PNG      │   │
+│  │ → pose key   │   │  --python       │   │  • writes to raw/      │   │
+│  │ → camera key │   │  render_panel.py│   │                        │   │
+│  └──────────────┘   └─────────────────┘   └────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**LoRA training data flow (separate from generation):**
+---
+
+## Component Responsibilities
+
+| Component | Responsibility | Status |
+|-----------|---------------|--------|
+| `pipeline/src/stages/script.ts` | Parse Markdown chapter → `script.json` with `shotType` and `action` fields per panel | Unchanged |
+| `pipeline/src/stages/prompt.ts` | Generate AI art prompts from `script.json` | Unchanged — not used for Blender panels, but keep for background-only panels |
+| `pipeline/src/stages/generate.ts` | Orchestrate image generation; add `mode === 'blender'` branch | Modified (additive) |
+| `pipeline/src/blender/pose-map.ts` | Map `Panel.shotType` + `Panel.action` → `{pose, camera}` tuple for Blender | New |
+| `pipeline/src/blender/blender-runner.ts` | Spawn Blender headless process via `child_process.execFile()`, pass render args, poll for output file | New |
+| `pipeline/src/blender/types.ts` | TypeScript types: `BlenderRenderRequest`, `BlenderRenderResult`, `PoseMapEntry` | New |
+| `3d_models/render/render_panel.py` | Single-panel Blender render script — accepts pose + camera + output path as CLI args, renders one PNG | New |
+| `3d_models/render/render_poses.py` | Existing batch render script — unchanged, used for reference sheet generation | Unchanged |
+| `pipeline/src/stages/overlay.ts` | Composite speech balloons and SFX onto raw renders | Unchanged |
+| `pipeline/src/stages/assemble.ts` | Stack lettered panels into Webtoon vertical strip | Unchanged |
+| `pipeline/src/generation/manifest.ts` | Track every generation attempt and approval state | Modified (additive — new `source: 'blender'` value) |
+| `pipeline/src/types/generation.ts` | `GenerationLogEntry` type | Modified (additive — add `source: 'blender'` and `blenderPose`, `blenderCamera` fields) |
+
+---
+
+## Data Flow: Script to Webtoon
+
+### Complete Data Flow
 
 ```
-CLI
-    │  pnpm stage:train-lora -- --character kael --images ./ref-images/kael/
+03_manga/chapter-01-script.md
+    │
+    │  pnpm stage:script -c 1
     ▼
-Express service
+output/ch-01/script.json
+    │  Chapter.pages[].panels[].shotType  (e.g. "MEDIUM-WIDE")
+    │  Chapter.pages[].panels[].action    (e.g. "Spyke sprints along walkway")
     │
-    ├── POST /loras/train  → spawn kohya_ss child process
-    │       │  streams stdout/stderr to ./outputs/logs/<jobId>.log
-    │       │  returns { loraJobId, status: 'training' }
+    │  pnpm stage:generate -- --blender -c 1 --page 3
+    ▼
+pipeline/src/stages/generate.ts  [mode === 'blender']
     │
-    ├── GET  /loras/:id/status  → { status, progress?, outputPath? }
+    │  reads script.json for page 3
+    │  reads panel.shotType + panel.action
     │
-    └── kohya_ss exits → .safetensors written to ComfyUI models/loras/
-                          → POST /loras/:id complete
+    ▼
+pipeline/src/blender/pose-map.ts
+    │  mapPanelToBlenderArgs(panel) → { pose: 'walking', camera: 'Cam_Front' }
+    │
+    │  Mapping logic (defined in a static lookup table):
+    │  shotType 'WIDE'              → camera: 'Cam_Front',      pose: 'standing_relaxed'
+    │  shotType 'MEDIUM-WIDE'       → camera: 'Cam_Front',      pose: 'walking' (if action contains 'sprint/run/walk')
+    │  shotType 'MEDIUM'            → camera: 'Cam_UpperBody',  pose: 'standing_relaxed'
+    │  shotType 'CLOSE-UP'          → camera: 'Cam_Portrait',   pose: 'standing_relaxed'
+    │  shotType '3/4'               → camera: 'Cam_ThreeQuarter', pose: 'standing_relaxed'
+    │  action contains 'battle'     → pose: 'battle_ready'
+    │  action contains 'katana'     → pose: 'drawing_katana'
+    │
+    ▼
+pipeline/src/blender/blender-runner.ts
+    │  const blenderPath = process.env.BLENDER_PATH ?? '/Applications/Blender.app/Contents/MacOS/blender'
+    │  const blendFile  = '3d_models/output/spyke/spyke.blend'
+    │  const outputPath = 'output/ch-01/raw/ch01_p003_v1.png'
+    │
+    │  child_process.execFile(blenderPath, [
+    │    blendFile,
+    │    '--background',
+    │    '--python', '3d_models/render/render_panel.py',
+    │    '--',
+    │    '--pose',   'walking',
+    │    '--camera', 'Cam_Front',
+    │    '--output', outputPath,
+    │  ])
+    │
+    ▼
+3d_models/render/render_panel.py  (Blender Python, runs inside Blender process)
+    │  1. parse CLI args after '--'
+    │  2. find Spyke_Armature in scene
+    │  3. apply_pose(armature, POSES[pose])     (reuse from render_poses.py)
+    │  4. bpy.context.scene.camera = bpy.data.objects[camera]
+    │  5. bpy.context.scene.render.filepath = output_path
+    │  6. bpy.ops.render.render(write_still=True)
+    │  7. exit(0)
+    │
+    │  Output: output/ch-01/raw/ch01_p003_v1.png  (800×1200 PNG, RGBA)
+    │
+    ▼
+pipeline/src/stages/generate.ts
+    │  verifies output file exists
+    │  adds entry to generation-log.json:
+    │    { source: 'blender', blenderPose: 'walking', blenderCamera: 'Cam_Front', approved: false }
+    │
+    │  pnpm stage:generate -- --approve ch01_p003_v1.png -c 1
+    ▼
+output/ch-01/raw/ch01_p003_v1.png  (approved)
+
+    │  pnpm stage:overlay -c 1
+    ▼
+overlay.ts reads manifest, finds approved entry,
+loads raw/ch01_p003_v1.png, composites dialogue balloons → lettered/ch01_p003_v1.png
+
+    │  pnpm stage:assemble -c 1
+    ▼
+output/ch-01/webtoon/strip-001.jpg
 ```
+
+### Key Insight: Overlay and Assemble Are Unmodified
+
+The overlay stage reads `raw/{imageFile}` where `imageFile` comes from the generation manifest. It does not care how the image was produced — Gemini, ComfyUI, or Blender. As long as the Blender render lands at `output/ch-NN/raw/chNN_pNNN_vN.png` and has an approved manifest entry, overlay and assemble work with zero changes.
 
 ---
 
 ## New Components
 
-| Component | Path | Responsibility |
-|-----------|------|----------------|
-| Express service entry | `pipeline/service/index.ts` | Bootstrap Express app, mount routes, start HTTP server on port 3000 |
-| Jobs router | `pipeline/service/routes/jobs.ts` | `POST /jobs`, `GET /jobs/:id` — image generation jobs |
-| LoRA router | `pipeline/service/routes/loras.ts` | `POST /loras/train`, `GET /loras/:id/status` — training jobs |
-| JobManager | `pipeline/service/job-manager.ts` | In-memory job queue, single-worker serial execution, job state map |
-| ComfyUI HTTP client | `pipeline/service/comfyui/http-client.ts` | `submitWorkflow(workflowJSON)`, `getImage(filename, subfolder, type)` wrappers around fetch |
-| ComfyUI WebSocket client | `pipeline/service/comfyui/ws-client.ts` | Connect to `ws://127.0.0.1:8188/`, emit events when jobs complete or error |
-| Workflow template loader | `pipeline/service/workflows/loader.ts` | Load JSON template files, return parsed objects for injection |
-| Workflow injector | `pipeline/service/workflows/injector.ts` | Fill node inputs (prompt, LoRA name, ControlNet image path, seed) into template object |
-| Workflow templates (JSON) | `pipeline/service/workflows/*.json` | Static workflow definitions: `txt2img-lora.json`, `img2img-lora-controlnet.json` |
-| kohya_ss runner | `pipeline/service/training/kohya-runner.ts` | `spawnTraining(config)` — child_process.spawn, log streaming, completion detection |
-| Pipeline ComfyUI client | `pipeline/src/generation/comfyui-client.ts` | Called by `generate.ts` — POSTs job to Express service, polls until done, copies image to raw/ |
+### 1. `pipeline/src/blender/pose-map.ts`
+
+Maps panel metadata to Blender render parameters. This is the translation layer between the TypeScript script model and the Blender Python world.
+
+```typescript
+// pipeline/src/blender/pose-map.ts
+
+export interface BlenderPanelArgs {
+  pose: string;      // One of the POSES keys in render_poses.py
+  camera: string;    // One of the Cam_* names in render_setup.py
+}
+
+const SHOT_TYPE_TO_CAMERA: Record<string, string> = {
+  'WIDE':         'Cam_Front',
+  'MEDIUM-WIDE':  'Cam_Front',
+  'MEDIUM':       'Cam_UpperBody',
+  'CLOSE-UP':     'Cam_Portrait',
+  'PORTRAIT':     'Cam_Portrait',
+  '3/4':          'Cam_ThreeQuarter',
+  'SIDE':         'Cam_Side',
+};
+
+const ACTION_TO_POSE: Array<{ keywords: string[]; pose: string }> = [
+  { keywords: ['sprint', 'run', 'walk', 'stride'], pose: 'walking' },
+  { keywords: ['battle', 'fight', 'stance', 'combat'], pose: 'battle_ready' },
+  { keywords: ['katana', 'draw', 'iaijutsu', 'unsheathe'], pose: 'drawing_katana' },
+  // Default: standing_relaxed
+];
+
+export function mapPanelToBlenderArgs(panel: Panel): BlenderPanelArgs {
+  const camera = SHOT_TYPE_TO_CAMERA[panel.shotType.toUpperCase()] ?? 'Cam_Front';
+
+  const lowerAction = panel.action.toLowerCase();
+  let pose = 'standing_relaxed';
+  for (const rule of ACTION_TO_POSE) {
+    if (rule.keywords.some(kw => lowerAction.includes(kw))) {
+      pose = rule.pose;
+      break;
+    }
+  }
+
+  return { pose, camera };
+}
+```
+
+**Important:** The pose and camera key lists here must stay in sync with `POSES` and `REFERENCE_VIEWS` in `render_poses.py`. When new poses are added to the Python side, add them here. This is the only coupling point between TypeScript and Python code.
+
+### 2. `pipeline/src/blender/blender-runner.ts`
+
+Spawns Blender as a child process and waits for the output file.
+
+```typescript
+// pipeline/src/blender/blender-runner.ts
+
+import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
+
+export interface BlenderRenderRequest {
+  blendFile: string;    // absolute path to spyke.blend
+  renderScript: string; // absolute path to render_panel.py
+  pose: string;
+  camera: string;
+  outputPath: string;   // absolute path for the output PNG
+}
+
+export interface BlenderRenderResult {
+  outputPath: string;
+  durationMs: number;
+}
+
+export async function renderWithBlender(
+  req: BlenderRenderRequest
+): Promise<BlenderRenderResult> {
+  const blenderBin = process.env['BLENDER_PATH'] ?? '/Applications/Blender.app/Contents/MacOS/blender';
+  const startTime = Date.now();
+
+  const args = [
+    req.blendFile,
+    '--background',
+    '--python', req.renderScript,
+    '--',
+    '--pose',   req.pose,
+    '--camera', req.camera,
+    '--output', req.outputPath,
+  ];
+
+  try {
+    const { stdout, stderr } = await execFileAsync(blenderBin, args, {
+      timeout: 120_000,  // 2 minutes max for a single frame on M1 Pro
+    });
+
+    if (process.env['BLENDER_VERBOSE']) {
+      console.log('[blender] stdout:', stdout.slice(-500));
+      if (stderr) console.warn('[blender] stderr:', stderr.slice(-200));
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Blender render failed: ${msg}`);
+  }
+
+  if (!existsSync(req.outputPath)) {
+    throw new Error(`Blender exited cleanly but output not found at: ${req.outputPath}`);
+  }
+
+  return { outputPath: req.outputPath, durationMs: Date.now() - startTime };
+}
+```
+
+**Why `execFile` over `spawn`:** The render is synchronous per panel. There is no streaming output needed. `execFile` with `await` is the simplest model — wait for Blender to exit, check the file exists, continue. EEVEE renders for a single frame on M1 Pro take approximately 3-15 seconds depending on scene complexity.
+
+### 3. `3d_models/render/render_panel.py`
+
+New single-panel render script. Reuses `apply_pose()` and `POSES` from `render_poses.py` but renders exactly one frame to a caller-specified path.
+
+```python
+# 3d_models/render/render_panel.py
+"""
+Single-panel render script — render one pose + camera to a specific output path.
+Called by the TypeScript pipeline via blender-runner.ts.
+
+Usage (always via blender-runner.ts, not direct):
+  blender spyke.blend --background --python render_panel.py -- \
+    --pose walking --camera Cam_Front --output /path/to/ch01_p003_v1.png
+"""
+
+import bpy
+import os
+import sys
+import math
+from mathutils import Euler
+
+# Reuse POSES from render_poses.py
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SCRIPT_DIR)
+from render_poses import POSES, apply_pose
+
+def parse_args():
+    args = { 'pose': 'standing_relaxed', 'camera': 'Cam_Front', 'output': None }
+    if '--' in sys.argv:
+        argv = sys.argv[sys.argv.index('--') + 1:]
+        i = 0
+        while i < len(argv):
+            if argv[i] == '--pose'   and i + 1 < len(argv): args['pose']   = argv[i+1]; i += 2
+            elif argv[i] == '--camera' and i + 1 < len(argv): args['camera'] = argv[i+1]; i += 2
+            elif argv[i] == '--output' and i + 1 < len(argv): args['output'] = argv[i+1]; i += 2
+            else: i += 1
+    return args
+
+def main():
+    args = parse_args()
+    if not args['output']:
+        print('ERROR: --output is required')
+        sys.exit(1)
+
+    # Apply pose to armature
+    armature = bpy.data.objects.get('Spyke_Armature')
+    if not armature:
+        print('ERROR: Spyke_Armature not found in scene')
+        sys.exit(1)
+
+    pose_data = POSES.get(args['pose'], POSES['standing_relaxed'])
+    apply_pose(armature, pose_data)
+
+    # Set camera
+    cam = bpy.data.objects.get(args['camera'])
+    if not cam:
+        print(f"ERROR: Camera '{args['camera']}' not found")
+        sys.exit(1)
+    bpy.context.scene.camera = cam
+
+    # Set output path
+    os.makedirs(os.path.dirname(args['output']), exist_ok=True)
+    bpy.context.scene.render.filepath = args['output']
+
+    # Render single frame
+    bpy.ops.render.render(write_still=True)
+    print(f'Rendered: {args["output"]}')
+
+if __name__ == '__main__':
+    main()
+```
 
 ---
 
 ## Modified Components
 
-| File | Nature of Change | What Changes |
-|------|-----------------|--------------|
-| `pipeline/src/stages/generate.ts` | Additive — new mode branch | Add `mode === 'comfyui'` branch that calls `comfyui-client.ts` instead of `gemini-client.ts`. Existing `manual` and `api` branches remain untouched. |
-| `pipeline/src/cli.ts` | Additive — new flags | Add `--comfyui` flag to the `generate` command. Add new `train-lora` subcommand. |
-| `pipeline/src/types/generation.ts` | Additive — new field | Add `generationBackend: 'gemini' | 'comfyui' | 'manual'` field to `GenerationLogEntry`. Existing entries without this field are treated as `'manual'`. |
-| `pipeline/src/config/defaults.ts` | Additive — new constants | Add `DEFAULT_COMFYUI_SERVICE_URL = 'http://localhost:3000'` and `DEFAULT_COMFYUI_PORT = 8188`. |
-| `pipeline/.env` | New key added | Add `COMFYUI_SERVICE_URL=http://localhost:3000` (optional override). |
+### `pipeline/src/stages/generate.ts`
 
-**gemini-client.ts is NOT deleted or modified.** The Gemini API mode (`--api`) continues to work. ComfyUI is a new alternative mode, not a replacement.
-
----
-
-## Express Service Structure
-
-### Directory Layout
-
-```
-pipeline/service/
-├── index.ts                          # app bootstrap, listen on PORT (default 3000)
-├── routes/
-│   ├── jobs.ts                       # POST /jobs, GET /jobs/:id
-│   └── loras.ts                      # POST /loras/train, GET /loras/:id/status
-├── job-manager.ts                    # in-memory job state, serial queue
-├── comfyui/
-│   ├── http-client.ts                # thin fetch wrappers for ComfyUI REST API
-│   └── ws-client.ts                  # WebSocket client for execution events
-├── workflows/
-│   ├── loader.ts                     # read + parse JSON templates from disk
-│   ├── injector.ts                   # fill node inputs into template
-│   ├── txt2img-lora.json             # SD 1.5 text-to-image + LoRA template
-│   └── img2img-lora-controlnet.json  # SD 1.5 img2img + LoRA + ControlNet template
-├── training/
-│   └── kohya-runner.ts               # spawn kohya_ss training process
-├── outputs/                          # runtime output directory (gitignored)
-│   ├── images/                       # <jobId>.png, <jobId>.json
-│   ├── loras/                        # symlinks or copies of trained .safetensors
-│   └── logs/                         # <jobId>.log for training jobs
-└── package.json                      # separate from pipeline/ package.json
-```
-
-### Route Contracts
-
-```
-POST /jobs
-  Body: {
-    promptText: string,       // full art prompt text
-    chapter: number,
-    page: number,
-    version: number,
-    workflowType: 'txt2img-lora' | 'img2img-lora-controlnet',
-    loraName?: string,        // filename without extension, e.g. "kael-v2"
-    baseImagePath?: string,   // absolute path to ControlNet/img2img source
-    seed?: number             // omit for random
-  }
-  Response 202: { jobId: string, status: 'queued' }
-  Response 503: { error: 'ComfyUI not reachable' }
-
-GET /jobs/:id
-  Response 200: {
-    jobId: string,
-    status: 'queued' | 'running' | 'complete' | 'failed',
-    outputPath?: string,      // absolute path to .png when complete
-    error?: string,
-    durationMs?: number
-  }
-  Response 404: { error: 'Job not found' }
-
-POST /loras/train
-  Body: {
-    characterId: string,
-    imageDir: string,         // absolute path to training images folder
-    baseModel: string,        // e.g. "v1-5-pruned-emaonly.ckpt"
-    steps?: number            // default 1500
-  }
-  Response 202: { loraJobId: string, status: 'training' }
-
-GET /loras/:id/status
-  Response 200: {
-    loraJobId: string,
-    status: 'training' | 'complete' | 'failed',
-    outputPath?: string,      // path to .safetensors when complete
-    progress?: number,        // 0-100 parsed from kohya stdout
-    logPath: string           // path to streaming log file
-  }
-```
-
-### Middleware Stack
+Add `mode === 'blender'` branch. The existing `manual`, `api`, and `comfyui` branches are untouched.
 
 ```typescript
-app.use(express.json({ limit: '1mb' }))   // body parsing
-app.use(requestLogger)                     // simple console logging
-app.use('/jobs', jobsRouter)
-app.use('/loras', lorasRouter)
-app.use(errorHandler)                      // catches unhandled errors, returns 500
-```
+// New branch in runGenerate(), alongside existing 'manual' | 'api' | 'comfyui' branches:
 
----
+if (mode === 'blender') {
+  // 1. Read script.json to get panel metadata (shotType, action)
+  const scriptPath = path.join(chapterPaths.root, 'script.json');
+  const chapter: Chapter = JSON.parse(await readFile(scriptPath, 'utf-8'));
 
-## ComfyUI Workflow JSON Structure
+  // 2. Filter pages if --page or --pages specified
+  const pagesToRender = options.pages
+    ? chapter.pages.filter(p => options.pages!.includes(p.pageNumber))
+    : options.page != null
+      ? chapter.pages.filter(p => p.pageNumber === options.page)
+      : chapter.pages;
 
-ComfyUI workflow JSON uses a **node graph format** — each node has a numeric string ID, a `class_type`, and `inputs`. Node inputs can reference another node's output via `["nodeId", outputIndex]`.
+  const blendFile = path.resolve(PATHS.blendFile);   // new path constant
+  const renderScript = path.resolve(PATHS.renderPanelScript);
 
-### Nodes Required for SD 1.5 txt2img + LoRA
+  for (const page of pagesToRender) {
+    const { pose, camera } = mapPanelToBlenderArgs(page.panels[0]!);
+    const version = nextVersion(chapterPaths.raw, options.chapter, page.pageNumber);
+    const filename = panelImageFilename(options.chapter, page.pageNumber, version);
+    const outputPath = path.join(chapterPaths.raw, filename);
 
-```json
-{
-  "1": {
-    "class_type": "CheckpointLoaderSimple",
-    "inputs": { "ckpt_name": "v1-5-pruned-emaonly.ckpt" }
-  },
-  "2": {
-    "class_type": "LoraLoader",
-    "inputs": {
-      "model": ["1", 0],
-      "clip": ["1", 1],
-      "lora_name": "{{LORA_NAME}}.safetensors",
-      "strength_model": 0.8,
-      "strength_clip": 0.8
-    }
-  },
-  "3": {
-    "class_type": "CLIPTextEncode",
-    "inputs": {
-      "text": "{{POSITIVE_PROMPT}}",
-      "clip": ["2", 1]
-    }
-  },
-  "4": {
-    "class_type": "CLIPTextEncode",
-    "inputs": {
-      "text": "low quality, blurry, extra limbs, text, watermark",
-      "clip": ["2", 1]
-    }
-  },
-  "5": {
-    "class_type": "KSampler",
-    "inputs": {
-      "model": ["2", 0],
-      "positive": ["3", 0],
-      "negative": ["4", 0],
-      "latent_image": ["6", 0],
-      "seed": "{{SEED}}",
-      "steps": 20,
-      "cfg": 7.0,
-      "sampler_name": "euler",
-      "scheduler": "normal",
-      "denoise": 1.0
-    }
-  },
-  "6": {
-    "class_type": "EmptyLatentImage",
-    "inputs": { "width": 800, "height": 1067, "batch_size": 1 }
-  },
-  "7": {
-    "class_type": "VAEDecode",
-    "inputs": { "samples": ["5", 0], "vae": ["1", 2] }
-  },
-  "8": {
-    "class_type": "SaveImage",
-    "inputs": { "images": ["7", 0], "filename_prefix": "{{FILENAME_PREFIX}}" }
-  }
-}
-```
+    console.log(`[generate] Blender render: page ${page.pageNumber} pose=${pose} camera=${camera}`);
 
-### Additional Nodes for img2img + ControlNet
+    const result = await renderWithBlender({ blendFile, renderScript, pose, camera, outputPath });
 
-Replace node `6` (EmptyLatentImage) with:
-
-```json
-"6": {
-  "class_type": "LoadImage",
-  "inputs": { "image": "{{BASE_IMAGE_FILENAME}}" }
-},
-"6b": {
-  "class_type": "VAEEncode",
-  "inputs": { "pixels": ["6", 0], "vae": ["1", 2] }
-},
-"9": {
-  "class_type": "ControlNetLoader",
-  "inputs": { "control_net_name": "control_v11p_sd15_lineart.pth" }
-},
-"10": {
-  "class_type": "ControlNetApply",
-  "inputs": {
-    "conditioning": ["3", 0],
-    "control_net": ["9", 0],
-    "image": ["6", 0],
-    "strength": 0.9
-  }
-}
-```
-
-And change KSampler node `5` to:
-- `"latent_image": ["6b", 0]`
-- `"positive": ["10", 0]`
-- `"denoise": 0.7` (img2img denoising strength)
-
-### Template Injection Points
-
-The workflow injector (`injector.ts`) performs string replacement on the parsed JSON object. Injection points use `{{PLACEHOLDER}}` tokens. This is simpler than a template engine — ComfyUI workflows are already JSON; string replacement on parsed objects avoids double-serialization issues.
-
-| Placeholder | Source | Node |
-|-------------|--------|------|
-| `{{POSITIVE_PROMPT}}` | Job request `promptText` | CLIPTextEncode positive |
-| `{{LORA_NAME}}` | Job request `loraName` or default | LoraLoader `lora_name` |
-| `{{SEED}}` | Random or job request `seed` | KSampler `seed` |
-| `{{FILENAME_PREFIX}}` | Derived from `ch{N}_p{N}_v{N}` | SaveImage |
-| `{{BASE_IMAGE_FILENAME}}` | Basename of `baseImagePath` after upload to ComfyUI input dir | LoadImage |
-
-**Note on base images:** ComfyUI's `LoadImage` node reads from its own `input/` directory. The Express service must copy the base image to the ComfyUI input folder before submitting the workflow. This is a simple `fs.copyFile` from the pipeline's `output/ch-NN/processed/` path to `[COMFYUI_DIR]/input/`.
-
----
-
-## Job Management Approach
-
-**Recommendation: In-memory Map with serial queue. No Redis, no file-based queue.**
-
-**Rationale for single-user local service:**
-- ComfyUI on M1 Pro with 16GB RAM runs one generation job at a time. Concurrent submissions would queue in ComfyUI anyway, but tracking state in the Express service allows the CLI to poll without querying ComfyUI directly.
-- File-based queue adds fsync latency and complexity for no benefit — there is no crash recovery requirement for a dev tool.
-- Redis requires a separate process, adds infrastructure overhead. Unjustified for a service that runs locally alongside the pipeline CLI.
-
-### In-Memory Job State
-
-```typescript
-// job-manager.ts
-
-type JobStatus = 'queued' | 'running' | 'complete' | 'failed';
-
-interface Job {
-  jobId: string;
-  status: JobStatus;
-  request: JobRequest;
-  outputPath?: string;
-  error?: string;
-  startedAt?: number;
-  completedAt?: number;
-  comfyPromptId?: string;   // ComfyUI's internal prompt ID, for WS correlation
-}
-
-const jobs = new Map<string, Job>();
-let activeJob: Job | null = null;
-const queue: Job[] = [];
-```
-
-**Worker loop:** When a job completes (or fails), the worker immediately dequeues the next job. No polling interval needed — the WebSocket event from ComfyUI triggers the transition.
-
-**Lifetime:** Jobs stay in the Map until the service restarts. For a dev tool this is fine — the CLI can retrieve results within the same session.
-
-**If persistence is later needed** (across restarts): add `appendFileSync` writes to `outputs/images/<jobId>.json` when job state changes. The CLI can reconstruct state from those files on startup. This is a 30-line addition, not an architectural change.
-
----
-
-## ComfyUI API — Key Endpoints
-
-These are the ComfyUI endpoints the Express service calls directly:
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/prompt` | POST | Submit a workflow for execution. Body: `{ prompt: workflowJSON, client_id: string }`. Returns `{ prompt_id: string }`. |
-| `/queue` | GET | List pending and running prompts. |
-| `/history/:prompt_id` | GET | Get execution history and output filenames for a completed prompt. |
-| `/view` | GET | Download an output image. Params: `filename`, `subfolder`, `type=output`. Returns image bytes. |
-| `/upload/image` | POST | Upload an image to ComfyUI's input directory. Multipart form. Required before using `LoadImage` node. |
-| `/system_stats` | GET | Health check — confirm ComfyUI is running. |
-
-**WebSocket events** on `ws://127.0.0.1:8188/`:
-- `{ type: 'executing', data: { node: null, prompt_id } }` — job started
-- `{ type: 'progress', data: { value, max } }` — step-level progress
-- `{ type: 'executed', data: { node, output, prompt_id } }` — individual node done
-- `{ type: 'execution_success', data: { prompt_id } }` — entire workflow complete (HIGH confidence this event exists; verify event name)
-- `{ type: 'execution_error', data: { prompt_id, error } }` — workflow failed
-
-**Confidence note:** The ComfyUI API has been stable in its core structure since 2023, but event names and `/history` response shape should be verified against a running instance before finalising the WebSocket client.
-
----
-
-## Pipeline Integration Point: generate.ts
-
-**Decision: The existing `generate.ts` calls the Express service via HTTP. generate.ts is NOT restructured.**
-
-This is the correct integration point because:
-1. The stage interface (`StageOptions → StageResult`) stays unchanged. The CLI (`cli.ts`) needs no changes to the generate command's structure beyond adding a `--comfyui` flag.
-2. `comfyui-client.ts` follows the same pattern as `gemini-client.ts`: a thin async function that takes a prompt and returns an image buffer (or writes a file). generate.ts calls whichever client matches the selected mode.
-3. The Express service is an **optional sidecar** — the pipeline continues to work without it. If the service is not running, the ComfyUI mode fails with a clear error; manual and Gemini API modes are unaffected.
-
-### generate.ts Integration Pattern
-
-```typescript
-// In generate.ts, the new mode='comfyui' branch:
-if (mode === 'comfyui') {
-  const serviceUrl = process.env['COMFYUI_SERVICE_URL'] ?? DEFAULT_COMFYUI_SERVICE_URL;
-
-  // Check service is alive
-  const healthy = await pingComfyUiService(serviceUrl);
-  if (!healthy) {
-    return { stage: 'generate', success: false, errors: ['ComfyUI service not running at ' + serviceUrl], ... };
-  }
-
-  for (const file of filteredFiles) {
-    const promptText = await readFile(promptFilePath, 'utf-8');
-    const version = nextVersion(chapterPaths.raw, options.chapter, pageNum);
-    const filename = panelImageFilename(options.chapter, pageNum, version);
-    const destPath = path.join(chapterPaths.raw, filename);
-
-    // Submit job and poll
-    const result = await generateViaComfyUi({
-      serviceUrl,
-      promptText,
-      chapter: options.chapter,
-      page: pageNum,
-      version,
-      baseImagePath: options.baseImagePath,  // new CLI option
-      loraName: options.loraName,            // new CLI option
-    });
-
-    // result.outputPath is the Express service's local image path
-    await copyFile(result.outputPath, destPath);
-
-    // Manifest entry (same structure as Gemini mode, backend field added)
     const entry: GenerationLogEntry = {
       imageFile: filename,
-      promptFile: ...,
-      promptHash: hashPrompt(promptText),
-      model: options.loraName ?? 'sd-1.5',
-      generationBackend: 'comfyui',   // new field
+      promptFile: '',          // no prompt file for Blender renders
+      promptHash: '',
+      model: 'blender-eevee',
+      source: 'blender',
+      blenderPose: pose,
+      blenderCamera: camera,
       timestamp: new Date().toISOString(),
       version,
       approved: false,
     };
     await addEntry(chapterPaths.root, manifest, entry);
+    outputFiles.push(outputPath);
+
+    console.log(`[generate] Rendered in ${result.durationMs}ms → ${filename}`);
   }
 }
 ```
 
-### comfyui-client.ts Polling Pattern
+**What does NOT change:** The manifest format (`generation-log.json`) is extended with two optional fields (`blenderPose`, `blenderCamera`), both absent in Gemini/ComfyUI entries. The overlay stage reads `entry.imageFile` and `entry.approved` only — it ignores all other fields. No overlay changes required.
+
+### `pipeline/src/types/generation.ts`
+
+Add two optional fields and extend the `source` union:
 
 ```typescript
-// pipeline/src/generation/comfyui-client.ts
-
-export async function generateViaComfyUi(opts: ComfyUiGenerateOptions): Promise<{ outputPath: string }> {
-  // 1. Submit job
-  const { jobId } = await submitJob(opts.serviceUrl, opts);
-
-  // 2. Poll with timeout
-  const POLL_INTERVAL_MS = 2000;
-  const TIMEOUT_MS = 300_000;  // 5 minutes
-  const deadline = Date.now() + TIMEOUT_MS;
-
-  while (Date.now() < deadline) {
-    await sleep(POLL_INTERVAL_MS);
-    const status = await getJobStatus(opts.serviceUrl, jobId);
-
-    if (status.status === 'complete') return { outputPath: status.outputPath! };
-    if (status.status === 'failed') throw new Error(`ComfyUI job failed: ${status.error}`);
-    // 'queued' | 'running' → continue polling
-  }
-
-  throw new Error(`ComfyUI job ${jobId} timed out after ${TIMEOUT_MS}ms`);
+export interface GenerationLogEntry {
+  // ... existing fields unchanged ...
+  source?: 'gemini' | 'comfyui' | 'blender';  // extend union
+  blenderPose?: string;    // e.g. 'walking'
+  blenderCamera?: string;  // e.g. 'Cam_Front'
 }
+```
+
+### `pipeline/src/config/paths.ts`
+
+Add two new paths:
+
+```typescript
+export const PATHS = {
+  // ... existing paths unchanged ...
+
+  /** Blender .blend scene file for Spyke. */
+  blendFile: path.join(PROJECT_ROOT, '3d_models', 'output', 'spyke', 'spyke.blend'),
+
+  /** Single-panel render script (called by blender-runner.ts). */
+  renderPanelScript: path.join(PROJECT_ROOT, '3d_models', 'render', 'render_panel.py'),
+} as const;
+```
+
+### `pipeline/src/cli.ts`
+
+Add `--blender` flag to the `generate` command and handle mode selection:
+
+```typescript
+program
+  .command('generate')
+  // ... existing options ...
+  .option('--blender', 'Blender 3D render mode — renders panels from spyke.blend')
+  .action(async (options) => {
+    // extend mode detection:
+    const mode = options.blender ? 'blender'
+               : options.comfyui ? 'comfyui'
+               : options.api     ? 'api'
+               : 'manual';
+    // ...
+  });
 ```
 
 ---
 
-## LoRA Output Handling
-
-**kohya_ss output directory:** By default, kohya_ss writes trained `.safetensors` to a directory specified in the training config JSON (the `output_dir` field). The recommended path to set in the training config:
+## Directory Structure After Integration
 
 ```
-[COMFYUI_DIR]/models/loras/<characterId>/
+plasma/
+├── pipeline/
+│   └── src/
+│       ├── blender/                    # NEW directory
+│       │   ├── blender-runner.ts       # NEW — child process wrapper
+│       │   ├── pose-map.ts             # NEW — shotType+action → pose+camera
+│       │   └── types.ts                # NEW — BlenderRenderRequest, etc.
+│       ├── stages/
+│       │   └── generate.ts             # MODIFIED — new 'blender' mode branch
+│       ├── types/
+│       │   └── generation.ts           # MODIFIED — source union + 2 optional fields
+│       └── config/
+│           └── paths.ts                # MODIFIED — 2 new path constants
+└── 3d_models/
+    ├── render/
+    │   ├── render_poses.py             # UNCHANGED
+    │   └── render_panel.py             # NEW — single-panel render, called by TS pipeline
+    ├── output/
+    │   └── spyke/
+    │       └── spyke.blend             # Built by build_spyke.py — pipeline reads this
+    └── ...                             # Everything else unchanged
 ```
-
-e.g., `/path/to/ComfyUI/models/loras/kael/kael-v1.safetensors`
-
-**Why this directory:** ComfyUI's `LoraLoader` node scans `models/loras/` recursively. Placing the output directly in ComfyUI's model directory means the LoRA is immediately available to workflows without a copy step.
-
-**ComfyUI finds it:** After training completes, ComfyUI detects new model files either on next workflow submission or via a model refresh. ComfyUI does NOT need to be restarted. The `lora_name` in the workflow JSON is the relative path from `models/loras/`, e.g. `"kael/kael-v1.safetensors"`.
-
-**The Express service should record** the final LoRA path in `outputs/loras/<loraJobId>.json`:
-
-```json
-{
-  "loraJobId": "lora-abc123",
-  "characterId": "kael",
-  "status": "complete",
-  "outputPath": "/path/to/ComfyUI/models/loras/kael/kael-v1.safetensors",
-  "loraName": "kael/kael-v1",
-  "completedAt": "2026-02-19T12:00:00Z"
-}
-```
-
-**The pipeline CLI** reads this JSON when constructing a generation job to automatically populate `loraName`.
 
 ---
 
-## Process Management: kohya_ss Training
+## Architectural Patterns
 
-```typescript
-// pipeline/service/training/kohya-runner.ts
+### Pattern 1: Child Process Boundary (TypeScript → Python)
 
-import { spawn } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
+**What:** TypeScript never imports or calls Python directly. The boundary is always `child_process.execFile(blender, [...args])`. All communication is via CLI arguments (in) and filesystem (out). No stdout parsing for result data — the output file existing is the success signal.
 
-export function spawnTraining(opts: TrainingOpts): ChildProcessHandle {
-  const logStream = createWriteStream(opts.logPath, { flags: 'a' });
+**When to use:** Any time a TypeScript process needs to invoke Blender. Never attempt to manage Blender state across invocations — each render is a fresh headless Blender instance loading the `.blend` file from scratch.
 
-  const child = spawn('python', [
-    opts.kohyaScriptPath,           // e.g. /path/to/kohya_ss/train_network.py
-    '--config_file', opts.configPath
-  ], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, PYTHONUNBUFFERED: '1' }
-  });
+**Why this works:** Blender's `--background` mode is designed for exactly this use case. The `.blend` file is the serialized state. Opening it in headless mode, running a Python script, and exiting is the documented pattern for pipeline automation.
 
-  child.stdout.pipe(logStream);
-  child.stderr.pipe(logStream);
+**Trade-off:** Each panel render incurs the Blender startup overhead (~1-2s on M1 Pro) plus EEVEE render time (~3-10s per panel). For 28 panels in Chapter 1, expect 2-5 minutes total. This is acceptable and far faster than LoRA inference inconsistency debugging.
 
-  // Parse progress from stdout lines like "steps: 150/1500"
-  child.stdout.on('data', (chunk: Buffer) => {
-    const line = chunk.toString();
-    const match = /steps:\s*(\d+)\/(\d+)/.exec(line);
-    if (match) {
-      const progress = Math.round((parseInt(match[1]!) / parseInt(match[2]!)) * 100);
-      opts.onProgress?.(progress);
-    }
-  });
+### Pattern 2: Pose Map as Code (Not Configuration File)
 
-  child.on('exit', (code) => {
-    logStream.close();
-    if (code === 0) opts.onComplete(opts.expectedOutputPath);
-    else opts.onError(new Error(`kohya_ss exited with code ${code}`));
-  });
+**What:** The `shotType → camera` and `action keyword → pose` mapping lives in TypeScript source (`pose-map.ts`), not a YAML/JSON config file.
 
-  return { pid: child.pid!, kill: () => child.kill('SIGTERM') };
-}
+**Why:** The mapping is code logic (keyword matching with fallbacks), not pure data. It will evolve as the panel script conventions solidify. Keeping it in TypeScript means it's type-checked, easily testable, and in the same diff as any related changes. A YAML config would be loaded at runtime with no type safety.
+
+**Trade-off:** Adding a new pose requires touching both `render_poses.py` (to define the bone rotations) and `pose-map.ts` (to create the routing rule). This coupling is explicit and acceptable — pose-map.ts is the documented synchronization point.
+
+### Pattern 3: Blender as Stateless Renderer
+
+**What:** The `.blend` file is built once by `build_spyke.py` and saved to `3d_models/output/spyke/spyke.blend`. Every render invocation opens this file fresh, applies a pose, renders, exits. The `.blend` file is never mutated by the pipeline.
+
+**Why:** This makes the render step idempotent. Re-rendering page 3 with the same pose always produces the same output. If the `.blend` file is updated (model refinement, shader changes), all pages can be re-rendered in a batch without tracking state.
+
+**Implication:** The `.blend` file must be committed or regenerated before running the pipeline. It is the build artifact of `build_spyke.py`. Treat it like a compiled binary — generated, not hand-edited (except for manual refinement passes via Blender UI, after which `build_spyke.py` is not rerun).
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Parsing Blender Stdout for Results
+
+**What people do:** Run Blender, parse stdout for filenames or success messages, use that to determine output path.
+
+**Why it's wrong:** Blender's stdout is not a stable API. Print statements in Python scripts, Blender info messages, and library output all mix in stdout. Parsing it is fragile. Blender also writes to stderr for warnings that are not errors.
+
+**Do this instead:** Pass `--output /absolute/path/to/output.png` as a CLI arg. After `execFile` resolves, check `existsSync(outputPath)`. File present = success. File absent = failure. This is robust across Blender versions.
+
+### Anti-Pattern 2: One Blender Process Per Chapter (Persistent Session)
+
+**What people do:** Start one Blender process, communicate with it via stdin pipe, send "render page 1, render page 2..." commands, then exit.
+
+**Why it's wrong:** Blender is not designed as a persistent server. The Python API runs inside Blender's own event loop. There is no stable stdin command protocol. Attempting to implement one is complex, fragile, and version-sensitive.
+
+**Do this instead:** One `execFile` per panel. The startup overhead per render (~1-2 seconds) is worth the simplicity. If render time becomes a bottleneck, use `Promise.all()` with multiple concurrent Blender processes — Blender is safe to run concurrently since each instance gets its own process space. On M1 Pro with 16GB unified memory, 2-3 concurrent renders are feasible.
+
+### Anti-Pattern 3: Hard-Coding Pose Names as Strings in generate.ts
+
+**What people do:** Write `pose: 'walking'` or `camera: 'Cam_Front'` directly in generate.ts stage code.
+
+**Why it's wrong:** When pose names change in `render_poses.py`, generate.ts breaks silently at runtime. The pose map is the wrong place to discover a bug.
+
+**Do this instead:** All pose and camera names are defined in `pose-map.ts` as constants or a typed enum. `blender-runner.ts` passes them through without inspection. If a pose key doesn't exist in Blender, `render_panel.py` exits with a non-zero code and prints a clear error, which `execFile` surfaces as a thrown Error.
+
+---
+
+## Integration Points
+
+### External Boundaries
+
+| Boundary | Communication Method | Contract |
+|----------|---------------------|----------|
+| TypeScript → Blender | `child_process.execFile` with CLI args | Args: `--pose`, `--camera`, `--output` (all strings). Returns: 0 on success, non-zero on failure. Output file at `--output` path. |
+| Blender Python → render_poses.py | Python `import` (same process) | `POSES` dict and `apply_pose()` function. Both must stay importable. |
+| generate.ts → overlay.ts | Filesystem + manifest | Approved PNG at `raw/chNN_pNNN_vN.png`. Entry in `generation-log.json` with `approved: true`. |
+| generate.ts → pose-map.ts | TypeScript function call | `mapPanelToBlenderArgs(panel: Panel): BlenderPanelArgs`. Input is the `Panel` type from `manga.ts`. |
+
+### Internal Boundaries (Existing, Verified)
+
+| Boundary | How It Works | Notes for Blender Integration |
+|----------|-------------|------------------------------|
+| overlay.ts reads raw/ | `getApprovedEntry(manifest, pageNumber)` → `entry.imageFile` → `path.join(chapterPaths.raw, imageFile)` | Blender renders land at `raw/chNN_pNNN_vN.png` — same location, same naming convention. No change. |
+| assemble.ts reads lettered/ | Scans `lettered/` for PNG files sorted by name | Blender → overlay → lettered/ path is identical to Gemini → overlay → lettered/ path. No change. |
+| manifest entry approval | `pnpm stage:generate -- --approve chNN_pNNN_vN.png -c N` | Same approve command works for Blender renders. Approve logic in generate.ts reads `entry.source` but does not branch on it for the approval action. |
+
+---
+
+## File Naming Convention Alignment
+
+The existing convention `chNN_pNNN_vN.png` is used without modification:
+
+```
+ch01_p003_v1.png   → Chapter 1, Page 3, Version 1 (Blender render)
+ch01_p003_v2.png   → Chapter 1, Page 3, Version 2 (re-render with different pose)
 ```
 
-**Key constraints on M1 Pro:**
-- kohya_ss on Apple Silicon uses MPS (Metal Performance Shaders). Requires `accelerate` config with `mps` device.
-- Training 1500 steps on M1 Pro with 16GB takes approximately 20-60 minutes depending on dataset size and resolution. The Express service must not time out the HTTP response for training jobs — respond immediately with `202 Accepted` and poll via `GET /loras/:id/status`.
-- Only ONE training job at a time. The JobManager should reject a second training request if one is active, returning `409 Conflict`.
+`panelImageFilename(chapter, page, version)` and `nextVersion()` in `pipeline/src/generation/naming.ts` are used unchanged. The Blender runner calls `nextVersion(chapterPaths.raw, chapter, pageNum)` the same way the Gemini and ComfyUI modes do.
+
+**Important:** The output is 800×1200 PNG with RGBA transparency (as configured in `render_setup.py`). The overlay stage (`overlayPage()`) uses Sharp to load the raw image — Sharp handles RGBA PNGs correctly. The assemble stage uses Sharp to stack images — RGBA input is flattened to white background during JPEG assembly. No format changes needed.
 
 ---
 
 ## Build Order
 
-Build order is determined by dependency: each layer depends on the one below it.
+Build order is determined by dependency: each item below depends on those above it being testable.
 
-**Layer 1: ComfyUI Client (no dependencies on Express)**
-Build and test `comfyui/http-client.ts` and `comfyui/ws-client.ts` as standalone modules. Verify they can submit a hand-crafted workflow JSON to a running ComfyUI and retrieve the output image. This validates the ComfyUI API shape before building anything around it.
+### Phase 1: Blender Python — `render_panel.py`
 
-**Layer 2: Workflow Templates + Injector**
-Build `workflows/loader.ts`, `workflows/injector.ts`, and the JSON templates. Unit-testable without ComfyUI running: inject known values, assert the resulting JSON has correct node input values.
+Build `3d_models/render/render_panel.py` first. It has no TypeScript dependencies.
 
-**Layer 3: JobManager**
-Build `job-manager.ts`. Test with mock ComfyUI client. Verify serial queue behaviour: second job queued while first is running; second runs after first completes.
+**Deliverable:** `blender spyke.blend --background --python render_panel.py -- --pose walking --camera Cam_Front --output /tmp/test.png` produces a PNG.
 
-**Layer 4: Express Routes + Service Entry**
-Wire `routes/jobs.ts` and `service/index.ts`. Integration test with a real running ComfyUI instance. Submit one job, poll to completion, verify image appears at expected path.
+**Prerequisite:** `spyke.blend` must exist. Run `build_spyke.py` first if it has not been run since Phase 9. This is a one-time model build step — after the `.blend` is saved, the render pipeline operates on it.
 
-**Layer 5: pipeline/src/generation/comfyui-client.ts**
-Build the pipeline-side client that calls the Express service. Test end-to-end: CLI → comfyui-client.ts → Express service → ComfyUI → image in output/ch-NN/raw/.
+**Verification:** Open `/tmp/test.png` — should show Spyke in walking pose, cel-shaded, with Freestyle outlines, 800×1200.
 
-**Layer 6: generate.ts modification**
-Add the `comfyui` mode branch to the existing generate stage. The branch is a thin wrapper around comfyui-client.ts. Regression test: verify `--manual` and `--api` modes still work unchanged.
+### Phase 2: TypeScript Types — `blender/types.ts`
 
-**Layer 7: LoRA training (independent of 1-6)**
-Build `training/kohya-runner.ts` and `routes/loras.ts`. This is independent of the image generation path and can be built after Layers 1-6 are working. kohya_ss training requires a separate setup step (Python environment, kohya_ss installation) that may need its own research spike.
+Define `BlenderRenderRequest` and `BlenderRenderResult` interfaces. No logic, no dependencies. This unblocks parallel development of the runner and the pose-map.
 
-### Phase Summary
+### Phase 3: Pose Map — `blender/pose-map.ts`
 
-| Phase | Components | Deliverable |
-|-------|-----------|-------------|
-| 1 | ComfyUI HTTP + WS clients | Submit a workflow, retrieve output image from ComfyUI directly |
-| 2 | Workflow templates + injector | Correct JSON for SD 1.5 txt2img + LoRA |
-| 3 | JobManager | Serial queue with state tracking |
-| 4 | Express service (routes + entry) | Working HTTP API at port 3000 |
-| 5 | comfyui-client.ts | Pipeline CLI can generate via ComfyUI |
-| 6 | generate.ts mode branch | Full end-to-end: `pnpm stage:generate -- --comfyui -c 1` works |
-| 7 | kohya_ss runner + LoRA routes | Training pipeline operational |
+Build `pose-map.ts` with the shot type and action keyword mapping table.
+
+**Unit-testable without Blender:** Given a Panel with `shotType: 'MEDIUM'`, assert `mapPanelToBlenderArgs(panel).camera === 'Cam_UpperBody'`.
+
+**Dependency:** `render_panel.py` Phase 1 (to know what pose names and camera names are valid). Verify the keys in `pose-map.ts` match the keys in `POSES` and `REFERENCE_VIEWS` in `render_poses.py`.
+
+### Phase 4: Blender Runner — `blender/blender-runner.ts`
+
+Build `blender-runner.ts` with `renderWithBlender()`.
+
+**Integration test:** Call `renderWithBlender()` with known pose/camera/output args. Verify file is created and has non-zero size.
+
+**Dependency:** Phase 1 (render_panel.py must work). Phase 2 (types). `BLENDER_PATH` env var must be set or default `/Applications/Blender.app/Contents/MacOS/blender` must be valid.
+
+### Phase 5: generate.ts Mode Branch
+
+Add `mode === 'blender'` to `generate.ts`. Wire in pose-map and runner.
+
+**Dependency:** Phases 1-4. Also requires `script.json` to exist for the chapter (run `pnpm stage:script -c 1` first).
+
+**End-to-end test:** `pnpm stage:generate -- --blender -c 1 --page 3` produces `output/ch-01/raw/ch01_p003_v1.png` and adds an entry to `generation-log.json` with `source: 'blender'`.
+
+### Phase 6: Approve → Overlay → Assemble (Existing Commands, No Changes)
+
+With a Blender render approved in the manifest, run:
+
+```bash
+pnpm stage:generate -- --approve ch01_p003_v1.png -c 1
+pnpm stage:overlay -c 1 --page 3
+pnpm stage:assemble -c 1
+```
+
+**Expected result:** The Blender render passes through the existing overlay and assemble stages unchanged. The Webtoon strip is assembled from a mix of approved Blender renders and any remaining Gemini/ComfyUI images.
 
 ---
 
-## Constraints Specific to M1 Pro / Single-User
+## Environment Configuration
 
-- **No GPU VRAM limit concerns** — M1 Pro uses unified memory. 16GB is shared between CPU and GPU. SD 1.5 inference uses approximately 4-6GB; LoRA training uses 8-12GB. Cannot run generation and training simultaneously.
-- **ComfyUI input directory** — When a base image is needed for img2img/ControlNet, the Express service must upload it to ComfyUI via `POST /upload/image` (multipart form) before submitting the workflow. Alternatively, copy the file to `[COMFYUI_DIR]/input/` directly via filesystem — simpler and avoids HTTP overhead for large images.
-- **File paths** — All paths between the Express service and ComfyUI should be absolute. ComfyUI's output filenames are returned by the history endpoint as relative names within ComfyUI's output directory; the Express service needs to know ComfyUI's output directory path (configured via env var `COMFYUI_OUTPUT_DIR`).
-- **Port conflicts** — Express at 3000, ComfyUI at 8188. Both configurable via env vars. Document clearly.
-- **COMFYUI_DIR env var** — The service needs to know the absolute path to ComfyUI's installation directory to: (a) copy images to `input/`, (b) locate `models/loras/` for training output, (c) read images from `output/`. Make this a required env var with no default.
+One new environment variable is needed:
+
+```bash
+# pipeline/.env  (add to existing file)
+BLENDER_PATH=/Applications/Blender.app/Contents/MacOS/blender
+```
+
+Optional — defaults to the macOS standard install path. On a different machine, override this to the correct Blender 5.0.1 binary path.
+
+No service, no port, no server. Blender is invoked as a CLI tool. This is simpler than the ComfyUI Express service — there is no persistent process to manage.
 
 ---
 
-## Environment Variables
+## Scaling Considerations
 
-```
-# pipeline/service/.env  (new file, gitignored)
-COMFYUI_URL=http://127.0.0.1:8188
-COMFYUI_DIR=/path/to/ComfyUI
-EXPRESS_PORT=3000
-OUTPUTS_DIR=/path/to/plasma/pipeline/service/outputs
-KOHYA_SCRIPT=/path/to/kohya_ss/train_network.py
-KOHYA_PYTHON=/path/to/kohya_venv/bin/python
+This is a single-developer local pipeline, not a service. Scaling concerns are render throughput only.
 
-# pipeline/.env  (existing file, add one line)
-COMFYUI_SERVICE_URL=http://localhost:3000
-```
+| Scale | Approach |
+|-------|----------|
+| 1-5 panels per session | Serial renders, `for` loop in generate.ts. Default. |
+| Full chapter (28 panels) | Serial is fine — ~5-10 min total on M1 Pro. No changes needed. |
+| Multiple characters (future) | Each character gets a separate `.blend` file and `render_<character>.py`. `blender-runner.ts` accepts `blendFile` as a parameter (already designed this way). |
+| Concurrent renders (future, if needed) | Replace `for` loop with `Promise.all()` batches of 2-3 concurrent renders. M1 Pro can handle 2-3 Blender EEVEE renders simultaneously within 16GB unified memory. Each frame uses ~1-2GB at 800×1200. |
 
 ---
 
 ## Sources
 
-- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/stages/generate.ts` — existing stage interface and mode branching pattern
-- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/generation/gemini-client.ts` — existing client pattern to replicate for ComfyUI
-- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/types/pipeline.ts` — `StageOptions`, `StageResult` interface contracts
-- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/types/generation.ts` — `GenerationLogEntry`, `GenerationManifest`
-- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/cli.ts` — command structure, flag patterns
-- Direct inspection of `/Users/dondemetrius/Code/plasma/pipeline/src/config/paths.ts` — `PATHS.chapterOutput`, output directory structure
-- ComfyUI HTTP API (`/prompt`, `/view`, `/history`, `/upload/image`, WebSocket events): training data — MEDIUM confidence, verify against running instance
-- ComfyUI workflow JSON node graph format: training data — HIGH confidence, core format stable since 2023
-- kohya_ss `train_network.py` CLI and `output_dir` config field: training data — MEDIUM confidence, verify kohya_ss version installed before implementing runner
-- M1 Pro MPS device support in accelerate/kohya_ss: training data — MEDIUM confidence, known to work but setup is non-trivial
+- Direct inspection: `pipeline/src/stages/generate.ts` — existing mode branching, manifest integration, naming conventions
+- Direct inspection: `pipeline/src/stages/overlay.ts` — how it reads manifest, uses `raw/` directory, is agnostic to generation source
+- Direct inspection: `pipeline/src/types/generation.ts` — `GenerationLogEntry`, `source` field, extension pattern
+- Direct inspection: `pipeline/src/config/paths.ts` — `chapterOutput()`, `raw`, directory layout
+- Direct inspection: `pipeline/src/generation/naming.ts` — `panelImageFilename()`, `nextVersion()`, filename regex
+- Direct inspection: `pipeline/src/generation/manifest.ts` — `addEntry()`, `getApprovedEntry()` — overlay only reads `approved` and `imageFile`
+- Direct inspection: `3d_models/render/render_poses.py` — `POSES` dict, `apply_pose()`, `render_view()`, CLI arg parsing pattern
+- Direct inspection: `3d_models/common/render_setup.py` — camera names (`Cam_Front`, etc.), render resolution 800×1200, RGBA output
+- Direct inspection: `3d_models/build_spyke.py` — output path `3d_models/output/spyke/spyke.blend`
+- Direct inspection: `pipeline/src/cli.ts` — mode flag pattern, Commander.js option structure
+- Blender `--background` headless mode with `--python` script: HIGH confidence — documented Blender feature, stable across 3.x and 4.x, consistent with 5.0.1
+- `child_process.execFile` for synchronous subprocess invocation: HIGH confidence — Node.js stdlib, stable API
 
 ---
 
-*Architecture research for: ComfyUI + LoRA integration into TypeScript manga pipeline*
-*Researched: 2026-02-19*
+*Architecture research for: Blender 3D rendering integration into TypeScript manga pipeline*
+*Researched: 2026-02-25*

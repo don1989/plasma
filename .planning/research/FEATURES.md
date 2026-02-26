@@ -1,671 +1,299 @@
-# Features Research: ComfyUI + LoRA Pipeline
+# Feature Research
 
-**Domain:** Local ComfyUI + SD 1.5 inference pipeline for manga character generation
-**Researched:** 2026-02-19
-**Milestone:** v2.0 — Replacing Gemini generate stage with local ComfyUI + LoRA stack
-**Confidence:** MEDIUM — ComfyUI node architecture, LoRA loading, and ControlNet wiring are
-well-established as of training cutoff (August 2025). Node class names may shift across ComfyUI
-versions; verify against running ComfyUI instance. kohya_ss training parameters are HIGH confidence
-based on widely-documented SD 1.5 LoRA training practices.
-
-> **Note on research conditions:** WebSearch and WebFetch were blocked during this session.
-> Findings are based on training knowledge of ComfyUI's documented node graph architecture,
-> the kohya_ss training toolkit, and community-standard wrapper patterns. Confidence levels
-> are assigned conservatively. All node class names should be verified against the ComfyUI
-> node list (`GET /object_info`) on first run.
+**Domain:** Blender 3D manga rendering pipeline (script-driven character posing + toon shading)
+**Researched:** 2026-02-25
+**Milestone:** v3.0 — Replacing AI image generation with Blender 3D rendering for character consistency
+**Confidence:** HIGH for Blender Python API and EEVEE toon shading (well-established, verified against Blender 5.0 docs and Blender developers blog). MEDIUM for retopology workflows and background approaches (community patterns vary). LOW for Blender 5.0-specific EEVEE Next NPR changes (feature development begins post-5.0, not yet shipped).
 
 ---
 
 ## Context: What Exists vs What's New
 
-**Already built (v1.0 — do not re-research):**
-- Script parsing, panel extraction, character fingerprint system
-- Gemini API image generation + manual import workflow
-- Dialogue overlay (SVG balloons), Webtoon strip assembly
-- Manifest/versioning system (`generation-log.json`)
+**Already built (v1.0 + v2.0 — do not re-research):**
+- TypeScript pipeline: script → prompt → generate → overlay → assemble (5 stages)
+- SVG dialogue balloon overlay, Webtoon strip assembly
+- Character YAML fingerprints, ComfyUI + LoRA inference
+- Spyke blockout scripts (`3d_models/`) — Python/Blender API, NOT YET RUN
+  - `generate_spyke.py`: body, hair, clothing, equipment, armature (built from primitives)
+  - `manga_shader.py`: EEVEE Shader-to-RGB toon shader with rim light + metallic variants
+  - `render_poses.py`: 5 poses × 6 cameras, CLI args, batch rendering
+  - `render_setup.py`: camera rig (front/3-4/side/back/portrait/upper), 2-light setup, Freestyle outlines
 
-**What v2.0 adds (scope of this research):**
-- ComfyUI inference server running locally (Metal/MPS on M1 Pro)
-- img2img workflow with ControlNet OpenPose pose conditioning
-- LoRA training via kohya_ss on character reference images
-- Seed locking for panel reproducibility
-- Model preset switching (anime vs realistic checkpoints)
-- TypeScript Express service wrapping ComfyUI with job management API
-- Auto-caption generation for LoRA training dataset preparation
+**What v3.0 adds (scope of this research):**
+- Blockout → render-ready model quality (sculpt, retopo, weight paint, detail)
+- Expanded pose library mapped to manga panel types
+- Panel-specific camera selection logic
+- 3D background generation for establishing shots
+- TypeScript → Blender subprocess integration (replace `generate` stage)
+- End-to-end Blender render → overlay → Webtoon assembly
 
----
-
-## Inference Features
-
-### 1. txt2img — Baseline Workflow
-
-**What it is:** Generate an image from a text prompt only, no input image.
-
-**ComfyUI workflow JSON structure (simplified):**
-```json
-{
-  "1": { "class_type": "CheckpointLoaderSimple",
-         "inputs": { "ckpt_name": "dreamshaper_8.safetensors" } },
-  "2": { "class_type": "CLIPTextEncode",
-         "inputs": { "text": "...(positive prompt)...", "clip": ["1", 1] } },
-  "3": { "class_type": "CLIPTextEncode",
-         "inputs": { "text": "...(negative prompt)...", "clip": ["1", 1] } },
-  "4": { "class_type": "EmptyLatentImage",
-         "inputs": { "width": 512, "height": 768, "batch_size": 1 } },
-  "5": { "class_type": "KSampler",
-         "inputs": {
-           "model":           ["1", 0],
-           "positive":        ["2", 0],
-           "negative":        ["3", 0],
-           "latent_image":    ["4", 0],
-           "seed":            42,
-           "steps":           20,
-           "cfg":             7.0,
-           "sampler_name":    "euler_ancestral",
-           "scheduler":       "karras",
-           "denoise":         1.0
-         }
-  },
-  "6": { "class_type": "VAEDecode",
-         "inputs": { "samples": ["5", 0], "vae": ["1", 2] } },
-  "7": { "class_type": "SaveImage",
-         "inputs": { "images": ["6", 0], "filename_prefix": "ch01_p003" } }
-}
-```
-
-**Key nodes for txt2img:**
-| Node | Class Type | Purpose |
-|------|------------|---------|
-| Checkpoint loader | `CheckpointLoaderSimple` | Load model, CLIP, VAE as tuple |
-| Positive CLIP encode | `CLIPTextEncode` | Encode positive prompt to conditioning |
-| Negative CLIP encode | `CLIPTextEncode` | Encode negative prompt to conditioning |
-| Empty latent | `EmptyLatentImage` | Create blank noise tensor at target resolution |
-| KSampler | `KSampler` | Denoise: runs diffusion loop, produces latent |
-| VAE decode | `VAEDecode` | Latent → pixel image |
-| Save image | `SaveImage` | Write PNG to ComfyUI output dir |
-
-**Complexity:** LOW — this is the base workflow; all other workflows extend it.
+**Hardware constraint:** MacBook Pro M1 Pro 16GB, Blender 5.0.1, EEVEE required (Shader to RGB not available in Cycles).
 
 ---
 
-### 2. img2img — What Changes vs txt2img
+## Feature Categories
 
-**What it is:** Start from an existing image (partially denoised) instead of pure noise. Used for pose-guided generation or style transfer.
-
-**The single difference from txt2img:** Replace `EmptyLatentImage` with `LoadImage` + `VAEEncode`.
-
-```json
-{
-  "8": { "class_type": "LoadImage",
-         "inputs": { "image": "pose_reference.png", "upload": "image" } },
-  "9": { "class_type": "VAEEncode",
-         "inputs": { "pixels": ["8", 0], "vae": ["1", 2] } }
-}
-```
-
-Then in KSampler, wire `latent_image: ["9", 0]` instead of `["4", 0]`.
-
-**Denoising strength** is the `denoise` parameter on KSampler (0.0–1.0):
-- `1.0` = pure noise, ignores input image content entirely (same as txt2img)
-- `0.75` = moderate influence from input image; good for pose-guided re-drawing
-- `0.5` = strong image preservation, only style/detail changes
-- `0.3–0.4` = image is barely changed; subtle style transfer
-
-**For pose conditioning on character panels:** Use `denoise: 0.65–0.80`. Lower values preserve the reference pose shape; higher values give the model more creative freedom to interpret the prompt.
-
-**Practical use in this pipeline:** When generating a panel where Spyke is in a known pose (e.g., an action pose from ControlNet skeleton), provide a rough pose sketch or previous panel as the `img2img` source. This constrains the spatial composition while the LoRA handles character appearance.
-
-**Complexity:** LOW — 2 additional nodes, one parameter change in KSampler.
+1. **Model Quality** — mesh refinement that makes blockout render-ready
+2. **Posing** — script-driven pose library for panel automation
+3. **Rendering** — toon shader config, outline systems, camera management
+4. **Integration** — TypeScript pipeline connection, file I/O
+5. **Backgrounds** — 3D environments and stylized alternatives
 
 ---
 
-### 3. ControlNet OpenPose — Wiring Pose Conditioning
+## Table Stakes (Users Expect These)
 
-**What it is:** An auxiliary neural network that conditions image generation on structural information (skeleton/pose) extracted from a reference image. Uses a separate ControlNet model file.
+Features required for a functional Blender 3D manga pipeline. Without these, the pipeline cannot produce panels that look better than AI generation.
 
-**How it works:**
-1. A pose reference image (real photo, 3D render, or stick figure) is passed through a preprocessor that extracts the OpenPose skeleton (JSON with 18 body keypoints).
-2. The skeleton is then passed to the ControlNet model at inference time alongside the main diffusion model.
-3. The generated image respects the extracted pose layout regardless of what the text prompt says about position.
+### Model Quality
 
-**Node graph for ControlNet OpenPose:**
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Proper face topology (eye/mouth loops) | Blockout sphere head cannot deform or render convincing manga face expressions | HIGH | Anime face topology uses distinct edge loops around eyes and mouth — not connected, separated; clear planes with no wrinkle topology. Must be hand-modeled or retopologized over blockout. |
+| Skin/body mesh retopology | Current primitive capsules produce blocky silhouettes; toon shader exposes poor topology as broken shade bands | HIGH | Retopology is 3–5 days of work manually. Blender's built-in Remesh modifier (Voxel or Quad Remesh in 4.x+) can provide a starting point, but edge flow for posing requires manual cleanup around joints. |
+| Weight painting for deformation | Armature is parented to meshes without vertex group assignments; posing will not deform clothing and body together | HIGH | Current `generate_spyke.py` uses `obj.parent = armature` (rigid parent), not skinning. Weight painting assigns each vertex to armature bones so posed limbs drag clothing naturally. Cannot automate this step. |
+| Freestyle outlines configured correctly | Manga outlines are the primary visual signal; wrong settings produce either no lines, too many lines, or inconsistent thickness | MEDIUM | Already scaffolded in `render_setup.py` (2px black Freestyle). Need to tune: crease angle threshold, silhouette-only mode, line thickness variation by distance. Freestyle is controlled via Python API (`bpy.context.scene.render.use_freestyle`). |
+| Transparent background PNG output | Render must output PNG with alpha channel so TypeScript overlay stage can composite over any background | LOW | Already set in render settings. `scene.render.film_transparent = True` + RGBA color depth. Confirmed working in Blender 5.0. EEVEE transparent output is stable but requires `scene.render.image_settings.color_mode = 'RGBA'`. |
+| Consistent camera-to-character framing | Each panel type (full body, upper body, portrait, close-up) needs the character framed appropriately every time | MEDIUM | 6 cameras are scaffolded in `render_setup.py`. Need to verify they frame Spyke correctly at render resolution (800×1200) once meshes are refined. |
 
-```json
-{
-  "10": { "class_type": "LoadImage",
-          "inputs": { "image": "pose_reference.png" } },
-  "11": { "class_type": "OpenposePreprocessor",
-          "inputs": {
-            "image":        ["10", 0],
-            "detect_hand":  "enable",
-            "detect_body":  "enable",
-            "detect_face":  "disable",
-            "resolution":   512
-          }},
-  "12": { "class_type": "ControlNetLoader",
-          "inputs": { "control_net_name": "control_v11p_sd15_openpose.pth" } },
-  "13": { "class_type": "ControlNetApply",
-          "inputs": {
-            "conditioning":    ["2", 0],
-            "control_net":     ["12", 0],
-            "image":           ["11", 0],
-            "strength":        0.8
-          }}
-}
-```
+### Posing
 
-Wire `["13", 0]` as the `positive` input to KSampler instead of `["2", 0]`.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Standing / idle pose | Most dialogue panels use a standing character; without this, every panel is a T-pose | LOW | Already in `render_poses.py` as `standing_relaxed`. Needs validation that it looks correct on refined mesh. |
+| Action / combat poses | Spyke is a fighter — Chapter 1 has sword draw and battle sequences | MEDIUM | `battle_ready` and `drawing_katana` poses exist in `render_poses.py`. Plausibility depends on weight painting quality. Need to validate bone rotations look natural once mesh deforms. |
+| Per-panel pose selection via script | Automation goal: given a panel description, select and render the closest pose without opening Blender | MEDIUM | `render_poses.py` already accepts `--poses <name>` CLI arg. The TypeScript integration layer maps panel metadata to a pose name. Pose selection logic lives in TypeScript, not Blender. |
+| Pose reset between renders | Each batch render must start from a known state; accumulated rotations will corrupt output | LOW | Already implemented in `render_poses.py` via `reset_armature_pose()`. Verify it works in headless mode. |
 
-**Key parameters:**
-| Parameter | Typical Value | Notes |
-|-----------|---------------|-------|
-| `strength` | 0.6–0.9 | How tightly to follow the pose. >0.9 can cause artifacts. 0.7–0.8 is the sweet spot for anime characters. |
-| `resolution` | 512 | Should match model's training resolution (SD 1.5 = 512). |
+### Rendering
 
-**ControlNet model required:** `control_v11p_sd15_openpose.pth` (the `v1.1` series for SD 1.5). File goes in `ComfyUI/models/controlnet/`.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| EEVEE toon shader (Shader to RGB + ColorRamp) | Cel-shaded flat color bands are the manga aesthetic; Principled BSDF produces photorealistic look that clashes with drawn backgrounds | LOW | Already implemented in `manga_shader.py`. Diffuse BSDF → Shader to RGB → ColorRamp (Constant interpolation) → Emission output. Uses `SHADOW_INTENSITY = 0.55`, `HIGHLIGHT_THRESHOLD = 0.45`. Note: Shader to RGB is EEVEE-only; confirmed in Blender 5.0 docs. |
+| 2-band hard shadow (light/shadow only) | Manga uses binary shading — lit area vs shadow, no mid-tones | LOW | Already set via `SHADE_BANDS = 2` in `manga_shader.py`. ColorRamp interpolation = CONSTANT gives hard edge. |
+| Rim light (Fresnel-based edge highlight) | Edge highlighting is standard in anime/manga to separate character from dark backgrounds | LOW | Already in `manga_shader.py` (`RIM_LIGHT_STRENGTH = 0.3`, Fresnel → ColorRamp → Add mix). Tune strength per panel type. |
+| Headless batch rendering via CLI | Pipeline automation requires `blender --background --python script.py` execution without GUI | LOW | Core Blender feature. All scripts are structured for headless mode already. M1 Pro runs EEVEE headless via Metal. Confirmed working in Blender 5.0. |
+| PNG output with correct naming convention | Output files must follow `ch01_p003_v1.png` for downstream TypeScript stages to find them | LOW | `render_poses.py` names files `spyke_{pose}_{view}.png`. Needs to be changed to pipeline naming convention (`ch{ch:02d}_p{page:03d}_v{version}.png`). Add chapter/page/version as CLI args. |
 
-**Preprocessor node class name:** `OpenposePreprocessor` is provided by the `comfyui_controlnet_aux` custom node pack (not built into ComfyUI base). This is the standard community extension for ControlNet preprocessing.
+### Integration
 
-**Pose source options for this pipeline:**
-1. **Manual stick figure:** Draw a rough skeleton in any tool, export as PNG. Preprocessor extracts keypoints.
-2. **Reference panel reuse:** Take a previously approved panel as pose reference, run through preprocessor. Good for maintaining Spyke's fight stance across sequential panels.
-3. **3D pose tool output:** Tools like OpenPose Editor (ComfyUI custom node) or PoseMyArt export pose skeleton images directly.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| TypeScript spawns Blender subprocess | The pipeline's `generate` stage must call Blender headlessly and wait for PNG output | LOW | Node.js `child_process.spawn()` pattern. Call `blender scene.blend --background --python render_panel.py -- --chapter 1 --page 3 --pose battle_ready --camera Cam_ThreeQuarter --output /path/to/output/`. Stream stdout/stderr for logging. |
+| Render output lands in `output/ch-XX/raw/` | Existing overlay and assemble stages expect this path | LOW | Pass `--output` arg to Blender script. Blender script sets `scene.render.filepath`. Integration is straightforward. |
+| Generation log / manifest entry | Existing `generation-log.json` format must be extended to record pose, camera, and .blend file version used | LOW | Extend the TypeScript manifest writer after Blender subprocess exits. Log: `{ model: "blender-eevee", blendFile: "spyke.blend", pose: "battle_ready", camera: "Cam_ThreeQuarter", chapter: 1, page: 3 }`. |
+| Error handling for failed renders | Blender can segfault or exit non-zero on headless render failures; pipeline must detect and report | MEDIUM | Check subprocess exit code. Parse stdout for Blender's `Error:` lines. Retry logic: 1 retry with cleared temp files. |
 
-**Complexity:** MEDIUM — requires installing `comfyui_controlnet_aux` custom nodes and downloading the ControlNet model file (~1.4GB). Node wiring is straightforward once files are in place.
+### Backgrounds
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Transparent background (character-only render) | Dialogue and action panels need character composited over drawn or solid-color backgrounds — not a 3D environment | LOW | Already configured. `film_transparent = True` gives alpha cutout. TypeScript overlay stage composites the PNG over a flat color or texture. This is the default for most panels. |
+| Simple solid/gradient background | Manga commonly uses white, grey, or simple gradient for dialogue panels | LOW | Handled entirely in TypeScript overlay stage (Sharp fills background color before compositing character). No Blender work required. |
 
 ---
 
-## Training Features
+## Differentiators (Competitive Advantage)
 
-### 4. LoRA Training via kohya_ss
+Features beyond the baseline that improve quality, efficiency, or pipeline expressiveness. Not required for Chapter 1 launch, but high value.
 
-**What it is:** LoRA (Low-Rank Adaptation) is a technique that fine-tunes a small adapter matrix on top of a frozen base model. The result is a `.safetensors` file (~10–150MB) that, when applied at inference, biases the model toward the training images.
+### Model Quality
 
-**For this pipeline:** Train a LoRA on images of Spyke so that `<spyke>` trigger word reliably produces his exact appearance (white cloak, asymmetric gloves, ginger hair) regardless of prompt variation.
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Stylized manga face (hand-modeled, not sculpted) | A well-designed anime face reads better at small panel scale than a sculpted realistic face; simpler geometry, cleaner toon shading | HIGH | Anime face topology has: clear cheekbone line visible from angles, minimal mouth loops (style doesn't show laugh lines), flat nose bridge, large simplified eye sockets. Box modeling approach preferred over sculpt-then-retopo for manga characters. 3–7 days of work. |
+| Equipment details (cloak folds, boot buckles, sword pommel) | Adds visual richness to close-up shots; the blockout's flat boxes won't read well in portrait-view panels | MEDIUM | Cloak folds = Loop Cuts + proportional editing to simulate drape. Sword pommel = extrude + bevel. These are targeted detail passes, not full sculpts. 1–2 days. |
+| Custom normal map for toon shading (smooth normals on hard mesh) | Toon shading can look "bumpy" on low-poly mesh; custom normals smooth the shade bands to anime-style gradients | HIGH | Geometry Nodes approach: generate smoothed normals representing simplified mesh silhouette (Blender Studio technique). Makes cel shading look hand-drawn rather than "3D-ish". Requires Geometry Nodes knowledge — HIGH complexity. |
 
-**The training pipeline:**
+### Posing
 
-```
-Reference images → Caption each image → Organize into dataset dirs → Run kohya_ss training → Output .safetensors
-```
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Extended pose library (10+ poses) | Richer variety of manga panel compositions without manual Blender intervention | MEDIUM | Add: sitting, crouching, running, mid-jump, over-shoulder look, reactive surprise, hands-in-pockets. Each pose = a dict of bone rotations in `render_poses.py`. 30–60 min per pose once weight painting is working. |
+| Panel-type→pose mapping table | Defines which pose suits which script event type; enables automated pose selection without per-panel manual choice | LOW | A JSON/YAML lookup: `{ "dialogue": "standing_relaxed", "action": "battle_ready", "draw_katana": "drawing_katana", ... }`. Lives in TypeScript pipeline config. No Blender changes needed. |
+| BVH motion capture import | Free mocap libraries (CMU mocap database, Mixamo) provide hundreds of realistic human poses that can be retargeted to Spyke's rig | MEDIUM | Blender supports BVH import natively (`bpy.ops.import_anim.bvh()`). Requires retargeting the CMU/Mixamo bone hierarchy to Spyke's bone names. The rig in `generate_spyke.py` uses a simple bone naming scheme (`UpperArm.R`, `Thigh.L`, etc.) — retargeting scripts are available in the community. Best for running and dynamic action poses that are hard to keyframe manually. |
+| Pose interpolation for in-between frames | Generate "half-way" poses between two library poses for scenes where exact match doesn't exist | LOW | In Python: linear interpolate bone `rotation_euler` values between two pose dicts. Add `--blend_poses pose_a:pose_b:0.5` CLI arg. Computationally trivial; code complexity LOW. |
 
-**Dataset directory structure for kohya_ss:**
-```
-lora_dataset/
-└── 10_spyke/          ← "<repeats>_<trigger-word>"
-    ├── Spyke_Final_crop_01.png
-    ├── Spyke_Final_crop_01.txt    ← caption file
-    ├── Spyke_Final_crop_02.png
-    ├── Spyke_Final_crop_02.txt
-    └── ...
-```
+### Rendering
 
-The directory prefix `10_` means each image repeats 10 times per epoch. This compensates for having very few training images.
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Grease Pencil Line Art modifier (alternative to Freestyle) | Gives more control over outline style — variable thickness, taper, hand-drawn jitter; Freestyle is all-or-nothing per edge type | MEDIUM | Grease Pencil Line Art modifier reads 3D mesh geometry and generates strokes as a Grease Pencil layer. Can be styled independently per-material. More anime-production-accurate than Freestyle but requires a separate Grease Pencil object in the scene. Avoid running both Freestyle and Line Art simultaneously — they produce duplicate lines. |
+| 3-band shading (light/mid/shadow) | Adds mid-tone for more nuanced fabric shading on cloak and skin | LOW | Change `SHADE_BANDS = 3` in `manga_shader.py` and add a third ColorRamp stop. 10 minutes of config change. Test if it reads well at 800px wide Webtoon format. |
+| Per-material outline thickness control | Different outline weights for costume, body, and equipment create visual hierarchy (anime standard) | MEDIUM | Freestyle line thickness can be set per-material via `LineStyle` objects, or use `bpy.types.FreestyleLineSet` to assign different thickness by collection. Requires splitting objects into collections by outline weight category. |
+| Camera dolly / zoom variants per pose | Portrait shots need tighter framing than wide shots; automate camera distance based on panel type | LOW | Parameterize `Cam_Portrait` and `Cam_UpperBody` focal length and Z-offset in the render script. Pass `--focal-length 85` as a CLI arg. Controls are already accessible via `cam.data.lens`. |
 
-**Core training parameters for SD 1.5 LoRA on M1 Pro:**
-| Parameter | Recommended Value | Notes |
-|-----------|-------------------|-------|
-| `network_dim` (rank) | 32 | 16 is minimal; 64 gives higher quality but larger file |
-| `network_alpha` | 16 | Usually half of `network_dim` |
-| `learning_rate` | 1e-4 | Standard starting point for LoRA |
-| `lr_scheduler` | cosine_with_restarts | Smooth decay |
-| `max_train_steps` | 500–1000 | With 5 images at 10 repeats × 10 epochs = ~500 steps |
-| `train_batch_size` | 1 | M1 Pro 16GB: batch size 1 only |
-| `resolution` | 512 | Match SD 1.5 training resolution |
-| `mixed_precision` | fp16 | Use `bf16` on Apple Silicon if supported |
-| `optimizer` | AdamW or Prodigy | Prodigy is self-tuning; good when unsure of LR |
-| `base_model` | dreamshaper_8.safetensors | Use same checkpoint as inference |
+### Integration
 
-**M1 Pro notes:**
-- kohya_ss supports Metal/MPS backend but support has been variable. As of mid-2025, `--device mps` works for training but is 2–5x slower than CUDA. Expect 30–90 minutes for 500 steps with a single reference image.
-- `--xformers` is CUDA-only; skip it on Apple Silicon
-- Recommend using `accelerate` config set to `mps` device type
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| TypeScript pose selector (script-event → pose name) | Fully automated rendering without per-panel human pose selection | MEDIUM | Parse panel script metadata (action keywords, character state) → lookup pose name → pass to Blender CLI. Requires a structured panel metadata format in the pipeline's existing script stage. |
+| Render queue with progress reporting | For Chapter 1's 28 panels, batch rendering takes 30–60 min; progress visibility is useful | LOW | TypeScript: track submitted/completed counts, log `[render] Panel 3/28 complete (45%)`. No changes needed in Blender scripts. |
+| `.blend` file versioning | Lock the `.blend` file used for each rendered chapter so model changes don't retroactively alter rendered panels | LOW | Copy `spyke.blend` to `spyke_v1.blend` before starting a chapter. Record version in manifest. When re-rendering, use the version-locked file. |
 
-**Complexity:** HIGH — setup requires Python environment separate from the TypeScript pipeline, managing PyTorch/MPS compatibility, and the quality of output depends heavily on dataset size and captioning quality.
+### Backgrounds
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Simple 3D establishing shot environments | Manga establishing shots set scene location; a simple 3D environment (floor plane, building wall, geometry) renders more consistently than drawn backgrounds | HIGH | One environment per major scene location (dojo interior, flooded street, ship deck). Each = a separate `.blend` file. Character is rendered separately with transparent bg, then composited. OR character + environment are rendered together. Compositing approach is simpler. 1–3 days per environment. |
+| HDRI environment lighting for outdoor scenes | HDRI gives accurate outdoor lighting on the character without modeling a sky; affects toon shading shadow direction | LOW | `bpy.data.worlds['World'].node_tree.nodes['Environment Texture'].image = bpy.data.images.load('/path/to/hdri.exr')`. Free HDRIs: Polyhaven. Affects shadow direction on toon shader — useful for consistent sunlight in outdoor panels. |
+| Speed line compositor effect | Manga action panels use radiating speed lines; generate these in Blender compositor or post in Sharp | MEDIUM | Compositor approach: use a radial gradient + noise texture + ColorRamp to generate dynamic speed lines. Alternative: TypeScript overlay stage draws lines using Sharp + SVG overlay (simpler, more controllable). Recommend TypeScript approach — keep Blender focused on character. |
 
 ---
 
-### 5. Dataset Preparation: Image Captioning
-
-**What it is:** Each training image needs a `.txt` caption file that describes the image without describing the unique character features you want the LoRA to learn. The LoRA learns what's unique from visual patterns; the caption helps it learn context (e.g., "standing pose, white background" vs "action pose, dark background").
-
-**Three approaches:**
-
-#### Approach A: WD14 Tagger (Recommended for anime characters)
-
-WD14 (WaifuDiffusion Tagger v1.4) is a danbooru-tag-based classifier trained on anime images. It outputs booru-style tags like `1boy, white_cloak, orange_hair, solo, full_body, sword`.
-
-**Pros:** Fast, automated, native to anime style, understands character art conventions.
-**Cons:** Tags are booru style (underscored, categorical), not natural language. May need manual pruning of tags that describe the trigger character's unique traits (remove `orange_hair` if you want the LoRA to own that feature).
-
-**In ComfyUI workflow context:** WD14 is available as a ComfyUI custom node (`WD14Tagger`). Can be run as a separate captioning pass before training.
-
-**Standard implementation:** Run the tagger, then manually remove tags that are the LoRA's job to learn (character-unique tags). Keep tags that describe pose, background, scene context.
-
-#### Approach B: BLIP / BLIP-2 Captioning
-
-Generates natural language captions: "a manga character in a white cloak standing with a sword on their back."
-
-**Pros:** Natural language output compatible with any SD 1.5 model, easier to edit.
-**Cons:** Less precise for anime-style details; tends to describe generic features, misses booru-specific tags that SD 1.5 anime checkpoints respond to.
-
-**Recommendation for this pipeline:** BLIP is better if using a realistic checkpoint; WD14 Tagger is better if using an anime checkpoint (which is the case here — dreamshaper or AbyssOrangeMix).
-
-#### Approach C: Manual Captioning
-
-Write `.txt` files by hand. For a dataset of 5–15 images, this is 30 minutes of work and produces the highest-quality results.
-
-**Format:** `spyke, manga character, white cloak, ginger hair, standing pose, full body, white background`
-
-Include the trigger word (`spyke`) in every caption. Keep consistent across all images.
-
-**Complexity (all approaches):** LOW for manual; MEDIUM for automated (requires running a tagger model). Manual is the right starting point when the dataset is small.
-
-**Recommendation: Start with manual captioning.** With 1 source image (Spyke_Final.png, 2816x1536), you can generate 4–8 crops at 512px. Write captions by hand. Move to automated tagger if dataset grows beyond 20 images.
-
----
-
-### 6. Source Image Constraints for Spyke LoRA
-
-**Critical finding from project file inspection:**
-
-Only 1 high-quality reference image exists for Spyke training: `Spyke_Final.png` (2816x1536, landscape). The Gemini-generated concept variations exist but show character inconsistency and should NOT be used as training data — they will teach the LoRA the drift, not the canonical design.
-
-**From 1 image, you can generate a usable (small) dataset by:**
-1. Multiple crops at 512x512 and 512x768 from different parts of the image
-2. Horizontal flip (SD 1.5 is not symmetric — flips add variety)
-3. Slight zoom crops (head-only crop, torso crop, full-body crop)
-4. Color jitter / minor augmentations if kohya_ss augmentation options are enabled
-
-**Realistic dataset size from 1 source:** 6–12 images. This is a minimal LoRA dataset. Expect the LoRA to capture broad character identity but not fine asymmetric details. This is still significantly better than the Gemini prompt-only approach.
-
-**Complexity:** MEDIUM — requires writing a crop/augmentation script, not just pointing at existing files.
-
----
-
-## API / Job Management Features
-
-### 7. ComfyUI HTTP API
-
-**What it is:** ComfyUI exposes a REST-style HTTP API when running as a server (`comfyui --listen`). The TypeScript Express service wraps this API.
-
-**Core ComfyUI endpoints:**
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/prompt` | POST | Submit a workflow JSON as a queued job. Returns `{ prompt_id: "uuid" }`. |
-| `/history/{prompt_id}` | GET | Poll job status. Returns output filenames when complete. |
-| `/queue` | GET | See pending + running jobs. |
-| `/interrupt` | POST | Cancel current generation. |
-| `/object_info` | GET | List all available node class types + their input schemas. Use this to verify node names on first run. |
-| `/view` | GET | Download a generated image by filename. Query params: `filename`, `type` (output/input/temp), `subfolder`. |
-| `/upload/image` | POST | Upload an input image (for img2img, ControlNet reference). Returns filename to use in workflow. |
-
-**WebSocket for real-time status:** ComfyUI also provides a WebSocket at `ws://localhost:8188/ws`. Messages include execution progress events. Polling `/history` is simpler for a wrapper service; WebSocket is better if you need progress percentage.
-
-**Complexity:** LOW — standard HTTP client calls. No authentication required for local instance.
-
----
-
-### 8. Job Management Pattern (TypeScript Express Wrapper)
-
-**What it is:** The Express service queues generation requests, submits them to ComfyUI, polls for completion, and returns results.
-
-**Standard polling pattern:**
-
-```typescript
-// POST /generate → submit to ComfyUI → return job ID to client immediately
-async function submitJob(workflowJson: object): Promise<string> {
-  const response = await fetch('http://localhost:8188/prompt', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: workflowJson }),
-  });
-  const { prompt_id } = await response.json();
-  return prompt_id;
-}
-
-// Internal: poll ComfyUI until job finishes
-async function pollUntilComplete(promptId: string): Promise<string[]> {
-  while (true) {
-    const res = await fetch(`http://localhost:8188/history/${promptId}`);
-    const data = await res.json();
-    if (data[promptId]) {
-      // Job complete — extract output filenames
-      const outputs = data[promptId].outputs;
-      const images = Object.values(outputs)
-        .flatMap((node: any) => node.images ?? [])
-        .map((img: any) => img.filename);
-      return images;
-    }
-    await new Promise(resolve => setTimeout(resolve, 1000)); // poll every 1s
-  }
-}
-```
-
-**Job state machine:**
-```
-PENDING → RUNNING → COMPLETE
-                  → FAILED
-```
-
-**In-process job store (sufficient for single-user local service):**
-```typescript
-interface Job {
-  id: string;           // UUID generated by wrapper, maps to ComfyUI prompt_id
-  status: 'pending' | 'running' | 'complete' | 'failed';
-  outputFiles: string[];
-  error?: string;
-  params: GenerateParams;
-  createdAt: string;
-}
-const jobs = new Map<string, Job>();
-```
-
-**API surface (as specified in PROJECT.md):**
-| Endpoint | Method | Request | Response |
-|----------|--------|---------|----------|
-| `/generate` | POST | `{ prompt, seed, modelPreset, loraId, controlnetStrength, ... }` | `{ jobId }` |
-| `/jobs/:id` | GET | — | `{ status, outputFiles?, error? }` |
-| `/train-lora` | POST | `{ datasetPath, triggerWord, steps }` | `{ jobId }` |
-| `/health` | GET | — | `{ status: 'ok', comfyuiReachable: boolean }` |
-
-**Complexity:** LOW for polling pattern; MEDIUM for full job persistence + train-lora endpoint.
-
----
-
-### 9. Output Retrieval and File Integration
-
-**What it is:** After ComfyUI completes a generation, the output image is in ComfyUI's own output directory. The Express wrapper must:
-1. Download/copy the image from ComfyUI's output directory to the pipeline's `output/ch-XX/raw/` directory
-2. Apply the existing pipeline naming convention (`ch01_p003_v2.png`)
-3. Write a manifest entry (reusing existing `generation-log.json` format)
-
-**ComfyUI SaveImage node behavior:** The `SaveImage` node writes to `ComfyUI/output/` by default. Files are named with the `filename_prefix` parameter + a counter suffix (e.g., `ch01_p003_00001_.png`). The `/history` response includes the exact filename.
-
-**Download via ComfyUI API:**
-```
-GET http://localhost:8188/view?filename=ch01_p003_00001_.png&type=output
-```
-Returns raw image bytes.
-
-**Integration with existing manifest system:** The Express wrapper should write the same `GenerationLogEntry` format as the v1.0 pipeline, replacing `model: "gemini-..."` with `model: "dreamshaper_8-lora-spyke_v1"` or similar. This ensures the overlay and assemble stages work unchanged.
-
-**Complexity:** LOW — the manifest format and output conventions already exist; just need a new writer in the Express service.
-
----
-
-## Consistency Features
-
-### 10. Seed Locking
-
-**What it is:** Setting a fixed integer seed in the KSampler node guarantees that the same prompt + same parameters + same seed produces the same output, bit-for-bit. This is the core reproducibility mechanism.
-
-**In ComfyUI workflow JSON:**
-```json
-{
-  "5": {
-    "class_type": "KSampler",
-    "inputs": {
-      "seed": 4815162342,
-      "steps": 20,
-      "cfg": 7.0,
-      "sampler_name": "euler_ancestral",
-      "scheduler": "karras",
-      "denoise": 1.0
-    }
-  }
-}
-```
-
-**Requirements for seed lock to hold:**
-1. **Same seed value** in KSampler inputs
-2. **Same sampler name** (`euler_ancestral`, `dpm_2_ancestral`, `ddim`, etc.) — different samplers produce entirely different images from the same seed
-3. **Same scheduler** (`karras`, `normal`, `exponential`) — scheduler affects noise schedule, which affects image even with same seed
-4. **Same step count** — more/fewer steps = different image
-5. **Same CFG** — scale changes how strongly prompt is applied
-6. **Same model** — different checkpoint = different image
-7. **Same resolution** — `EmptyLatentImage` width/height affect generation
-
-**Sampler recommendation for consistency:** `euler_ancestral` with `karras` scheduler is the most widely-tested SD 1.5 combination. It is also the default in many anime-style checkpoints' training configs. Stick to this pair and document it as the project standard.
-
-**Complexity:** LOW — just documenting and enforcing the parameter contract. The hard part is discipline: every panel generation must store all 6 parameters in the manifest, not just the seed.
-
-**Manifest extension needed:** The existing `GenerationLogEntry` only stores `model`. For v2.0 it needs: `seed`, `sampler`, `scheduler`, `steps`, `cfg`, `denoise`, `loraId`, `controlnetStrength`. These are needed to reproduce a specific panel later.
-
----
-
-### 11. LoRA Loading at Inference Time
-
-**What it is:** Apply a trained LoRA `.safetensors` file during generation to bias the model toward the trained character appearance.
-
-**In ComfyUI workflow JSON:** A `LoraLoader` node sits between the checkpoint loader and CLIP/KSampler:
-
-```json
-{
-  "1": { "class_type": "CheckpointLoaderSimple",
-         "inputs": { "ckpt_name": "dreamshaper_8.safetensors" } },
-  "14": { "class_type": "LoraLoader",
-          "inputs": {
-            "model":           ["1", 0],
-            "clip":            ["1", 1],
-            "lora_name":       "spyke_v1.safetensors",
-            "strength_model":  0.8,
-            "strength_clip":   0.8
-          }
-  },
-  "2": { "class_type": "CLIPTextEncode",
-         "inputs": { "text": "spyke, ...", "clip": ["14", 1] } }
-}
-```
-
-The LoraLoader outputs a modified `(model, clip)` pair. All downstream nodes use the LoRA-modified model/CLIP instead of the raw checkpoint outputs.
-
-**Key parameters:**
-| Parameter | Typical Value | Effect |
-|-----------|---------------|--------|
-| `strength_model` | 0.6–1.0 | How strongly the LoRA biases the U-Net (image appearance) |
-| `strength_clip` | 0.6–0.9 | How strongly the LoRA biases CLIP (prompt interpretation) |
-
-**Trigger word placement:** The trigger word (`spyke`) must appear in the positive CLIP prompt. Without it, the LoRA has reduced influence even with high strength. Recommended placement: at the very start of the positive prompt.
-
-**Multiple LoRAs:** You can chain `LoraLoader` nodes (output of one becomes input of next). For v2.0, the plan is one LoRA per major character. When June appears in a panel, her LoRA is also loaded. Stacking 2–3 LoRAs at `strength_model: 0.5–0.7` each is feasible on M1 Pro 16GB.
-
-**LoRA file location:** `ComfyUI/models/loras/spyke_v1.safetensors`
-
-**Complexity:** LOW — one additional node in the workflow graph. The hard work is training the LoRA, not loading it.
-
----
-
-### 12. Model Preset Switching (Anime vs Realistic Checkpoints)
-
-**What it is:** Different checkpoint `.safetensors` files produce fundamentally different visual styles. The pipeline supports named presets that swap the loaded checkpoint without changing the rest of the workflow.
-
-**What changes between presets:**
-
-Only the `CheckpointLoaderSimple` node's `ckpt_name` input changes. Everything else — LoRA, ControlNet, sampler — remains identical.
-
-| Preset | Checkpoint File | Style |
-|--------|----------------|-------|
-| `anime` | `AbyssOrangeMix3_AOM3.safetensors` or `counterfeitV30.safetensors` | Anime cel-shaded, high-contrast lines, vivid colors — matches Plasma's target style |
-| `realistic` | `realisticVisionV51.safetensors` or `dreamshaper_8.safetensors` | Photorealistic or painterly. Useful for backgrounds, concept reference |
-| `mix` | `dreamshaper_8.safetensors` | Semi-realistic with anime leanings. Default for Plasma characters |
-
-**IMPORTANT for M1 Pro 16GB:** Each checkpoint is ~2–4GB in VRAM. Model loading is the most memory-intensive step. ComfyUI caches the loaded model between jobs — you pay the load cost once per server restart, not per generation. If you switch presets frequently, you pay the re-load cost each time (~15–30s on M1 Pro).
-
-**Recommendation:** For v2.0, commit to one checkpoint for character generation (`dreamshaper_8` or an anime variant) and test thoroughly before adding preset switching. Multiple presets add workflow complexity with limited benefit in the initial milestone. Add preset switching in v2.1 once the core LoRA workflow is stable.
-
-**Complexity:** LOW to implement (one parameter swap); MEDIUM to manage correctly (different checkpoints require different LoRAs — a Spyke LoRA trained on dreamshaper won't work as well on a different base checkpoint).
-
----
-
-## Feature Priority Table
-
-| Feature | Category | Complexity | Dependencies | Table Stakes? |
-|---------|----------|------------|--------------|---------------|
-| ComfyUI server setup (Metal/MPS) | Infrastructure | MEDIUM | None | YES |
-| txt2img workflow via API | Inference | LOW | ComfyUI running | YES |
-| Job polling pattern (`/jobs/:id`) | API | LOW | ComfyUI API | YES |
-| Seed locking + manifest extension | Consistency | LOW | txt2img workflow | YES |
-| LoRA loading at inference | Consistency | LOW | Trained LoRA file | YES |
-| Output file retrieval + manifest write | API | LOW | Job polling | YES |
-| `GET /health` endpoint | API | LOW | Express service | YES |
-| Spyke dataset preparation (crop + caption) | Training | MEDIUM | Spyke_Final.png | YES (before LoRA training) |
-| LoRA training via kohya_ss | Training | HIGH | Dataset prepared, kohya_ss installed | YES (for consistency) |
-| img2img workflow | Inference | LOW | txt2img + VAEEncode node | DIFFERENTIATOR |
-| ControlNet OpenPose (model download + node) | Inference | MEDIUM | `comfyui_controlnet_aux` custom nodes | DIFFERENTIATOR |
-| ControlNet pose reference wiring | Inference | LOW | ControlNet model file | DIFFERENTIATOR |
-| Manual captioning for dataset | Training | LOW | Cropped images | YES (before training) |
-| WD14 Tagger auto-captioning | Training | MEDIUM | Custom ComfyUI node | DIFFERENTIATOR |
-| `POST /train-lora` endpoint | API | MEDIUM | kohya_ss installed | YES (for training workflow) |
-| Model preset switching | Inference | LOW | Multiple checkpoints downloaded | DIFFERENTIATOR |
-| Multi-LoRA stacking (June, Draster) | Consistency | MEDIUM | Per-character LoRA trained | DIFFERENTIATOR |
-| June / Draster LoRA training | Training | HIGH | Per-character reference images | DIFFERENTIATOR |
-| Progress via WebSocket | API | MEDIUM | None | DEFER |
-| ComfyUI node editor UI | Infrastructure | N/A | — | ANTI-FEATURE |
-
----
-
-## Table Stakes vs Differentiators
-
-### Table Stakes (Must have for any working output)
-
-The pipeline cannot produce a single panel without these. They form the critical path.
-
-1. **ComfyUI server running on M1 Pro (Metal/MPS)** — no generation happens without this
-2. **txt2img workflow JSON** — baseline generation
-3. **Job management API** — async submission + polling (client polls, service manages state)
-4. **Spyke dataset prep + LoRA training** — the entire reason for switching from Gemini; without the LoRA, character consistency is not better than Gemini
-5. **Seed locking** — if seeds are not stored + reproduced, panels cannot be regenerated after approval
-6. **Output file integration** — images must land in `output/ch-XX/raw/` with correct naming so v1.0 overlay and assemble stages work unchanged
-
-### Differentiators (What makes this better than Gemini)
-
-These are the features that justify the v2.0 pivot. Without them, ComfyUI offers no advantage.
-
-1. **LoRA character consistency** — Spyke's asymmetric glove setup, exact cloak length, and ginger hair become deterministic, not probabilistic
-2. **Seed locking for panel reproduction** — Any approved panel can be exactly reproduced; no "generate and hope"
-3. **ControlNet OpenPose** — Pose-anchored composition means sequential panels can maintain spatial continuity (Spyke's swing follows through in the next panel)
-4. **No per-call API cost** — 28 pages × 3 iterations per page = 84 generations, free after hardware investment
-
----
-
-## Anti-Features / Scope Warnings
-
-### Anti-Feature 1: ComfyUI Web UI / Node Editor
-
-**Looks useful:** "We can design workflows visually."
-
-**Problem:** The workflow JSON must be programmatically templated by the TypeScript service. If workflow design relies on the ComfyUI GUI, the service cannot swap models, seeds, or LoRA IDs at runtime. The GUI is fine for initial workflow design and debugging, but must never be the runtime path.
-
-**What to do instead:** Design 2–3 workflow templates (txt2img, img2img, img2img+ControlNet) in the GUI, export their JSON, then parameterize them in TypeScript by slot-filling node inputs programmatically.
-
----
-
-### Anti-Feature 2: SDXL / Flux / SDXL-Turbo Models
-
-**Looks useful:** "Flux produces better images."
-
-**Problem:** M1 Pro 16GB cannot run SDXL at 512px batch size 1 without significant degradation of speed, and training an SDXL LoRA locally is borderline infeasible. `PROJECT.md` explicitly calls this out as out of scope. Adding SDXL model support adds checkpoint management complexity with no local hardware benefit.
-
-**What to do instead:** Stay on SD 1.5. If quality ceiling is hit, document SDXL/Flux as an upgrade path for future hardware (M3 Max or cloud GPU), not a v2.0 item.
-
----
-
-### Anti-Feature 3: Automated Pose Generation (OpenPose Skeleton Synthesis)
-
-**Looks useful:** "Auto-generate the correct pose for each panel from the script description."
-
-**Problem:** This requires either a pose estimation model running on character descriptions (language→skeleton) or integrating a 3D poser tool. Both are significant scope additions. The manual path — use a reference photo or previous panel as the pose source — is adequate for v2.0.
-
-**What to do instead:** Keep pose reference images manual. Store them in `output/ch-XX/poses/` alongside the generation. If volume grows, re-evaluate in v2.1.
-
----
-
-### Anti-Feature 4: LoRA Training for All Characters Before v2.0 Launch
-
-**Looks useful:** "Train Spyke, June, and Draster LoRAs before shipping v2.0."
-
-**Problem:** June and Draster have zero dedicated reference images (only Gemini-generated concept images exist, which show character drift and should not be training data). Training LoRAs on bad reference data produces a bad LoRA that's worse than no LoRA. Training June/Draster requires first creating canonical reference art — that's a separate creative task.
-
-**What to do instead:** v2.0 ships with one Spyke LoRA only. June/Draster LoRAs are a v2.1 item gated on creating clean reference art first.
-
----
-
-### Anti-Feature 5: Real-time Progress Streaming to Pipeline CLI
-
-**Looks useful:** "Show a generation progress bar in the pipeline terminal."
-
-**Problem:** Requires implementing WebSocket client in the TypeScript service + threading/streaming the progress back to the CLI caller. The job polling pattern (`GET /jobs/:id` on 1s interval) is sufficient for a local single-user pipeline. Progress bars add complexity without meaningful workflow benefit when generation takes 30–90 seconds.
-
-**What to do instead:** Log `[generate] Job submitted: {id}` and `[generate] Polling...` to stdout. Return the output path when done.
-
----
-
-### Anti-Feature 6: Parallel Batch Generation
-
-**Looks useful:** "Generate all 28 pages in parallel."
-
-**Problem:** ComfyUI processes one job at a time by default on M1 Pro (GPU is shared resource). Submitting multiple jobs simultaneously queues them; they do not run in parallel. Parallel HTTP requests to the service just result in a longer queue, not faster completion. Worse, it can cause memory pressure if multiple large models are being swapped.
-
-**What to do instead:** Sequential generation per chapter. The Express service's job queue handles order naturally via ComfyUI's own queue. Add a `--pages 1-5` flag to generate subsets, not parallelism.
+## Anti-Features (Commonly Requested, Often Problematic)
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Cycles render engine instead of EEVEE | "Cycles produces better lighting" | Cycles does NOT support the Shader to RGB node, which is the entire basis of the toon shader system in `manga_shader.py`. Switching to Cycles breaks the cel-shading pipeline entirely and requires rebuilding the shader graph from scratch using Toon BSDF (less configurable). Also 10–20x slower on M1 Pro. | Stay on EEVEE for all character rendering. Cycles is only relevant if switching to a path-traced background environment, which can be composited separately. |
+| Full rig with IK (inverse kinematics) | "IK makes posing easier" | IK is a real-time interactive tool — useful in the Blender UI, but adds complexity to script-driven posing. Setting IK target positions programmatically requires solving the IK constraint, which can produce unexpected results in headless mode. The current FK (forward kinematics) approach in `render_poses.py` — setting bone rotations directly — is deterministic and scriptable. | Keep FK posing for script-driven rendering. IK is only worth adding if a human is interactively adjusting poses in the Blender UI before export. |
+| Blender GUI workflow (open Blender, pose manually, render) | "Manual posing gives more control" | Destroys automation. Every panel that requires opening Blender UI breaks the pipeline's end-to-end automation goal. The entire v3.0 motivation is `script → render → output` without manual steps per panel. | Define all poses as code in `render_poses.py`. Use the Blender UI only for initial pose authoring (save to file), then export the rotation values into the POSES dict. |
+| Auto-retopology with Blender's Remesh modifier | "Remesh is automatic — saves time" | Voxel Remesh and Quad Remesh produce topology that does not follow edge flow required for deformation. Arms, legs, and face joints become irregular polygons that cause pinching artifacts when posed. The toon shader amplifies these artifacts as broken shade bands. | Use Remesh as a base mesh only, then manually retopologize the critical deformation areas (shoulder, elbow, knee, face) using Blender's built-in retopology tools or RetopoFlow addon. Accept that retopology is a 3–5 day human task — it cannot be fully automated for a poseable character. |
+| Multiple characters in the same .blend scene | "Render Spyke and June in one shot" | Adds model management complexity, scene state management between renders, and potential memory issues (M1 Pro 16GB). For v3.0, the goal is Spyke only. | Render characters separately with transparent backgrounds, composite in TypeScript overlay stage (Sharp `composite` operation). This keeps each .blend file focused on one character and makes it easy to update one character without touching the other's render setup. |
+| Blender's built-in NLA / animation system for poses | "Store poses as NLA strips for reuse" | NLA editor is designed for timeline animation, not single-frame pose extraction. Script-driven pose selection from a Python dict is simpler, more readable, and more robust for headless batch rendering. | Keep poses as Python dicts in `render_poses.py`. Each pose is a `dict[str, tuple[float, float, float]]` of bone rotations. This is already implemented and working. |
+| Realistic-style 3D backgrounds (full environments) | "Full 3D scenes for every panel" | Full 3D environment modeling is a significant separate skill and time investment. M1 Pro 16GB renders complex scenes slowly in EEVEE. Complex geometry in establishing shots does not add enough value over stylized 2D backgrounds to justify the cost in v3.0. | Use 3D environments only for 2–3 key establishing shots per chapter. Use flat color + stylized 2D elements (drawn by hand or AI-generated separately) for dialogue and action panels. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Spyke_Final.png reference image]
-    └──crop + augment──> [Training dataset (6-12 images + .txt captions)]
-                              └──kohya_ss train──> [spyke_v1.safetensors]
-                                                       └──placed in ComfyUI/models/loras/
-                                                            └──enables──> [LoRA loading at inference]
+[generate_spyke.py blockout]
+    └──is base for──> [Retopology + sculpt (face, body)]
+                          └──enables──> [Weight painting (joint deformation)]
+                                            └──enables──> [Pose plausibility (clothing follows body)]
+                                                              └──enables──> [Extended pose library]
 
-[ComfyUI server running]
-    └──provides──> [txt2img workflow]
-                       └──extends──> [img2img workflow]  (add LoadImage + VAEEncode)
-                       └──extends──> [ControlNet OpenPose] (add preprocessor + ControlNetApply)
-                       └──extends──> [LoRA loading] (add LoraLoader node)
+[manga_shader.py (already working)]
+    └──applied to──> [Refined mesh materials]
+                          └──validates──> [Shade band quality on refined topology]
 
-[Express service]
-    └──wraps──> [ComfyUI HTTP API]
-                    └──provides──> [POST /generate]
-                    └──provides──> [GET /jobs/:id]
-                    └──provides──> [GET /health]
-    └──wraps──> [kohya_ss CLI]
-                    └──provides──> [POST /train-lora]
+[render_poses.py (already working)]
+    └──requires──> [Weight painting complete] (for clothing deformation to work)
+    └──extended by──> [Extended pose library (more poses)]
+    └──extended by──> [Panel naming convention (--chapter --page --version args)]
 
-[Output retrieval]
-    └──depends on──> [Job polling complete]
-    └──writes to──> [output/ch-XX/raw/ + generation-log.json]
-    └──consumed by──> [v1.0 overlay stage] (unchanged)
-    └──consumed by──> [v1.0 assemble stage] (unchanged)
+[TypeScript generate stage]
+    └──spawns──> [Blender subprocess]
+                      └──executes──> [render_poses.py with pose + camera args]
+                      └──outputs──> [PNG to output/ch-XX/raw/]
+                      └──result consumed by──> [overlay stage (unchanged)]
+                                                    └──consumed by──> [assemble stage (unchanged)]
+
+[3D background scenes]
+    └──separate .blend files──> [Rendered independently with transparent character composite]
+    └──or──> [Character rendered with transparent bg, composited in TypeScript overlay stage]
+
+[Grease Pencil Line Art]
+    └──conflicts──> [Freestyle outlines] (both active = duplicate lines; pick one)
 ```
 
-**Critical path (minimum to generate one panel with LoRA consistency):**
-1. ComfyUI server running with SD 1.5 checkpoint loaded
-2. `spyke_v1.safetensors` trained and placed in `ComfyUI/models/loras/`
-3. Express service with `POST /generate` + `GET /jobs/:id`
-4. Output file integration writing to `output/ch-XX/raw/`
+### Dependency Notes
 
-ControlNet is NOT on the critical path for v2.0 launch. It is a parallel track that can be added once LoRA generation is working.
+- **Retopology requires blockout:** The blockout primitives are the sculpting base. Run `generate_spyke.py` first to produce `spyke.blend`, then open in Blender for manual retopology.
+- **Weight painting requires retopology:** Painting vertex weights on blocky capsule primitives produces poor deformation. Retopology must come first.
+- **Pose plausibility requires weight painting:** The current `parent_to_armature()` in `generate_spyke.py` uses rigid parenting. Poses exist in `render_poses.py` but clothing will not deform naturally until weight painting is done. T-pose and near-neutral poses will look acceptable; wide action poses will reveal the rigid parenting.
+- **Pipeline integration is independent:** TypeScript subprocess spawning can be implemented before mesh refinement is complete. Use the current blockout for integration testing.
+- **Freestyle and Grease Pencil Line Art are mutually exclusive:** Use one outline system. Freestyle is simpler (already configured), Line Art gives more artistic control. Decision must be made before extended pose rendering.
+
+---
+
+## MVP Definition
+
+### v3.0 Launch With (Chapter 1 end-to-end)
+
+- [ ] **Face retopology** — Spyke's head reads as a manga character, not a UV sphere. Eye sockets, mouth region, clear face planes. Without this, close-up panels look wrong.
+- [ ] **Weight painting (critical joints)** — Shoulder, elbow, hip, knee at minimum. Spine and neck secondary. Standing and mild action poses must deform without tearing.
+- [ ] **Verified toon shader output** — Run `manga_shader.py` on refined mesh, confirm shade bands look correct. Tune `SHADOW_INTENSITY` and `HIGHLIGHT_THRESHOLD` against the Webtoon format.
+- [ ] **Freestyle outlines verified** — Outlines appear on silhouette, 2px weight reads correctly at 800px wide. Crease angle tuned to not pick up internal geometry lines.
+- [ ] **Standing + 2 action poses validated** — `standing_relaxed`, `battle_ready`, `drawing_katana` produce plausible renders after weight painting.
+- [ ] **Pipeline naming convention** — Add `--chapter`, `--page`, `--version` CLI args to `render_poses.py`. Output to `output/ch{ch:02d}/raw/ch{ch:02d}_p{page:03d}_v{version}.png`.
+- [ ] **TypeScript subprocess integration** — `generate` stage replaced: spawn `blender spyke.blend --background --python render_poses.py -- --chapter X --page Y --pose Z --camera W --output /path/`. Wait for exit, check code, write manifest entry.
+- [ ] **Transparent bg compositing verified** — One complete panel end-to-end: Blender render → TypeScript overlay (SVG balloons) → Webtoon assemble. Confirm alpha compositing works.
+
+### Add After Validation (v3.0.x)
+
+- [ ] **Extended pose library (5 more poses)** — Once weight painting is solid, adding poses is cheap. Add after first successful Chapter 1 render.
+- [ ] **Panel-type → pose mapping** — TypeScript config lookup. Reduces per-panel manual pose selection to zero.
+- [ ] **3D establishing shot (1 environment)** — One scene (dojo interior or flooded street) for Chapter 1's opening panels. Validate the composite workflow.
+- [ ] **Equipment detail pass** — Cloak folds, sword pommel detail, boot buckles. Do after pipeline is proven; these affect close-up quality, not wide shots.
+
+### Future Consideration (v3.1+)
+
+- [ ] **BVH motion capture retargeting** — Once pose library feels limiting. Requires CMU/Mixamo retargeting script.
+- [ ] **Grease Pencil Line Art** — If Freestyle outlines feel too mechanical. Higher control, higher setup cost.
+- [ ] **Custom normals for toon shading** — If shade bands look "3D-ish" on refined mesh. Geometry Nodes technique. High complexity.
+- [ ] **Additional character models** — June, Draster. Follow the same blockout → refine → pose pipeline. One character at a time.
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Face retopology | HIGH | HIGH | P1 |
+| Weight painting (critical joints) | HIGH | HIGH | P1 |
+| Standing + action poses validated | HIGH | MEDIUM | P1 |
+| Freestyle outlines verified | HIGH | LOW | P1 |
+| Pipeline naming convention | HIGH | LOW | P1 |
+| TypeScript subprocess integration | HIGH | LOW | P1 |
+| Transparent bg compositing | HIGH | LOW | P1 |
+| Toon shader tuning | MEDIUM | LOW | P1 |
+| Extended pose library | HIGH | MEDIUM | P2 |
+| Panel-type → pose mapping | MEDIUM | LOW | P2 |
+| 3D establishing shot (1 environment) | HIGH | HIGH | P2 |
+| Equipment detail pass (cloak folds etc.) | MEDIUM | MEDIUM | P2 |
+| Camera dolly variants per panel type | LOW | LOW | P2 |
+| .blend file versioning | MEDIUM | LOW | P2 |
+| BVH motion capture import | MEDIUM | MEDIUM | P3 |
+| Grease Pencil Line Art | MEDIUM | MEDIUM | P3 |
+| Custom normals for toon shading | MEDIUM | HIGH | P3 |
+| Per-material outline thickness | LOW | MEDIUM | P3 |
+| 3-band shading (light/mid/shadow) | LOW | LOW | P3 |
+| Speed line compositor effect | LOW | MEDIUM | P3 |
+
+**Priority key:**
+- P1: Must have for Chapter 1 end-to-end validation
+- P2: Should have — add after first successful render
+- P3: Nice to have — future milestone consideration
+
+---
+
+## Blender 5.0 / EEVEE Next Specific Notes
+
+**Shader to RGB is confirmed available in Blender 5.0 EEVEE.** The `manga_shader.py` approach (Diffuse BSDF → Shader to RGB → ColorRamp CONSTANT → Emission) works in both EEVEE and EEVEE Next (Blender 4.x+). HIGH confidence.
+
+**NPR improvements are planned but NOT yet in Blender 5.0.** The Blender Developers Blog (May 2025) confirmed the NPR project (multi-stage compositing, anti-aliased NPR output) begins development _after_ Blender 5.0. These features are not available in Blender 5.0.1 (the project's version). Do not design around them. MEDIUM confidence on timeline.
+
+**Freestyle is stable in Blender 5.0.** The Freestyle system is a mature rendering feature with full Python API control. Nothing in Blender 5.0 breaks the current `render_setup.py` Freestyle configuration.
+
+**Metal GPU (EEVEE on M1 Pro):** Metal backend for EEVEE viewport was shipped in Blender 3.5 and is stable on M1. EEVEE render performance via Metal is significantly improved over the OpenGL backend (up to 5x on M1 Max; M1 Pro improvement is proportional). Headless EEVEE render on M1 Pro works without the Metal viewport — it uses the software renderer. For batch headless rendering, expect ~5–15 seconds per panel at 800×1200 (EEVEE is fast compared to Cycles).
+
+**`BLENDER_EEVEE_NEXT` vs `BLENDER_EEVEE`:** The `manga_shader.py` already handles this:
+```python
+scene.render.engine = 'BLENDER_EEVEE_NEXT' if bpy.app.version >= (4, 0, 0) else 'BLENDER_EEVEE'
+```
+Blender 5.0.1 uses `BLENDER_EEVEE_NEXT`. This is correct.
 
 ---
 
 ## Sources
 
-- ComfyUI workflow JSON structure: Training knowledge of ComfyUI API documentation and node architecture (MEDIUM confidence — node class names verified via common community usage patterns; verify against `GET /object_info` on running instance)
-- kohya_ss LoRA training parameters: Training knowledge of SD 1.5 LoRA training community standards including `network_dim`, `network_alpha`, M1/MPS considerations (MEDIUM confidence — core parameters are stable; verify exact CLI flags against kohya_ss current release)
-- KSampler seed determinism requirements: Training knowledge of Stable Diffusion sampling mechanics (HIGH confidence — sampler/scheduler/seed contract is fundamental to SD architecture)
-- WD14 Tagger / BLIP captioning approaches: Training knowledge of LoRA training dataset preparation practices (MEDIUM confidence)
-- ComfyUI HTTP API endpoints (`/prompt`, `/history`, `/view`): Training knowledge of ComfyUI's REST API (MEDIUM confidence — endpoint paths are stable; verify WebSocket path and `/upload/image` behavior on running instance)
-- Spyke_Final.png dimensions and file count: Verified by direct inspection of `/Users/dondemetrius/Code/plasma/03_manga/concept/` (HIGH confidence)
-- `comfyui_controlnet_aux` custom node pack: Training knowledge of the standard ComfyUI ControlNet extension (MEDIUM confidence — verify installation method and preprocessor node names against current GitHub release)
-- M1 Pro 16GB constraints (batch size, MPS support): Training knowledge of Apple Silicon PyTorch/Metal performance characteristics (MEDIUM confidence — MPS support has improved through 2024-2025; verify current kohya_ss MPS status at install time)
-- PROJECT.md v2.0 requirements: Verified by direct inspection (HIGH confidence)
-- GenerationLogEntry interface: Verified by direct inspection of `pipeline/src/types/generation.ts` (HIGH confidence)
+- Blender NPR Project announcement (May 2025): [NPR Project — Blender Developers Blog](https://code.blender.org/2025/05/npr-project/) — confirms NPR improvements are post-5.0, MEDIUM confidence on timeline
+- Blender 5.0 Freestyle documentation: [Freestyle — Blender 5.0 Manual](https://docs.blender.org/manual/en/latest/render/freestyle/index.html) — confirms Freestyle stability, HIGH confidence
+- Blender 5.0 Shader to RGB documentation: [Shader To RGB Node — Blender 5.0 Manual](https://docs.blender.org/manual/en/latest/render/shader_nodes/color/shader_to_rgb.html) — EEVEE-only confirmed, HIGH confidence
+- Blender 5.0 Line Art Modifier: [Line Art Modifier — Blender 5.0 Manual](https://docs.blender.org/manual/en/latest/grease_pencil/modifiers/generate/line_art.html) — Grease Pencil alternative to Freestyle, HIGH confidence
+- Blender Metal viewport announcement: [Introducing the Blender Metal Viewport — Blender Developers Blog](https://code.blender.org/2023/01/introducing-the-blender-metal-viewport/) — M1 EEVEE performance, HIGH confidence
+- Anime face topology: [4 Categories of Face Topology in Anime 3D Model](https://animecglab.com/en/4-categories-of-anime-3d-model/) — anime topology conventions, MEDIUM confidence
+- Cartoon Character Shading with Geometry Nodes: [Blender Studio Blog](https://studio.blender.org/blog/cartoon-character-shading-with-geometry-nodes/) — custom normals technique, HIGH confidence (official Blender Studio source)
+- Blender Scripting for Animation Pipelines: [CG-Wire Blog 2026](https://blog.cg-wire.com/blender-scripting-animation/) — headless automation patterns, MEDIUM confidence
+- OkTopo Remesher (2025): [Jettelly Blog](https://jettelly.com/blog/oktopo-remesher-automatic-head-retopology-in-blender) — automatic retopology tool, LOW confidence (not used in this pipeline)
+- Shader to RGB limitations: [Blender Artists Community — Experiments with NPR/Toon Shading in Eevee](https://blenderartists.org/t/experiments-with-npr-toon-shading-in-eevee/1139213) — EEVEE-specific constraints, MEDIUM confidence
+- Node.js child_process for Blender integration: Blender_farm NodeJS project and standard Node.js spawn() docs — HIGH confidence (standard Node.js API)
+- Existing codebase: `3d_models/` scripts directly inspected — HIGH confidence
 
 ---
 
-*Feature research for: ComfyUI + LoRA image generation pipeline (Plasma v2.0)*
-*Researched: 2026-02-19*
-*Confidence: MEDIUM — core architecture patterns HIGH confidence; specific node names and M1 MPS support status need live verification*
+*Feature research for: Blender 3D manga rendering pipeline (Plasma v3.0)*
+*Researched: 2026-02-25*
+*Confidence: HIGH for Blender API and EEVEE toon shading; MEDIUM for mesh refinement workflows; LOW for Blender 5.0 NPR roadmap*
