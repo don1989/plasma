@@ -182,7 +182,8 @@ def setup_freestyle():
     scene = bpy.context.scene
     view_layer = bpy.context.view_layer
 
-    # Enable Freestyle
+    # Enable Freestyle globally on scene render AND on view layer
+    scene.render.use_freestyle = True
     view_layer.use_freestyle = True
 
     # Configure Freestyle settings
