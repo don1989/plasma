@@ -1,11 +1,11 @@
 /**
- * Kling AI panel generation stage.
+ * Kling AI panel generation stage (via fal.ai).
  *
- * Generates manga panels using Kling AI with character reference images
- * for visual consistency. Supports three modes:
+ * Generates manga panels using Kling AI through fal.ai's pay-per-use API
+ * with character reference images for visual consistency. Supports three modes:
  *
- * 1. Single-ref: One character reference image (subject/face mode)
- * 2. Multi-ref: Multiple character references via Kling Omni Image
+ * 1. Single-ref: One character reference image
+ * 2. Multi-ref: Multiple character references via Kling O1
  * 3. No-ref: Text-only generation (backgrounds, establishing shots)
  *
  * Generated images are saved to output/ch-NN/raw/kling/
@@ -18,8 +18,8 @@ import { parse as parseYaml } from 'yaml';
 
 import { PATHS } from '../config/paths.js';
 import {
-  createKlingClient,
-  validateKlingCredentials,
+  configureFal,
+  uploadToFal,
   generatePanel,
   generatePanelWithReference,
   generatePanelMultiRef,
@@ -27,7 +27,6 @@ import {
 } from '../generation/kling-client.js';
 import {
   loadCharacterReferences,
-  buildMultiRefPrompt,
 } from '../generation/references.js';
 import { loadEnvFile } from '../utils/env.js';
 
@@ -43,8 +42,6 @@ export interface KlingGenerateOptions {
   pages?: number[];
   /** Character IDs to include as references. */
   characters?: string[];
-  /** Override model name. */
-  model?: string;
   /** Override aspect ratio. */
   aspectRatio?: string;
   /** Reference fidelity 0-1 (default: 0.8). */
@@ -80,7 +77,7 @@ async function readPagePrompt(chapter: number, page: number): Promise<string | n
 }
 
 /**
- * Run the Kling AI generation stage.
+ * Run the Kling AI generation stage via fal.ai.
  */
 export async function runKlingGenerate(options: KlingGenerateOptions): Promise<StageResult> {
   const start = Date.now();
@@ -93,15 +90,13 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
     if (!process.env[k]) process.env[k] = v;
   }
 
-  // Validate credentials
-  let credentials;
+  // Configure fal.ai credentials
   try {
-    credentials = validateKlingCredentials();
+    configureFal();
   } catch (e) {
     return { success: false, duration: Date.now() - start, outputFiles: [], errors: [(e as Error).message] };
   }
 
-  const api = createKlingClient(credentials);
   const chapterPaths = PATHS.chapterOutput(options.chapter);
   const klingRawDir = path.join(chapterPaths.raw, 'kling');
   await mkdir(klingRawDir, { recursive: true });
@@ -133,15 +128,30 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
     };
   }
 
-  // Load character references
+  // Load character references and upload to fal.ai storage
   const charRefs = new Map<string, string[]>();
+  const charRefUrls = new Map<string, string[]>();
+
   if (options.characters && options.characters.length > 0) {
     for (const charId of options.characters) {
       const refs = await loadCharacterReferences(charId);
       if (refs.length > 0) {
         charRefs.set(charId, refs);
-        if (options.verbose) {
-          console.log(`  Loaded ${refs.length} reference(s) for ${charId}`);
+
+        if (!options.dryRun) {
+          // Upload reference images to fal.ai storage
+          if (options.verbose) {
+            console.log(`  Uploading ${refs.length} reference(s) for ${charId}...`);
+          }
+          const urls: string[] = [];
+          for (const refPath of refs) {
+            const url = await uploadToFal(refPath);
+            urls.push(url);
+          }
+          charRefUrls.set(charId, urls);
+          if (options.verbose) {
+            console.log(`  Uploaded ${urls.length} reference(s) for ${charId}`);
+          }
         }
       } else {
         console.warn(`  Warning: no reference images found for ${charId}`);
@@ -153,8 +163,8 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
   let stylePrefix = '';
   try {
     const styleRaw = await readFile(PATHS.styleGuide, 'utf-8');
-    const styleData = parseYaml(styleRaw) as { style_prefix?: string };
-    stylePrefix = styleData.style_prefix ?? '';
+    const styleData = parseYaml(styleRaw) as { kling_style_prefix?: string; style_prefix?: string };
+    stylePrefix = styleData.kling_style_prefix ?? styleData.style_prefix ?? '';
   } catch {
     // No style guide — fine
   }
@@ -204,38 +214,43 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
 
     try {
       let result;
+      const mode = charRefUrls.size > 1 ? 'multi-ref' : charRefUrls.size === 1 ? 'single-ref' : 'text-only';
 
-      if (charRefs.size > 1) {
-        // Multi-reference: use Kling Omni Image
-        const { prompt: multiPrompt, images } = buildMultiRefPrompt(prompt, charRefs);
-        console.log(`  Mode: multi-ref (${images.length} character references)`);
+      if (charRefUrls.size > 1) {
+        // Multi-reference: use Kling O1 with @Image syntax
+        // Build prompt with @Image placeholders and collect uploaded URLs
+        const imageUrls: string[] = [];
+        let multiPrompt = prompt;
+        let imageIndex = 1;
+        for (const [charId, urls] of charRefUrls) {
+          imageUrls.push(urls[0]!);
+          multiPrompt += ` @Image${imageIndex} is ${charId}.`;
+          imageIndex++;
+        }
 
-        result = await generatePanelMultiRef(api, {
+        console.log(`  Mode: multi-ref (${imageUrls.length} character references) via fal.ai`);
+
+        result = await generatePanelMultiRef({
           prompt: multiPrompt,
-          images,
-          model: options.model,
+          imageUrls,
           aspectRatio: options.aspectRatio,
         });
-      } else if (charRefs.size === 1) {
-        // Single reference: use subject mode
-        const [, refs] = [...charRefs.entries()][0]!;
-        console.log(`  Mode: single-ref (subject)`);
+      } else if (charRefUrls.size === 1) {
+        // Single reference
+        const [, urls] = [...charRefUrls.entries()][0]!;
+        console.log(`  Mode: single-ref via fal.ai`);
 
-        result = await generatePanelWithReference(api, {
+        result = await generatePanelWithReference({
           prompt,
-          referenceImage: refs[0]!,
-          referenceType: 'subject',
-          fidelity: options.fidelity ?? 0.8,
-          model: options.model,
+          referenceImage: urls[0]!,
           aspectRatio: options.aspectRatio,
         });
       } else {
         // No reference: text-only
-        console.log(`  Mode: text-only (no character references)`);
+        console.log(`  Mode: text-only via fal.ai`);
 
-        result = await generatePanel(api, {
+        result = await generatePanel({
           prompt,
-          model: options.model,
           aspectRatio: options.aspectRatio,
         });
       }
@@ -254,11 +269,11 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
       await writeFile(logPath, JSON.stringify({
         page: pageNum,
         version,
-        taskId: result.taskId,
-        model: options.model ?? (charRefs.size > 1 ? 'kling-image-o1' : 'kling-v2-1'),
-        mode: charRefs.size > 1 ? 'multi-ref' : charRefs.size === 1 ? 'single-ref' : 'text-only',
+        requestId: result.requestId,
+        provider: 'fal.ai',
+        model: 'fal-ai/kling-image/o1',
+        mode,
         characterRefs: [...charRefs.keys()],
-        fidelity: options.fidelity ?? 0.8,
         prompt: prompt.slice(0, 500),
         notes: options.notes ?? '',
         timestamp: new Date().toISOString(),

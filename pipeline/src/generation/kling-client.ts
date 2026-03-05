@@ -1,14 +1,19 @@
 /**
- * Kling AI API client for manga panel generation.
+ * Kling AI image generation via fal.ai.
  *
- * Wraps the `kling-api` npm package to provide:
- * - Single-reference image generation (face/subject mode)
- * - Multi-reference omni image generation (up to 10 refs)
- * - Auto-polling for task completion
- * - Local file saving
+ * Uses the @fal-ai/client SDK to access Kling models through fal.ai's
+ * pay-per-use API instead of the official Kling API ($2,100/mo minimum).
+ *
+ * Supports:
+ * - Text-only generation (backgrounds, establishing shots)
+ * - Single-reference generation (one character ref)
+ * - Multi-reference generation (up to 10 refs via Kling O1)
+ * - Auto-polling for task completion (handled by fal.subscribe)
+ * - Local file upload via fal.storage.upload()
  */
 
-import { KlingAPI } from 'kling-api';
+import { fal } from '@fal-ai/client';
+import { readFile } from 'node:fs/promises';
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -16,168 +21,195 @@ import path from 'node:path';
 // Types
 // ---------------------------------------------------------------------------
 
-export interface KlingConfig {
-  accessKey: string;
-  secretKey: string;
-}
-
 export interface GenerateImageOptions {
   /** Text prompt describing the panel. */
   prompt: string;
-  /** Model name (default: kling-v2-1). */
-  model?: string;
   /** Aspect ratio (default: 3:4 for portrait manga panels). */
   aspectRatio?: string;
   /** Number of images to generate (1-9, default: 1). */
   count?: number;
-  /** Resolution: '1k' or '2k' (default: '1k'). */
+  /** Resolution: '1K' or '2K' (default: '1K'). */
   resolution?: string;
 }
 
 export interface ReferenceImageOptions extends GenerateImageOptions {
   /** Path or URL to a single reference image. */
   referenceImage: string;
-  /** Reference type: 'subject' (whole character) or 'face'. */
-  referenceType: 'subject' | 'face';
   /** How closely to match the reference (0-1, default: 0.8). */
   fidelity?: number;
 }
 
-export interface OmniImageOptions {
-  /** Text prompt with <<<image_N>>> placeholders for references. */
+export interface MultiRefOptions {
+  /** Text prompt with @Image1, @Image2 placeholders for references. */
   prompt: string;
-  /** Array of reference image paths/URLs (up to 10). */
-  images: string[];
-  /** Model name (default: kling-image-o1). */
-  model?: string;
+  /** Array of reference image URLs (up to 10). Must be publicly accessible URLs. */
+  imageUrls: string[];
   /** Aspect ratio (default: 3:4). */
   aspectRatio?: string;
+  /** Number of images to generate (1-9, default: 1). */
+  count?: number;
+  /** Resolution: '1K' or '2K' (default: '1K'). */
+  resolution?: string;
 }
 
 export interface KlingGenerationResult {
   /** URL(s) of generated images. */
   imageUrls: string[];
-  /** Task ID for tracking. */
-  taskId: string;
-  /** Raw task status. */
-  status: string;
+  /** Request ID for tracking. */
+  requestId: string;
 }
 
 // ---------------------------------------------------------------------------
-// Client
+// fal.ai response types
 // ---------------------------------------------------------------------------
 
-export function createKlingClient(config: KlingConfig): KlingAPI {
-  return new KlingAPI({
-    accessKey: config.accessKey,
-    secretKey: config.secretKey,
-  });
+interface FalImage {
+  url: string;
+  content_type?: string;
 }
+
+interface FalKlingResult {
+  images: FalImage[];
+}
+
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+
+/** fal.ai model ID for Kling O1 (multi-reference image generation). */
+const FAL_KLING_O1 = 'fal-ai/kling-image/o1';
+
+type KlingAspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '3:2' | '2:3' | '21:9' | 'auto';
+type KlingResolution = '1K' | '2K';
 
 /**
- * Validate that Kling API credentials are present.
+ * Configure fal.ai credentials from environment.
+ * Must be called before any generation functions.
  */
-export function validateKlingCredentials(): KlingConfig {
-  const accessKey = process.env['KLING_ACCESS_KEY'];
-  const secretKey = process.env['KLING_SECRET_KEY'];
-
-  if (!accessKey || !secretKey) {
+export function configureFal(): void {
+  const key = process.env['FAL_KEY'];
+  if (!key) {
     throw new Error(
-      'Missing Kling AI credentials. Set KLING_ACCESS_KEY and KLING_SECRET_KEY in your .env file.\n' +
-      'Get your keys from: https://app.klingai.com/global/dev/document-api',
+      'Missing fal.ai API key. Set FAL_KEY in your .env file.\n' +
+      'Get your key from: https://fal.ai/dashboard/keys',
     );
   }
-
-  return { accessKey, secretKey };
+  fal.config({ credentials: key });
 }
 
 /**
- * Generate a manga panel image using Kling AI (no reference image).
+ * Upload a local file to fal.ai storage and return a public URL.
+ * Caches uploads within a session to avoid re-uploading the same file.
+ */
+const uploadCache = new Map<string, string>();
+
+export async function uploadToFal(localPath: string): Promise<string> {
+  // If it's already a URL, return as-is
+  if (localPath.startsWith('http://') || localPath.startsWith('https://')) {
+    return localPath;
+  }
+
+  const cached = uploadCache.get(localPath);
+  if (cached) return cached;
+
+  const buffer = await readFile(localPath);
+  const ext = path.extname(localPath).toLowerCase();
+  const mimeType = ext === '.png' ? 'image/png'
+    : ext === '.webp' ? 'image/webp'
+    : 'image/jpeg';
+
+  const blob = new Blob([buffer], { type: mimeType });
+  const file = new File([blob], path.basename(localPath), { type: mimeType });
+  const url = await fal.storage.upload(file);
+
+  uploadCache.set(localPath, url);
+  return url;
+}
+
+// ---------------------------------------------------------------------------
+// Generation functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a manga panel image using Kling AI via fal.ai (no reference image).
  */
 export async function generatePanel(
-  api: KlingAPI,
   options: GenerateImageOptions,
 ): Promise<KlingGenerationResult> {
-  const task = await api.generateImage({
-    prompt: options.prompt,
-    model_name: (options.model ?? 'kling-v2-1') as 'kling-v2-1',
-    aspect_ratio: (options.aspectRatio ?? '3:4') as '3:4',
-    n: options.count ?? 1,
+  const result = await fal.subscribe(FAL_KLING_O1, {
+    input: {
+      prompt: options.prompt,
+      image_urls: [],
+      aspect_ratio: (options.aspectRatio ?? '3:4') as KlingAspectRatio,
+      num_images: options.count ?? 1,
+      resolution: (options.resolution ?? '1K') as KlingResolution,
+    },
   });
 
-  const taskId = task.data.task_id;
-  const result = await api.waitForImageResult(taskId);
-
-  const images = result.data?.task_result?.images ?? [];
+  const data = result.data as FalKlingResult;
   return {
-    imageUrls: images.map((img: { url: string }) => img.url),
-    taskId,
-    status: result.data?.task_status ?? 'unknown',
+    imageUrls: (data.images ?? []).map((img) => img.url),
+    requestId: result.requestId,
   };
 }
 
 /**
  * Generate a manga panel with a single character reference image.
- * Uses subject or face reference mode for character consistency.
+ * Uploads the local reference file to fal.ai storage first.
  */
 export async function generatePanelWithReference(
-  api: KlingAPI,
   options: ReferenceImageOptions,
 ): Promise<KlingGenerationResult> {
-  const task = await api.generateImage({
-    prompt: options.prompt,
-    model_name: (options.model ?? 'kling-v2-1') as 'kling-v2-1',
-    aspect_ratio: (options.aspectRatio ?? '3:4') as '3:4',
-    n: options.count ?? 1,
-    image: options.referenceImage,
-    image_reference: options.referenceType,
-    image_fidelity: options.fidelity ?? 0.8,
+  const imageUrl = await uploadToFal(options.referenceImage);
+
+  const result = await fal.subscribe(FAL_KLING_O1, {
+    input: {
+      prompt: `@Image1 ${options.prompt}`,
+      image_urls: [imageUrl],
+      aspect_ratio: (options.aspectRatio ?? '3:4') as KlingAspectRatio,
+      num_images: options.count ?? 1,
+      resolution: (options.resolution ?? '1K') as KlingResolution,
+    },
   });
 
-  const taskId = task.data.task_id;
-  const result = await api.waitForImageResult(taskId);
-
-  const images = result.data?.task_result?.images ?? [];
+  const data = result.data as FalKlingResult;
   return {
-    imageUrls: images.map((img: { url: string }) => img.url),
-    taskId,
-    status: result.data?.task_status ?? 'unknown',
+    imageUrls: (data.images ?? []).map((img) => img.url),
+    requestId: result.requestId,
   };
 }
 
 /**
  * Generate a manga panel with multiple character reference images.
- * Uses Kling Omni Image for multi-reference consistency.
+ * Uses Kling O1 via fal.ai for multi-reference consistency.
  *
- * Prompt must include <<<image_1>>>, <<<image_2>>> etc. placeholders
+ * Prompt must include @Image1, @Image2 etc. placeholders
  * to reference the provided images.
  */
 export async function generatePanelMultiRef(
-  api: KlingAPI,
-  options: OmniImageOptions,
+  options: MultiRefOptions,
 ): Promise<KlingGenerationResult> {
-  if (options.images.length === 0) {
-    throw new Error('At least one reference image is required for omni image generation');
+  if (options.imageUrls.length === 0) {
+    throw new Error('At least one reference image URL is required for multi-ref generation');
   }
-  if (options.images.length > 10) {
-    throw new Error('Kling Omni Image supports a maximum of 10 reference images');
+  if (options.imageUrls.length > 10) {
+    throw new Error('Kling O1 supports a maximum of 10 reference images');
   }
 
-  const task = await api.omniImage({
-    prompt: options.prompt,
-    model_name: 'kling-image-o1',
-    image_list: options.images.map((image) => ({ image })),
-    aspect_ratio: (options.aspectRatio ?? '3:4') as '3:4',
+  const result = await fal.subscribe(FAL_KLING_O1, {
+    input: {
+      prompt: options.prompt,
+      image_urls: options.imageUrls,
+      aspect_ratio: (options.aspectRatio ?? '3:4') as KlingAspectRatio,
+      num_images: options.count ?? 1,
+      resolution: (options.resolution ?? '1K') as KlingResolution,
+    },
   });
 
-  const taskId = task.data.task_id;
-  const result = await api.waitForImageResult(taskId);
-
-  const images = result.data?.task_result?.images ?? [];
+  const data = result.data as FalKlingResult;
   return {
-    imageUrls: images.map((img: { url: string }) => img.url),
-    taskId,
-    status: result.data?.task_status ?? 'unknown',
+    imageUrls: (data.images ?? []).map((img) => img.url),
+    requestId: result.requestId,
   };
 }
 

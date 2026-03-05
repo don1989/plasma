@@ -126,12 +126,12 @@ export async function getPrimaryReference(
 }
 
 /**
- * Build a Kling omni-image prompt with <<<image_N>>> placeholders
- * for each character's reference images.
+ * Build a multi-reference prompt with @Image1, @Image2 placeholders
+ * for each character's reference images (fal.ai / Kling O1 syntax).
  *
  * @param basePrompt - The panel description prompt
  * @param characterRefs - Map of character name to their reference image paths
- * @returns The prompt with placeholders, and the ordered image array
+ * @returns The prompt with @Image placeholders, and the ordered image array
  */
 export function buildMultiRefPrompt(
   basePrompt: string,
@@ -146,7 +146,7 @@ export function buildMultiRefPrompt(
     if (refs.length > 0) {
       images.push(refs[0]!);
       // Append character reference instruction to prompt
-      prompt += ` <<<image_${imageIndex}>>> is ${characterName}.`;
+      prompt += ` @Image${imageIndex} is ${characterName}.`;
       imageIndex++;
     }
   }

@@ -283,7 +283,7 @@ program
   .option('--page <number>', 'Generate a single page')
   .option('--pages <range>', 'Page range (e.g., "1-5" or "3,7,12")')
   .option('--characters <ids...>', 'Character IDs to use as references (e.g., spyke-tinwall june-kamara)')
-  .option('--model <name>', 'Model override (default: kling-v2-1 or kling-image-o1 for multi-ref)')
+  .option('--model <name>', 'Model override (default: fal-ai/kling-image/o1 via fal.ai)')
   .option('--aspect-ratio <ratio>', 'Aspect ratio (default: 3:4)', '3:4')
   .option('--fidelity <number>', 'Reference fidelity 0-1 (default: 0.8)', '0.8')
   .option('--prompt <text>', 'Custom prompt override (skip reading from prompts dir)')
@@ -328,7 +328,6 @@ program
       page: options.page ? parseInt(options.page) : undefined,
       pages,
       characters: options.characters,
-      model: options.model,
       aspectRatio: options.aspectRatio,
       fidelity: parseFloat(options.fidelity),
       prompt: options.prompt,
