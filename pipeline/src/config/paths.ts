@@ -56,6 +56,7 @@ export const PATHS = {
       webtoon: path.join(root, 'webtoon'),
       prompts: path.join(root, 'prompts'),
       comfyuiRaw: path.join(raw, 'comfyui'),  // raw/comfyui/ for ComfyUI-generated images
+      klingRaw: path.join(raw, 'kling'),  // raw/kling/ for Kling AI-generated images
     };
   },
 } as const;
