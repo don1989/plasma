@@ -12,10 +12,10 @@ When writing or reviewing any Plasma content, check every scene against these ru
 
 ## Magic / Power System Rules
 
-1. **Plasma weapons are heavy without manipulation.** A small Plasma-infused dagger weighs as much as a car to someone who cannot manipulate Plasma. Spyke took years (age 6-11) to lift his broadsword. No character may casually pick up a Plasma weapon without training or innate ability.
+1. **Plasma Blade blades resist the wielder.** Plasma Blade hilts are light and compact, but the projected Plasma energy blade requires immense manipulation skill to control — like holding a firehose of energy. The blade resists every movement. Spyke trained from age 6-11 to master his Plasma Blade's blade. Non-manipulators cannot activate or control a Plasma blade at all. Traditional physical Plasma weapons (rare relics like Master's katana) are also impossible to lift without manipulation.
 2. **Plasma Gloves manipulate elements, not raw Plasma.** Gloves mix Plasma with atmospheric elements (fire, water, wind, earth, thunder) to create effects. They cannot conjure pure Plasma on their own.
 3. **Monsters can only be destroyed using Plasma.** Conventional weapons are useless. All effective combat requires Plasma-infused weapons, sword art, or elemental magic.
-4. **Sword Art is cast from Plasma weapons.** Plasma beams, elemental slashes, and iaijutsu techniques all require a Plasma-infused blade. Sword art range is limited by the user's Plasma manipulation skill.
+4. **Sword Art is cast from Plasma blades.** Plasma beams, elemental slashes, and iaijutsu techniques all require a Plasma blade — either a Plasma Blade's projected energy blade or a traditional Plasma-infused physical blade (like Master's katana). Sword art range is limited by the user's Plasma manipulation skill.
 5. **Elemental Sword requires a caster and a swordsman.** Draster (or another mage) imbues Spyke's blade with an elemental property. The swordsman cannot self-imbue without a mage.
 6. **Combined spells require multiple casters.** Wind + water (used for cliff descent) requires June and Draster working in sync. One person cannot do both.
 7. **Blood of the Ancients grants unique powers but at a cost.** Spyke's powers (time-freeze perception, ancient voice communication, visions) are tied to his left eye, which bleeds and causes debilitating headaches. This pain is not optional — it happens every time powers activate near crystals or shrines.
@@ -29,7 +29,7 @@ When writing or reviewing any Plasma content, check every scene against these ru
 
 1. **Year 3031 Earth:** Hover vehicles, AI-driven buses, mobile phones, advanced construction, Plasma energy grid. Civilisation built on towers above flooded surface.
 2. **Terra:** Mix of medieval and advanced tech. Hover vehicles exist but are expensive. Airships are the primary long-distance transport. Plasma-powered motorcycles exist (Cid's bike). Rail tunnels under construction.
-3. **Weapons:** Primarily bladed weapons (swords, daggers, axes) infused with Plasma. Guns exist (June's pistol, Dobblepot's shotgun) but are less common. Translator guns exist on Terra.
+3. **Weapons:** Primarily Plasma Blades — compact hilts that project energy blades of various shapes. Rare traditional Plasma-infused physical blades still exist as relics (e.g. Master's katana). Guns exist (June's pistol, Dobblepot's shotgun) but are less common. Translator guns exist on Terra.
 4. **No spacecraft.** Terra's barrier turns anything that touches it to dust. No one has left Terra by conventional means.
 5. **Communication:** Mobile phones exist on Earth. No established long-range communication on Terra. Phones can be tracked by the Formican Army.
 
@@ -40,9 +40,9 @@ When writing or reviewing any Plasma content, check every scene against these ru
 1. **Morkain is the current ceiling.** He has visited all 12 shrines and acquired their power. He can time-freeze at will, summon comets, and overpower the trio effortlessly. No character may surpass Morkain until the story explicitly permits it.
 2. **Master was S-rank.** He could solo a Crystal Demon, use lightning-fast iaijutsu, and overpower Formican squads. He was the strongest character shown before Morkain, and he is dead.
 3. **The trio are strong but not elite yet.** They can defeat Formican soldiers, Duke Hart, and shrine bosses, but Morkain toys with them. They cannot take Morkain in a fair fight at this stage.
-4. **Spyke is the strongest of the trio.** He is the primary damage dealer with broadsword and katana. June and Draster support and can hold their own but rely on teamwork.
-5. **Dual wielding limits sword art.** When Spyke dual-wields daggers/short blades, he sacrifices access to some sword art techniques.
-6. **Carrying too many Plasma weapons weighs you down.** Spyke carries five blades maximum. More would drain him.
+4. **Spyke is the strongest of the trio.** He is the primary damage dealer with his versatile Plasma Blade and Master's katana. June and Draster support and can hold their own but rely on teamwork.
+5. **Dual wielding limits sword art.** When Spyke dual-wields mini Plasma Blades/short blades, he sacrifices access to some sword art techniques.
+6. **Carrying too many Plasma weapons drains you.** Spyke carries a maximum of five Plasma Blade hilts. More would drain his Plasma reserves.
 
 ---
 

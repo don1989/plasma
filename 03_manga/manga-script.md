@@ -71,17 +71,17 @@ For each chapter, output:
 ## Plasma-Specific Visual Rules
 
 ### Character Appearances (Must Be Consistent)
-- **Spyke (age 21):** Spiky ginger hair (tips reach traps), green eyes, red bandana. White knee-length cloak (sleeves cut, dojo emblem on back, decorative pattern along bottom hem). Red fingerless glove on left hand, red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Broadsword on back, patterned katana at hip, daggers hidden in metal knee pauldron (not revealed until later). When Adrenaline Mode activates: eyes turn red, art style becomes sharper/more intense. When demon activates: left eye turns purple/black, arm may transform green/purple.
-- **June:** Blonde hair, sporty build. Shortsword at hip, pistol holster, magician glove on one hand, Plasma shoes visible.
+- **Spyke (age 21):** Spiky ginger hair (tips reach traps), green eyes, red bandana. White knee-length cloak (sleeves cut, dojo emblem on back, decorative pattern along bottom hem). Red fingerless glove on left hand, red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Plasma Blade hilt clipped to right side of belt (compact, dark grey/red metallic), Master's patterned katana sheathed at left hip, mini Plasma Blade hilts hidden in metal knee pauldron (not revealed until later). No back-mounted weapon, no harness. When Adrenaline Mode activates: eyes turn red, art style becomes sharper/more intense. When demon activates: left eye turns purple/black, arm may transform green/purple.
+- **June:** Blonde hair, sporty build. Plasma Blade hilt clipped to belt, pistol holster, magician glove on one hand, Plasma shoes visible.
 - **Draster:** Dark brown skin, black/silver hair, brown eyes. Slim. Navy jacket-style robe. Dual Plasma Gloves (leather, always visible).
 - **Morkain:** Long blonde hair, facial scar, long goatee. Black Formican uniform. Broadsword. Always drawn with an aura of calm menace.
 
 ### Action Sequences
-- **Sword Art:** Show energy beams emanating from blades with motion lines. Color note: Plasma energy is typically blue/white.
+- **Sword Art:** Show energy beams emanating from activated Plasma blades (Plasma Blade projections or traditional Plasma blades) with motion lines. Color note: Plasma energy is typically blue/white.
 - **Iaijutsu (Flash of Light):** Single decisive panel — sword already sheathed, effect already happened. Speed lines radiating from the strike point. After-image of the blade's path. Gold/yellow glow from Master's katana.
 - **Adrenaline Mode:** When Spyke's eyes go red, the art should intensify — heavier inks, darker shadows, more aggressive panel shapes (jagged borders).
 - **Time-Freeze:** Everything stops except Morkain. Show frozen rain/debris/people. Spyke perceives but moves in slow motion (show motion blur on Spyke while environment is sharp/frozen).
-- **Elemental Sword:** Show Draster casting toward Spyke's blade (two-person technique). Element wraps around the blade. Dual-panel composition: mage + swordsman acting in sync.
+- **Elemental Sword:** Show Draster casting toward Spyke's activated Plasma Blade blade (two-person technique). Element wraps around the energy blade. Dual-panel composition: mage + swordsman acting in sync.
 - **Demon Transformation:** Spyke's left eye panel — close-up of green/purple iris shifting. Dark tendrils on his arm. Background turns dark. Other characters react with fear.
 
 ### Boss Fights
@@ -155,7 +155,7 @@ These moments warrant splash pages or double-page spreads:
 |---------|--------|------|
 | 1 | Hood freezes time — everyone stops mid-motion | Splash |
 | 1 | Fang attacks London skyline | Double spread |
-| 4 | Young Spyke finally lifts the broadsword | Splash |
+| 4 | Young Spyke finally activates the Plasma Blade blade | Splash |
 | 5 | Master's final stand (katana drawn, enemies surrounding) | Double spread |
 | 5 | Trio wakes up on Terra (blue grass, pink sky reveal) | Double spread |
 | 7 | ArmourBird swooping down on the trio | Splash |

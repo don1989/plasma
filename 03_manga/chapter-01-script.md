@@ -4,7 +4,7 @@
 **Estimated pages:** 48
 **Characters appearing:** Spyke, June, Draster, Hood (Morkain), 3 Punks, Exam Registrar, Stewards, Ravage (boss)
 **Locations:** Westminster streets, Kings Cross station, Formican Army Base (exterior, reception, jungle dome)
-**Canon references:** Spyke (age 21), spiky ginger hair (tips reach traps), broadsword (Plasma-infused, impossibly heavy), patterned katana (Master's, secondary weapon), red bandana, green eyes, white knee-length cloak (sleeves cut, dojo emblem on back, pattern along bottom hem), red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered glove on right hand, red-accented belt, metal knee pauldron (hides daggers — not revealed in Ch.1). June's shortsword/pistol/magician glove/Plasma shoes. Draster's dual Plasma Gloves, navy suit-robe. Hood = Morkain in disguise. Time-freeze is ancient power. Rage Mode = Adrenaline Mode (early form). Year 3031, flooded Earth, tower civilisation.
+**Canon references:** Spyke (age 21), spiky ginger hair (tips reach traps), Plasma Blade hilt (compact, belt-mounted — projects variable-shape energy blades), Master's patterned katana (physical blade, secondary weapon, sheathed at left hip), red bandana, green eyes, white knee-length cloak (sleeves cut, dojo emblem on back, pattern along bottom hem), red fingerless glove on left hand with red bracer on left wrist, armoured full-fingered glove on right hand, red-accented belt, metal knee pauldron (hides mini Plasma Blade hilts — not revealed in Ch.1). June's Plasma Blade/pistol/magician glove/Plasma shoes. Draster's dual Plasma Gloves, navy suit-robe. Hood = Morkain in disguise. Time-freeze is ancient power. Rage Mode = Adrenaline Mode (early form). Year 3031, flooded Earth, tower civilisation.
 
 ---
 
@@ -26,11 +26,11 @@
 
 ### Panel 3 — Medium-Wide
 
-**Action:** Spyke sprints along a crowded elevated walkway in Westminster. His huge broadsword swings wildly from side to side on his back, forcing commuters to dodge. His red bandana trails behind him, white cloak billowing. Spiky ginger hair whipping in the wind. Green eyes focused ahead. He's weaving through a crowd of people in futuristic work clothes heading to their jobs.
+**Action:** Spyke sprints along a crowded elevated walkway in Westminster. His white cloak billows behind him as he shoves past commuters, katana bouncing at his hip, Plasma Blade hilt glinting on his belt. His red bandana trails behind him. Spiky ginger hair whipping in the wind. Green eyes focused ahead. He's weaving through a crowd of people in futuristic work clothes heading to their jobs.
 **Dialogue:**
 - SPYKE (thought): *Shit. I'm gonna be late...*
 **SFX:** —
-**Notes:** First appearance of Spyke — make it dynamic. The broadsword should look absurdly large for someone his size. Commuters reacting with annoyance/surprise sells the comedy and the weapon's scale.
+**Notes:** First appearance of Spyke — make it dynamic. His cloak and katana sheath give him an unmistakable silhouette. The Plasma Blade hilt on his belt is subtle but visible — its significance is revealed when he activates it later.
 
 ---
 
@@ -71,7 +71,7 @@
 
 ### Panel 1 — Medium
 
-**Action:** The lead punk calls out to Spyke from behind. Spyke doesn't stop walking. His back is to us — the broadsword dominates the frame.
+**Action:** The lead punk calls out to Spyke from behind. Spyke doesn't stop walking. His back is to us — the white cloak with dojo emblem and katana at his hip are prominent.
 **Dialogue:**
 - PUNK 1: "Hey... that's a pretty cool weapon on yo' back."
 **SFX:** —
@@ -96,7 +96,7 @@
 
 ### Panel 4 — Medium
 
-**Action:** Spyke has swivelled to face them. His hand is on his katana, not drawn yet. The punks fan out, drawing short swords. The biggest punk hangs back with a knowing grin.
+**Action:** Spyke has swivelled to face them. His hand is on his katana, not drawn yet. The punks fan out, activating their Plasma Blades — cheap energy blades humming. The biggest punk hangs back with a knowing grin.
 **Dialogue:**
 - PUNK 1: "I asked you a qu—"
 - SPYKE: "I don't have time for this. Get lost!"
@@ -139,15 +139,15 @@
 
 ### Panel 1 — Medium
 
-**Action:** The big punk steps forward, drawing his own broadsword — it's large, matching Spyke's in scale. He grins.
+**Action:** The big punk steps forward, activating his own Plasma Blade — a wide, heavy energy blade. He grins.
 **Dialogue:**
-- PUNK 1: "I asked if you could use that big sword on your back!"
+- PUNK 1: "I wanna see what that hilt on your belt can do!"
 **SFX:** —
-**Notes:** The challenge. This punk has been waiting to see the broadsword. His own sword establishes he's a cut above the other two.
+**Notes:** The challenge. This punk has been waiting to see Spyke's Plasma Blade. His own wide energy blade establishes he's a cut above the other two.
 
 ### Panel 2 — Close-up
 
-**Action:** Spyke's expression. A flicker of interest for the first time — then he reaches back and grips his broadsword's hilt. One corner of his mouth twitches.
+**Action:** Spyke's expression. A flicker of interest for the first time — then his hand moves to the Plasma Blade hilt on his belt. One corner of his mouth twitches.
 **Dialogue:**
 - SPYKE: "Hmph!"
 **SFX:** —
@@ -155,16 +155,16 @@
 
 ### Panel 3 — Wide
 
-**Action:** Spyke swings the massive broadsword in a devastating arc. The big punk blocks but is sent skidding backward from the force. Cracks form in the ground beneath his feet. Energy crackles along Spyke's blade — the faintest hint of Plasma.
+**Action:** Spyke activates his Plasma Blade — a MASSIVE broadsword-width Plasma blade erupts from the compact hilt, blazing blue-white. He swings it in a devastating arc. The big punk blocks but is sent skidding backward from the force. Cracks form in the ground beneath his feet. Energy crackles along Spyke's blade.
 **Dialogue:** —
-**SFX:** KRAAAANG
-**Notes:** Show the WEIGHT. This is a Plasma-infused broadsword. When it connects, reality shudders. The punk's block should look like it nearly broke his arms.
+**SFX:** VRMMM-KRAAAANG
+**Notes:** Show the POWER. The Plasma Blade blade is enormous — the same broadsword-width Spyke trained years to control. The energy blade's glow intensifies on impact. The punk's block should look like it nearly broke his arms. This is the audience's first time seeing Spyke's Plasma Blade at full power.
 
-> **[PLAYER DECISION POINT]** — *2nd Battle tutorial: weapon switch to broadsword*
+> **[PLAYER DECISION POINT]** — *2nd Battle tutorial: Plasma Blade activation (broadsword-width blade)*
 
 ### Panel 4 — Medium
 
-**Action:** Spyke sheathes his sword. The big punk is on the ground, defeated. Spyke turns and walks away without looking back.
+**Action:** Spyke deactivates his Plasma Blade — the blade retracts into the hilt. He clips it back to his belt. The big punk is on the ground, defeated. Spyke turns and walks away without looking back.
 **Dialogue:**
 - SPYKE (thought): *I'm gonna miss the train...*
 **SFX:** —
@@ -224,10 +224,10 @@
 
 ### Panel 2 — Medium
 
-**Action:** Inside the train. Spyke sits alone, broadsword propped against the seat next to him (nobody dares sit near it). He stares out the window, arms crossed. Other candidates — young people with various weapons — sit scattered around the carriage.
+**Action:** Inside the train. Spyke sits alone, katana propped against the seat next to him, Plasma Blade hilt on his belt. He stares out the window, arms crossed. Other candidates — young people with various weapons — sit scattered around the carriage.
 **Dialogue:** —
 **SFX:** —
-**Notes:** Spyke isolates himself by default. The empty seats around him say everything about how people react to that broadsword — and to him.
+**Notes:** Spyke isolates himself by default. The empty seats around him say everything about how people react to his cold demeanour — and to him.
 
 ### Panel 3 — Wide
 
@@ -280,7 +280,7 @@
 
 ### Panel 2 — Medium
 
-**Action:** June walks up to Spyke. She's blonde, sporty, confident posture. Shortsword at her hip, pistol holster on her thigh, one magician glove on her left hand. She's tying her hair back as she approaches.
+**Action:** June walks up to Spyke. She's blonde, sporty, confident posture. Plasma Blade hilt clipped to her belt, pistol holster on her thigh, one magician glove on her left hand. She's tying her hair back as she approaches.
 **Dialogue:**
 - JUNE: "Are you in for this slot?"
 - SPYKE: "Yes."
@@ -306,7 +306,7 @@
 
 ### Panel 5 — Small inset
 
-**Action:** June glances at Spyke's back as he warms up. She notices the broadsword's size. Slight widening of her eyes.
+**Action:** June glances at Spyke as he warms up. She notices the Plasma Blade hilt on his belt and the katana at his hip — two Plasma weapons. Slight widening of her eyes.
 **Dialogue:**
 - JUNE (thought): *...He does look strong though.*
 **SFX:** —
@@ -407,7 +407,7 @@
 
 ### Panel 3 — Close-up
 
-**Action:** Spyke grins slightly. His hand goes to his broadsword.
+**Action:** Spyke grins slightly. His hand goes to his Plasma Blade hilt.
 **Dialogue:**
 - SPYKE: "So you're the Ravage, huh?"
 **SFX:** —
@@ -419,7 +419,7 @@
 
 ### Panel 1 — Medium
 
-**Action:** Spyke draws his broadsword and steps forward, away from the group. His stance is aggressive, solo.
+**Action:** Spyke activates his Plasma Blade — a massive broadsword-width energy blade — and steps forward, away from the group. His stance is aggressive, solo.
 **Dialogue:**
 - SPYKE: "You two stay back. I'll handle this."
 **SFX:** —
@@ -427,7 +427,7 @@
 
 ### Panel 2 — Medium
 
-**Action:** June steps forward, furious. She draws her shortsword. Behind her, Draster shrugs and begins pulling his Plasma Gloves tight.
+**Action:** June steps forward, furious. She activates her Plasma Blade — a short, fast energy blade. Behind her, Draster shrugs and begins pulling his Plasma Gloves tight.
 **Dialogue:**
 - JUNE: "Are you kidding?! We need to work together!"
 **SFX:** —
@@ -472,7 +472,7 @@
 
 ### Panel 3 — Wide (Action)
 
-**Action:** Spyke sees the opening. He rushes in with a massive overhead swing of his broadsword, bringing it down on the staggered Ravage. The impact sends a shockwave through the ground. Plasma energy crackles along the blade.
+**Action:** Spyke sees the opening. He rushes in with a massive overhead swing of his Plasma Blade's broadsword-width blade, bringing it down on the staggered Ravage. The impact sends a shockwave through the ground. Plasma energy intensifies along the blade.
 **Dialogue:** —
 **SFX:** KRAKOOOM
 **Notes:** Full impact panel. Show the Plasma energy visually — blue/white crackling along the blade edge. The Ravage takes the full hit.
@@ -659,7 +659,7 @@
 
 ### Panel 4 — Wide (Action)
 
-**Action:** Spyke snaps. He charges Hood, broadsword drawn, roaring. The attack is pure rage — wild, powerful, uncontrolled. The panel should feel dangerous.
+**Action:** Spyke snaps. He charges Hood, Plasma Blade blazing, roaring. The attack is pure rage — wild, powerful, uncontrolled. The panel should feel dangerous.
 **Dialogue:**
 - SPYKE: "RRAAAGH!!"
 **SFX:** —
@@ -671,7 +671,7 @@
 
 ### Panel 1 — Wide (Action)
 
-**Action:** Spyke swings his broadsword at Hood with devastating force. Hood blocks with one hand on his own broadsword — effortlessly. The impact creates a shockwave that cracks the ground, but Hood doesn't move an inch.
+**Action:** Spyke swings his Plasma Blade at Hood with devastating force. Hood blocks with one hand on his own broadsword — effortlessly. Energy blade meets physical steel. The impact creates a shockwave that cracks the ground, but Hood doesn't move an inch.
 **Dialogue:** —
 **SFX:** KRAAANG
 **Notes:** Power gap visualized. Spyke's full-force attack vs Hood's casual one-hand block. This tells the reader everything about the difference between them. Hood's feet haven't shifted.
@@ -712,7 +712,7 @@
 
 ### Panel 2 — Medium
 
-**Action:** The trio is on their knees, battered. Spyke's broadsword is planted in the ground as a crutch. June is clutching her ribs. Draster's gloves are sparking but fading. They're beaten.
+**Action:** The trio is on their knees, battered. Spyke's Plasma Blade blade is planted in the ground as a crutch, energy flickering. June is clutching her ribs. Draster's gloves are sparking but fading. They're beaten.
 **Dialogue:**
 - SPYKE: "Goddamnit... what are you..."
 **SFX:** —
@@ -800,7 +800,7 @@
 
 ### Panel 4 — Medium
 
-**Action:** Spyke pushes himself up to a crouch. His broadsword is lying across from him on the grass. June and Draster are visible in the background, just beginning to stir.
+**Action:** Spyke pushes himself up to a crouch. His deactivated Plasma Blade hilt lies across from him on the grass. June and Draster are visible in the background, just beginning to stir.
 **Dialogue:** —
 **SFX:** —
 **Notes:** Building the reveal. The reader can see the blue grass but still hasn't seen the sky or the full environment.
@@ -842,7 +842,7 @@ The world is beautiful, alien, and vast.
 
 ### Panel 3 — Medium
 
-**Action:** Spyke picks up his sword and sheathes it. His face is set — whatever he's feeling, he's already moving past it.
+**Action:** Spyke picks up his Plasma Blade hilt and clips it back to his belt. His face is set — whatever he's feeling, he's already moving past it.
 **Dialogue:**
 - SPYKE: "We need to get back."
 **SFX:** —
@@ -958,7 +958,7 @@ The world is beautiful, alien, and vast.
 
 ### Game Design Markers
 - **Tutorial 1** (p.4): Katana combat basics vs 2 punks
-- **Tutorial 2** (p.5): Weapon switch to broadsword vs big punk
+- **Tutorial 2** (p.5): Plasma Blade activation (broadsword-width blade) vs big punk
 - **Free exploration** (p.8): Formican base, practice battles, sword art basics
 - **Tutorial 3** (p.12): Character switching during dome exploration
 - **Boss: Ravage** (p.14): Stagger mechanic introduction, exploit weak point (tail)

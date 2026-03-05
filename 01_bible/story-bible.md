@@ -40,7 +40,7 @@ A massive ball of Plasma energy is heading toward Terra. When it hits, it will d
 
 See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 
-1. Plasma weapons are impossibly heavy without Plasma manipulation ability
+1. Plasma Blade hilts are light, but the projected energy blade requires immense Plasma manipulation skill to control — the blade resists the wielder like a firehose of energy. Non-manipulators cannot activate or control a Plasma blade
 2. Monsters can only be killed with Plasma
 3. Blood of the ancients grants powers at a painful cost (eye bleeding, headaches, demon possession risk)
 4. Time-freeze is an ancient power — only Morkain and Spyke can use/perceive it
@@ -70,7 +70,7 @@ See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 
 - **Age:** 21
 - **Appearance:** Spiky ginger hair (tips reach his traps, not super long). Green eyes (left eye turns purple/black when demon activates, red in Adrenaline Mode). Wears Master's red bandana. White knee-length cloak with sleeves cut (similar style to Master's white cloak; dojo emblem on the back, decorative pattern along the bottom hem). Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Slim but strong build.
-- **Weapons:** Huge Plasma broadsword (primary), Master's katana (secondary, iaijutsu — patterned blade), hidden daggers concealed in a metal knee pauldron (not visible until later in the story). Max 5 blades.
+- **Weapons:** Versatile Plasma Blade (projects variable blade shapes — broadsword-width, katana-thin, etc.; wielder switches mid-combat), Master's katana (physical blade, iaijutsu — patterned, ancient relic), hidden mini Plasma Blade hilts concealed in metal knee pauldron (not visible until later in the story). Max 5 Plasma weapons.
 - **Role:** Swordsman, leader of the trio
 - **Goal:** Find his father Tinwall and get answers. Stop Morkain. Prevent the catastrophe.
 - **Flaw:** Emotionally closed off from childhood abuse. Impatient, blunt, struggles to trust. The demon inside threatens to consume him.
@@ -83,7 +83,7 @@ See `lore-consistency-rules.md` for the complete ruleset. Key rules:
 
 - **Age:** 20
 - **Appearance:** Blonde hair, sporty build.
-- **Weapons:** Shortsword, magician glove, pistol, Plasma-imbued shoes (enhanced mobility).
+- **Weapons:** Plasma Blade, magician glove, pistol, Plasma-imbued shoes (enhanced mobility).
 - **Role:** Fighter/gunner, emotional heart of the trio
 - **Goal:** Avenge her parents (killed at Canary Wharf). Fight the Formican Army.
 - **Flaw:** Impulsive — blurts out sensitive information. Quick temper.
@@ -163,7 +163,7 @@ See `glossary.md` for full details on: Jairek, Cannon, Melvin, Zena, Marik, Mick
 | Pre-story | Morkain invades Terra, overthrows Jairek and the Imperials | 5 Dukedoms established under Morkain's control |
 | Pre-story | Morkain drops comet on Delton (gnome capital) | Gnome civilization nearly wiped out; Western continent irradiated |
 | Pre-story | Formicans invade Knadville (dwarven capital) | Dwarves driven underground into Bernholdt Mines |
-| Pre-story | Tinwall imprisons Spyke at birth | Spyke grows up in a cell with only a broadsword |
+| Pre-story | Tinwall imprisons Spyke at birth | Spyke grows up in a cell with only a Plasma Blade hilt |
 | ~5 years pre-story | Master rescues Spyke (age ~11) from Tinwall | Spyke joins the orphanage |
 
 ### Story Events (Chapters 1-15)
@@ -173,7 +173,7 @@ See `glossary.md` for full details on: Jairek, Cannon, Melvin, Zena, Marik, Mick
 | Ch.1 | Spyke, June, Draster take Formican Army exam | Trio forms; Hood/Morkain is revealed as impossibly powerful |
 | Ch.2 | Fang attacks Canary Wharf; June's parents killed | June's motivation established; monster threat real |
 | Ch.3 | Trio discovers Master's orphanage | Training begins; Seymour rivalry |
-| Ch.4 | Flashback: Spyke's imprisonment and rescue | Spyke's trauma revealed; broadsword is Plasma-infused |
+| Ch.4 | Flashback: Spyke's imprisonment and rescue | Spyke's trauma revealed; Plasma Blade hilt is Plasma-infused |
 | Ch.5 | Goldhawk mission; Master dies; trio teleported to Terra | Master dead, Seymour crystal-fused, trio on alien planet |
 | Ch.6 | Meet Jairek; learn Terra's history | Trio gets weapons, translation, and quest direction |
 | Ch.7 | High Valley + Gunners Green | ArmourBird defeated; Cannon alliance formed |

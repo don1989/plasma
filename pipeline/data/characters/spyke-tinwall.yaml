@@ -19,16 +19,14 @@ fingerprint: |
   LEGS: black combat pants,
   knee on RIGHT of image: large hexagonal metal knee pauldron;
   knee on LEFT of image: completely bare — NO pad, NO pauldron at all,
-  BACK: massive plasma broadsword in enormous sheath (sheath is half
-  body height, wide enough for a broadsword — NOT a thin katana sheath);
-  blade is wide + thick, tapers symmetrically toward middle; dark grey;
-  HARNESS: thick brown leather X-harness — main strap runs over RIGHT
-  shoulder, diagonally down across chest to LEFT waist, then back across
-  body and up to RIGHT shoulder forming a clear X; secondary support strap
-  runs from center of sheath at back, around to RIGHT waist, connecting to
-  center of sheath at front — both straps worn ON TOP of cloak, visible in
-  all views including BACK VIEW where sheath is prominently shown,
-  LEFT HIP: patterned katana sheathed on belt, visible in all views
+  BELT (RIGHT side): Plasma Blade hilt clipped to belt on RIGHT
+  side — compact cylindrical hilt with red metallic accents, dark grey
+  body. Projects variable-shape Plasma blades (broadsword-width, katana-
+  thin, etc.) when activated — wielder can switch blade shape mid-combat.
+  No sheath, no harness — hilt clips directly to belt,
+  LEFT HIP: Master's katana (physical blade, NOT a Plasma Blade) sheathed
+  on belt, visible in all views — ancient relic predating Plasma Blade tech,
+  KNEE PAULDRON: conceals hidden mini Plasma Blade hilts (revealed later)
 
 reference_sheet_prompt: |
   Colored manga character reference sheet, Spyke Tinwall. Clean linework,
@@ -66,36 +64,18 @@ reference_sheet_prompt: |
     than the knee itself so it clearly stands out.
   - Character's RIGHT knee (LEFT side of image): completely bare. No
     pad, no pauldron at all.
-  BROADSWORD (back-mounted — CRITICAL — must show in ALL four views):
-  - MASSIVE weapon — blade alone is roughly HALF his full body height.
-    The blade is WIDE (broadsword width, NOT a thin katana blade). Wide,
-    thick, heavy. Width clearly visible. Maintain this EXACT blade design
-    consistently across all views — same width, same symmetrical taper,
-    same dark grey/metallic color.
-  - Design: hilt flows into blade, tapers symmetrically narrower toward
-    the middle then back out. Dark grey/metallic.
-  - Carried in an ENORMOUS sheath on his back. The sheath is BIG —
-    large enough to contain the full broadsword, visibly wide and long.
-  - ANGLE: the sheath sits diagonally — hilt sticks up over his RIGHT
-    shoulder so he can reach back with his right hand to draw it. The
-    sheathed blade runs diagonally across his back, tip pointing toward
-    his lower LEFT side.
-  - HARNESS (thick brown leather — CRITICAL — visible in ALL four views):
-    * MAIN STRAP: starts at the RIGHT shoulder, crosses diagonally down
-      across the front of his body to his LEFT waist, then continues back
-      across the body and up to the RIGHT shoulder — forming a clear
-      diagonal X shape across his chest (viewed from front) and back.
-    * SECONDARY SUPPORT STRAP: runs from the center of the sheath at the
-      BACK, around his body to the RIGHT side of his waist, then connects
-      to the center of the sheath at the FRONT — stabilising the bottom
-      of the sheath horizontally.
-    * Both straps are thick, brown leather, worn ON TOP of the white cloak.
-    * Clearly visible in FRONT, 3/4, SIDE, and BACK views.
-  - BACK VIEW: the broadsword sheath DOMINATES the back view — enormous,
-    wide, running diagonally from upper-right to lower-left. The thick
-    brown leather harness straps are clearly visible crossing his back.
-  KATANA (character's LEFT hip — RIGHT side of image in front view):
-  - Patterned katana in a sheath, attached horizontally to his belt on
+  PLASMA BLADE HILT (belt-mounted — RIGHT side — visible in ALL four views):
+  - Compact cylindrical hilt, roughly forearm-length. Dark grey metallic
+    body with red accent rings and grip texture.
+  - Clipped directly to the RIGHT side of his red-accented belt.
+  - This is a VERSATILE Plasma Blade — when activated, it projects
+    energy blades of variable shape (massive broadsword-width, katana-thin,
+    or anything between). Wielder controls blade shape through Plasma
+    manipulation. When deactivated, only the compact hilt is visible.
+  - NO sheath, NO back-mounted weapon, NO leather harness/straps.
+  MASTER'S KATANA (character's LEFT hip — RIGHT side of image in front view):
+  - Physical patterned katana (NOT a Plasma Blade — ancient relic, pre-
+    Plasma Blade tech) in a sheath, attached horizontally to his belt on
     his LEFT hip (RIGHT side of image in front view — NOT the left side
     of the image).
   - Visible in all four views.
@@ -104,29 +84,26 @@ reference_sheet_prompt: |
     panel — reproduce it identically in 3/4 and back views.
   - Bottom hem geometric pattern: same pattern, same scale, same style
     across all views.
-  - Broadsword blade: same wide, symmetrically-tapering dark grey blade
-    in every view — do not narrow or change the shape between views.
-  - Brown leather harness: same routing, same thickness in all four views.
+  - Plasma Blade hilt: same compact dark grey/red hilt on RIGHT belt in
+    every view — same size, same position, same accent colors.
+  - Master's katana: same patterned sheath on LEFT hip in every view.
   VIEW REQUIREMENTS — each view must look genuinely different:
   - FRONT VIEW: facing directly toward viewer, full symmetrical front.
+    Plasma Blade hilt visible on right belt, katana sheath on left hip.
   - 3/4 ANGLE VIEW: body turned approximately 45 degrees, showing depth
-    and perspective. The face turns slightly. The sword hilt and back
-    sheath begin to be visible. Clear spatial depth, NOT a flat front view.
+    and perspective. The face turns slightly. Both belt weapons visible.
+    Clear spatial depth, NOT a flat front view.
   - SIDE PROFILE VIEW: exactly 90 degrees sideways — pure silhouette
-    from the side. The broadsword sheath protrudes prominently behind
-    him. Completely different from the front — only one arm visible,
-    side of face only, full depth of sheath visible.
-  - BACK VIEW: facing directly away from viewer. The ENORMOUS broadsword
-    sheath DOMINATES this view — wide, long, running diagonally from
-    upper-right to lower-left on his back. The thick brown leather
-    harness straps are clearly visible crossing his back in an X. The
-    secondary support strap runs horizontally around to his right waist.
-    The dojo insignia is clearly visible on the center back of the cloak.
-    This must look completely different from the front.
+    from the side. Completely different from the front — only one arm
+    visible, side of face only. Cloak drapes cleanly without harness.
+  - BACK VIEW: facing directly away from viewer. The dojo insignia is
+    clearly visible on the center back of the cloak — this is now the
+    dominant feature of the back view. Cloak drapes freely with no
+    harness or sheath. This must look completely different from the front.
 
 palette:
   primary: ["red (bandana, glove, bracer)", "white (cloak)", "black (combat clothing)"]
-  accent: ["ginger (hair)", "green (eyes)", "grey/metallic (broadsword, left knee pauldron)"]
+  accent: ["ginger (hair)", "green (eyes)", "grey/metallic (Plasma Blade hilt, left knee pauldron)"]
 
 variants:
   adrenaline_mode: "eyes turn red, art style becomes sharper/more intense, heavier inks"
