@@ -65,7 +65,7 @@ In addition to general continuity, always verify these Plasma-universe specifics
 - [ ] Spyke wears white knee-length cloak (sleeves cut, similar to Master's)
 - [ ] Spyke wears red fingerless glove on left hand with red bracer on left wrist
 - [ ] Spyke wears armoured full-fingered glove on right hand
-- [ ] June is blonde, uses shortsword + pistol + magician glove + Plasma shoes
+- [ ] June is blonde, uses Plasma Blade + pistol + magician glove + Plasma shoes
 - [ ] Draster has dark brown skin, black/silver hair, dual Plasma Gloves
 - [ ] Morkain has long blonde hair, scar, goatee, black uniform
 - [ ] Dobblepot is a gnome (very short)

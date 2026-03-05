@@ -6,8 +6,8 @@ aliases: ["June", "JUNE", "June Kamara"]
 # Source: 03_manga/prompts/pages-01-to-15.md Character Quick Reference
 fingerprint: |
   June — blonde hair, sporty blue top, short shorts over black tights,
-  shoulder pad armor, shortsword at hip, pistol holster on right thigh,
-  magician glove on left hand, Plasma shoes
+  shoulder pad armor, Plasma Blade hilt clipped to belt, pistol
+  holster on right thigh, magician glove on left hand, Plasma shoes
 
 reference_sheet_prompt: |
   Colored manga character reference sheet, clean linework, cel-shaded,
@@ -26,7 +26,9 @@ reference_sheet_prompt: |
   to the skin. Wearing a big brown belt, with black tights covering her
   entire legs. Overall color scheme is pink, whites, and light tones with
   gold/blonde hair as an accent.
-  Weapons and Gear: (1) A shortsword in a sheath strictly on her LEFT hip.
+  Weapons and Gear: (1) A Plasma Blade hilt clipped to her belt on
+  her LEFT side — compact cylindrical hilt with dark pink accents; projects
+  a short, fast energy blade when activated. No sheath.
   (2) Magician gloves on both hands. (3) A pistol holster strapped to her
   right thigh containing a compact handgun. (4) Plasma-imbued shoes.
 

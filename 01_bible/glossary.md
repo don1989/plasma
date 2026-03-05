@@ -8,8 +8,8 @@
 
 | Name | Also Known As | Description |
 |------|---------------|-------------|
-| Spyke Tinwall | Redhead (by Seymour, Marik) | Protagonist, age 21. Spiky ginger hair (tips reach his traps). Green eyes (left eye turns purple/black when demon activates). Wears Master's red bandana. White knee-length cloak (sleeves cut, dojo emblem on back, decorative pattern along bottom hem). Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Carries broadsword, Master's patterned katana, and hidden daggers concealed in a metal knee pauldron. Has the blood of the ancients. |
-| June | — | Blonde hair, sporty build. Shortsword, magician glove, pistol, Plasma-imbued shoes. Lost parents in Canary Wharf monster attack. |
+| Spyke Tinwall | Redhead (by Seymour, Marik) | Protagonist, age 21. Spiky ginger hair (tips reach his traps). Green eyes (left eye turns purple/black when demon activates). Wears Master's red bandana. White knee-length cloak (sleeves cut, dojo emblem on back, decorative pattern along bottom hem). Red fingerless glove on left hand with a red bracer on left wrist; armoured full-fingered glove on right hand. Red-accented belt. Carries a versatile Plasma Blade hilt (projects variable blade shapes), Master's patterned katana (physical blade), and hidden mini Plasma Blade hilts concealed in a metal knee pauldron. Has the blood of the ancients. |
+| June | — | Blonde hair, sporty build. Plasma Blade, magician glove, pistol, Plasma-imbued shoes. Lost parents in Canary Wharf monster attack. |
 | Draster | — | Dark brown skin, black and silver hair, soft brown eyes. Slim build. Wears suit-robe like a navy jacket. Dual Plasma Gloves. Mage specializing in elemental magic. |
 | Morkain | Hood | Long blonde hair, wrinkled features, scar across face, long goatee. Black Formican Army uniform. Broadsword. Wind/time-freeze powers. Founder and leader of Formican Army. Elder's son. |
 | Tinwall | Spyke's Father | Formican Army general. Broadsword user. Father of both Spyke and Seymour. Abused and imprisoned Spyke as a child. Current whereabouts: Bazzleworth. |
@@ -110,7 +110,7 @@
 | Term | Definition |
 |------|------------|
 | Plasma | Energy source extracted from Terra. Powers weapons, vehicles, and technology. Is also the fundamental cosmic force — "the beginning and end, the creator, the destroyer, the universe." A massive ball of Plasma is the coming catastrophe. |
-| Plasma Manipulation | The ability to control Plasma-infused objects. Required to lift Plasma weapons. Learned through training or innate talent. |
+| Plasma Manipulation | The ability to control Plasma energy. Required to activate and wield Plasma Blades — the projected energy blade resists the wielder and demands immense skill to control. Also enables control of other Plasma-infused objects. Learned through training or innate talent. |
 | Sword Art | Combat techniques channeled through Plasma weapons. Includes ranged energy beams, elemental slashes, and special moves. |
 | Iaijutsu | Lightning-fast sword draw technique. Master's signature style. Spyke learned it and can use it with Master's katana. Grants extreme speed for a single strike. |
 | Elemental Sword | Combined technique — a mage imbues a swordsman's blade with elemental properties (fire, water, ice, thunder). Requires two people. |
@@ -130,9 +130,9 @@
 
 | Name | Description | Significance |
 |------|-------------|--------------|
-| Master's Katana | Katana with iaijutsu heritage. Patterned blade. Glows gold/yellow when activated. Pulsed with light to save trio in Deadbane Desert. | Spyke's secondary weapon. Connection to Master's spirit. |
+| Master's Katana | Physical katana with iaijutsu heritage — one of the few remaining traditional blades, predating Plasma Blade technology. Patterned blade. Glows gold/yellow when activated. Pulsed with light to save trio in Deadbane Desert. | Spyke's secondary weapon. Connection to Master's spirit. NOT a Plasma Blade. |
 | Master's Red Bandana | Red bandana given to Spyke as Master died. | Spyke wears it on his spiky ginger hair. Symbol of his promise. |
-| Spyke's Broadsword | Huge Plasma-infused broadsword. Had it since childhood imprisonment. | Primary weapon. Required years of training to lift. |
+| Spyke's Plasma Blade | Versatile Plasma Blade hilt. Had it since childhood imprisonment. Projects variable blade shapes — broadsword-width, katana-thin, or anything between — controlled through Plasma manipulation. Wielder can switch blade shape mid-combat. | Primary weapon. Required years of training to master the energy blade's resistance. |
 | Plasma Motorcycle | Silver bike built by Cid from parts. Seats 3 + passenger pod. Runs on Plasma, can levitate temporarily. | Primary vehicle for traversing Terra. |
 | Zodiac Gems | Crystals obtained from the 12 shrines. Each bears a zodiac symbol. | Unknown power — likely needed to confront Morkain/catastrophe. Collected: Sagittarius, Cancer, Leo, Gemini. |
 | Black/Green Crystal | Dark crystal that creates/controls monsters. Fused into Seymour's chest. Used in Formican manufacturing machines. Tracked by Formican sensors. | Central to Formican Army's monster creation. Triggers Spyke's eye/demon. |

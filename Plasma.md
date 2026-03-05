@@ -26,8 +26,8 @@ that will determine whether he is inducted into the Formican army, and finally g
 his father.
 The 9:27 train from Kings Cross is the only train that will take you to the Formican army base. If
 Spyke missed it, he would fail the exam by default.
-Big Ben chimed at 9.00 as Spyke dashed across Westminster with his huge broadsword
-swinging from side to side across his back.
+Big Ben chimed at 9.00 as Spyke dashed across Westminster with his katana bouncing at his
+hip and Plasma Blade hilt glinting on his belt.
 “Shit! I’m gonna be late…”, Spyke muttered to himself. He knew a shortcut through an alley that
 would save him approximately 23 seconds, so he glided through the hordes of people trying to
 get to work and slipped through.
@@ -62,11 +62,11 @@ punk just hung back and watched as Spyke readied himself for a fight.
 ***1st Battle - tutorial - Spyke vs 2 punks using katana***
 Spyke defeated the two punks without fatally wounding them. The big punk just watched and
 giggled to himself.
-“I asked if you could use that big sword on your back!” He said, drawing his own broadsword.
+“I wanna see what that hilt on your belt can do!” He said, activating his own Plasma Blade.
 
-“Hmph!” ***2nd battle - tutorial - teach Spyke how to switch weapons - switch to the broadsword
+“Hmph!” ***2nd battle - tutorial - teach Spyke how to activate Plasma Blade (broadsword-width)
 and defeats last punk***
-Spyke withdrew his sword and carried on along the path. The gusts of wind stopped as he
+Spyke deactivated his Plasma Blade, clipped it back to his belt, and carried on along the path. The gusts of wind stopped as he
 muttered to himself, “I’m gonna miss the train…”.
 When Spyke left the view of the punks who were knocked out from the agony, they all vanished
 in a poof of smoke. A tall hooded figure stepped out from the alleyway and watched as Spyke
@@ -114,7 +114,7 @@ Spyke readies himself as June walks up to him.
 (He must have been that guy that was yelling earlier), June thought to herself. (Great, how did I
 get stuck with him?! He does look strong though).
 Spyke continued to warm up as if June wasn’t even there.
-June tied her blonde hair back as she checked her equipment. She had a shortsword, one
+June tied her blonde hair back as she checked her equipment. She had a Plasma Blade, one
 magician glove and a pistol. She was armoured with a shoulder pad but was lightly dressed,
 wearing a sporty top to give her support, short shorts and black tights. Spyke gave her another
 glance, wondering why she had so many weapons in her arsenal.
@@ -219,7 +219,7 @@ this time.
 June and Draster looked up and confirmed what the trio had feared. They had somehow ended
 up on Terra.
 “Shiiiit…” June let out.
-Silence broke out between the trio for a while. Spyke picked up his sword and sheathed it.
+Silence broke out between the trio for a while. Spyke picked up his Plasma Blade hilt and clipped it back to his belt.
 “We need to get back…”, Spyke began.
 “Who the hell was that guy Spyke?!” June interrupted.
 “I don’t know…”
@@ -429,7 +429,7 @@ glare at Draster. They felt each other’s firy energy as they stared into the o
 “Get your hands off…”, Spyke started to say.
 “Lets have a duel”, Draster cut him off. “If you win, I’ll tell you my story, my past. If I win, you tell
 me yours. Deal? Nothing lethal of course.”
-“Nothing lethal huh?”, Spyke decides to pull out a dagger hidden by his side.
+“Nothing lethal huh?”, Spyke decides to pull out a mini Plasma Blade hidden by his side.
 “How many blades do you have?!” Draster asked.
 “Just five, any more and the plasma inside of them would weigh me down too much.” Spyke
 replied, pulling out his hidden blade behind the armour on his leg.
@@ -469,7 +469,7 @@ I dunno. I lived in a small hut, that was surrounded by a playground and that wa
 a tall barbed wall. My father would bring me food, just enough so that I could eat for a few days
 and then leave for a week or more. I had access to a radio so I could hear what was going on in
 the world, and that taught me how to speak. I had a few books that I could read from. I had this
-Plasma broadsword with me then too. That was it, I wasn’t allowed to leave.
+Plasma Blade hilt with me then too. That was it, I wasn’t allowed to leave.
 My mother died giving birth to me, and my father said that I was being punished for killing my
 mother. I would just cry and cry myself to sleep when I heard those words. All I could hear was
 my father blaming me, yelling, shouting, screaming at me, and I would just crawl up into a ball
@@ -484,8 +484,8 @@ could try to use it. I was barely able to lift it until I was 11 years old.
 “It took you five years to be able to lift that sword?” said Draster.
 Plasma swords are not just hunks of metal. They are in infused with Plasma, which makes it
 almost 10 times heavier if you do not know how to manipulate Plasma. If you just tried to lift a
-small dagger infused with Plasma without any knowledge of Plasma manipulation, it would
-weigh the same as a car.
+small Plasma Blade without any knowledge of Plasma manipulation, you wouldn't even be able
+to activate it — the energy blade would resist you completely.
 Anyway, one of the books I found in that old hut, was on Plasma manipulation which I didn’t
 know at the time as it was written in a language I couldn’t understand. It took me years to
 decipher what I had to do, but I figured it out and I could finally lift the sword. It took me another
@@ -526,7 +526,7 @@ I could feel myself being carried by piggyback. My eyes were half open as we fin
 what looked like a derelict church. I could hear some kind of chanting from within. “Ha… Ha…”,
 could be heard in a rhythmic way.
 When we got to the entrance, the man saw that I was awake and he let me down.
-“Here, this belongs to you”, he said, handing me my broadsword. He gestured to follow him as
+“Here, this belongs to you”, he said, handing me my Plasma Blade hilt. He gestured to follow him as
 he walked inside. The chanting got louder and louder as we walked through some corridors. I
 couldn’t believe my eyes when we got to the hall.
 There were about 50 kids all with kendo sticks striking at a dummy in front of them all in unison.
@@ -573,7 +573,7 @@ other kids. Most of them were nice, but there were cliques forming here and ther
 friends. I had arguments, but I had fun and I was happy.
 We were taught how to wield a sword, even though I taught myself the wrong way, I went back
 to basics and would relearn everything. Then Master and I would have extra lessons where he
-would teach me how to use the broadsword, and how to control Plasma. He called me his
+would teach me how to wield the Plasma Blade, and how to control Plasma. He called me his
 apprentice, and I think some of the other kids were jealous of that. Master told me not to tell
 anyone what happened to me in the past, so I didn’t, and that left a resentment feeling among
 some of them.
@@ -586,7 +586,7 @@ manipulate Plasma at such a young age. This only served to build up the resentme
 amongst some of my piers. The one who detested me the most was Seymour.
 Seymour eventually became a senior, but it was long after I became one, and it was through a
 lot of grit and hard work, and not so much natural talent. Because I had “trained” with a
-broadsword and had no choice but to learn how to use it from early on, he deemed that I just
+Plasma Blade and had no choice but to learn how to control it from early on, he deemed that I just
 had luck and natural talent to get to where I was. But he didn’t understand and he resented me
 for this.
 We had spent many years quarrelling and arguing for no reason. So much so that Memphis, the
@@ -612,7 +612,7 @@ have been supremely confident in us both.
 Seymour and I both headed out the door and dashed to our bunks, not saying a word to each
 other.
 I equipped my leg protector and shoulder shield, put on my red and white uniform, attached my
-hidden dagger and broadsword, and met Master and Seymour outside the church.
+hidden dagger and Plasma Blade hilt, and met Master and Seymour outside the church.
 “Always late I see…”, Seymour muttered.
 “Right let's go”, said Master. “We’re heading to Goldhawk. I’ll explain what we need to do when
 we get there.”
@@ -1471,8 +1471,8 @@ Blood was seeping out of Spyke’s left eye. He just about regained the use of h
 “Spyke, are you OK?”, June asked running over to them. Suddenly, a monster the size of the
 entire corridor spawned in front of June, blocking her path.
 “Can you fight?!”, Draster said to Spyke.
-Spyke looked up, wiping the blood from his face. He regained control of his body, drawing his
-broadsword and readying his stance.
+Spyke looked up, wiping the blood from his face. He regained control of his body, activating his
+Plasma Blade and readying his stance.
 “Of course I can!”, he replied.
 *Boss battle - Crystal Monster - this is the same monster as the one Spyke, Seymour and
 Master fought in Spyke’s past. The monster is facing June, and has it’s back to Spyke and
@@ -2087,7 +2087,7 @@ pulled out a dagger from behind him and reached for Spyke’s throat.
 *** Player reaction - the player has one second to react to Marik’s attack. If the player fails to
 react, Zena will step in and block the attack, leading to Marik mocking Spyke for his lack of
 awareness. If the player reacts in time, Spyke and Marik will have a duel ***
-Spyke sensed the dagger a mile off and block Marik’s attack with his own dagger strapped to
+Spyke sensed the dagger a mile off and block Marik’s attack with his own mini Plasma Blade strapped to
 his side.
 “Heh… nice reactions…”, Marik hissed at Spyke as they both glared at each other. They were
 both still grasping each other's hand refusing to let go.
@@ -2558,9 +2558,9 @@ Spyke marched on, batting away the flames with his blade and keeping a lookout f
 approached the Elder’s hut, that was still intact, but the roof was burning. He hurried inside.
 There he was. Morkain standing in front of his mother who was kneeled on the ground, ready to
 be executed. His blade was in the air, ready to slice her in half.
-**Player decision - Use iaijutsu and Master’s katana, or use broadsword. If the player chooses
-to use the broadsword, Spyke won’t make it in time to block Morkain’s attack. **
-Spyke sheaths his watery broadsword and grabs his Master’s katana. Using iaijutsu, he moves
+**Player decision - Use iaijutsu and Master’s katana, or use Plasma Blade. If the player chooses
+to use the Plasma Blade, Spyke won’t make it in time to block Morkain’s attack. **
+Spyke deactivates his watery Plasma Blade and grabs his Master’s katana. Using iaijutsu, he moves
 with lightning speed in front of Morkain to block his broadsword. Morkain is momentarily taken
 aback. Spyke’s katana glowed yellow and gold, something he noticed back at the shrine, and
 push Morkain back.
@@ -2762,14 +2762,14 @@ green now too.
 “Aaaarrgghh,” Spyke struggled, he was losing control of his body. “I… can’t… move…”
 “Draster…”, June whispered to him, keeping her eyes on Spyke.
 “I don’t know what we can do,” Draster replied.
-“I’m in control…”, Spyke hissed again. He slowly reached for his broadsword with his green
+“I’m in control…”, Spyke hissed again. He slowly reached for his Plasma Blade hilt with his green
 hand.
 June and Draster both readied their stance.
 “Looks like Spyke is struggling to control his body!” Draster yelled to June. “We need to subdue
 him!”
 “Shit… Spyke…!”, June was watching him in disbelief.
 Spyke’s eye and arm had both turned a shade of green. He looked into June’s eyes with his
-broadsword now in his green hand.
+Plasma Blade now activated in his green hand.
 “I’m in control…”, Spyke hissed one more time, as he jumped at June attacking her with his
 sword.
 June parried and evaded the attack.
@@ -4805,10 +4805,10 @@ Spyke then looked back down at June, and she had turned into a monster, snarling
 before jumping at him. He was able to evade and instinctively reached for his sword, but he was
 unequipped.
 As the monster spun around preparing for another attack, Spyke kneeled and grabbed the
-dagger he had hidden in his leg brace. The monster growled and ran straight towards him,
+mini Plasma Blade hilt he had hidden in his knee pauldron, activating it. The monster growled and ran straight towards him,
 Spyke was able to easily evade and strike the monster on top of the head, instantly killing it.
 “You really are armed to the teeth…” Morkain hissed behind Spyke.
-Spyke spun around with his dagger, taking a slash at Morkain, but he was able to evade.
+Spyke spun around with his Plasma Blade, taking a slash at Morkain, but he was able to evade.
 The two men glared at each other with hatred for one another. Neither of them spoke for what
 seemed like an eternity.
 “If you ever mess with my plans again…”, Morkain began.

@@ -19,15 +19,16 @@
 - Clean, confident linework — no sketchy or rough edges
 
 ### Character Color Palettes
-- **Spyke Tinwall:** Reds (bandana, right fingerless glove, left armored bracer/gauntlet), white (cloak), blacks (combat clothing, geometric cloak trim), dark grey/metallic (broadsword, knee pauldron), ginger hair, green eyes
+- **Spyke Tinwall:** Reds (bandana, right fingerless glove, left armored bracer/gauntlet), white (cloak), blacks (combat clothing, geometric cloak trim), dark grey/metallic (Plasma Blade hilt, knee pauldron), ginger hair, green eyes
 - **June Kamara:** Dark pinks (sporty top, shorts, shoes), whites (accents), gold/blonde hair, white/fair skin, black (tights, belt)
 - **Draster:** Navy (suit-robe), silver (hair highlights, glove accents), dark tones overall, dark brown skin
 - **Hood (Morkain):** Pure black (cloak), dark purple aura/energy wisps, no visible skin color
 
 ### Weapon Rendering
-- All **Plasma weapons** emit a faint **blue/white energy glow** along their cutting edges
-- The glow is soft and ethereal, not overpowering — like a thin luminous outline hugging the blade
-- Spyke's broadsword glows the most intensely; other weapons have subtler glows
+- **Plasma Blades** project energy blades from compact hilts — the projected blade emits a bright **blue/white Plasma glow**
+- When deactivated, only the compact hilt is visible (no blade, no glow)
+- When activated, Spyke's Plasma Blade glows the most intensely; other Plasma Blades have subtler glows
+- Traditional Plasma weapons (e.g. Master's katana, Hood's broadsword) emit a fainter **blue/white energy glow** along their physical cutting edges
 
 ### Panel Style (for the full manga)
 - **Dynamic layouts:** tilted panels, overlapping frames, broken borders during action
@@ -69,11 +70,9 @@ Feet: Dark combat boots.
 
 Weapons & Equipment:
 
-Back Weapon: A massive Plasma Broadsword. Unique design (hilt flows into blade, blade tapers toward the middle).
-- State: The blade is dark grey/metallic when sheathed, but glows faint blue-white when drawn.
-- Sheath/Rigging: The broadsword is held in a sheath on his back. Crucial: The leather strap and buckle for the sheath are worn ON TOP of the white cloak (visible across his chest and shoulder in Front and Side views).
+Belt Weapon (RIGHT side): A Plasma Blade hilt — compact cylindrical hilt with dark grey metallic body and red accent rings. Clipped directly to the right side of his belt. This is a versatile Plasma Blade that projects variable-shape Plasma energy blades (broadsword-width, katana-thin, etc.) when activated. When deactivated, only the compact hilt is visible — no blade, no sheath, no harness. NO back-mounted weapon, NO leather straps across chest.
 
-Side Weapon: A Katana sheathed at his left hip (visible in all four views).
+Side Weapon: Master's Katana — a physical patterned katana (NOT a Plasma Blade, ancient relic) sheathed at his left hip (visible in all four views).
 
 Layout:
 
@@ -87,7 +86,7 @@ Bottom Row: Expression sheet (6 bust/head shots):
 5. Shocked
 6. Inner Pain (left eye bleeding)
 
-Inserts: Detail callouts for the Red Bandana, Plasma Sword Glow, Leg Brace/Daggers, and Eye Transformation (Green -> Purple/Black Sclera -> Glowing Red).
+Inserts: Detail callouts for the Red Bandana, Plasma Blade Hilt (deactivated + activated with Plasma blade), Knee Pauldron (concealing mini Plasma Blade hilts), and Eye Transformation (Green -> Purple/Black Sclera -> Glowing Red).
 ```
 
 ---
@@ -105,7 +104,7 @@ Eyes: Bright, expressive eyes with a warm and lively look.
 
 Clothing: A vested sporty crop top in dark pink tones, with a big bust. One single shoulder pauldron on her LEFT shoulder — a small curved plate of metal or hardened leather, practical and slightly battle-worn. Dark pink medium shorts (athletic style) - shorts are flowy, but have undershorts which are tight to the skin. Wearing a big brown belt, with black tights covering her entire legs. Overall color scheme is pink, whites, and light tones with gold/blonde hair as an accent.
 
-Weapons and Gear: (1) A shortsword in a sheath strictly on her LEFT hip — compact and practical, suited for fast close-range combat. (2) Magician gloves on both hands — fingerless gloves with arcane/magical markings or subtle glowing runes etched into the fabric. (3) A pistol holster strapped to her right thigh containing a compact handgun. (4) Plasma-imbued shoes — her boots/sneakers are dark pink and have a faint blue-white Plasma energy glow emanating from the soles and edges, indicating they are magically enhanced for speed or agility.
+Weapons and Gear: (1) A Plasma Blade hilt clipped to her belt on her LEFT side — compact cylindrical hilt with dark pink accents; projects a short, fast energy blade when activated. No sheath. (2) Magician gloves on both hands — fingerless gloves with arcane/magical markings or subtle glowing runes etched into the fabric. (3) A pistol holster strapped to her right thigh containing a compact handgun. (4) Plasma-imbued shoes — her boots/sneakers are dark pink and have a faint blue-white Plasma energy glow emanating from the soles and edges, indicating they are magically enhanced for speed or agility.
 
 Views: Front full-body view (hair down), 3/4 angle view (hair tied back, combat-ready), side profile view, back view.
 
@@ -118,7 +117,7 @@ Expression sheet (6 expressions, bust/head shots arranged in a row at the very b
 5. Teasing smirk — half-lidded eyes, sly grin, playful and mischievous
 6. Shocked — eyes wide as saucers, mouth agape, classic manga shock expression with small pupils
 
-Include detail callouts for: the magician glove with its rune markings, the shoulder pauldron armor piece, the Plasma-imbued shoes showing the glow effect, and the pistol holster on the right thigh.
+Include detail callouts for: the magician glove with its rune markings, the shoulder pauldron armor piece, the Plasma Blade hilt (deactivated + activated), the Plasma-imbued shoes showing the glow effect, and the pistol holster on the right thigh.
 ```
 
 ---
@@ -186,17 +185,17 @@ Colored manga character reference sheet, clean linework, cel-shaded, vibrant col
 
 Characters: Three young male street thugs/punks, generic antagonist designs, cocky and aggressive body language. They are a small gang. All dressed in black streetwear/punk fashion.
 
-Punk Leader (center, tallest): The biggest and tallest of the three, broad-shouldered, muscular build, intimidating. Wears a black leather jacket (open, no shirt underneath or a dark tank top), black ripped jeans, heavy boots, chain accessories (wallet chain, chain necklace). Aggressive sneer on his face. A short sword sheathed at his hip. Cocky wide stance, arms crossed or one hand on the hilt of his sword. Spiky or slicked-back dark hair, a scar on his face (cheek or brow).
+Punk Leader (center, tallest): The biggest and tallest of the three, broad-shouldered, muscular build, intimidating. Wears a black leather jacket (open, no shirt underneath or a dark tank top), black ripped jeans, heavy boots, chain accessories (wallet chain, chain necklace). Aggressive sneer on his face. A Plasma Blade hilt clipped to his belt. Cocky wide stance, arms crossed or one hand on the hilt of his sword. Spiky or slicked-back dark hair, a scar on his face (cheek or brow).
 
-Punk 2 (left, medium build): Average height, lean and wiry. Wears a black hoodie with the sleeves torn off, dark cargo pants, combat boots, fingerless gloves. A beanie or bandana on his head. Sneering or smirking expression. Short sword at his hip. Slouched posture, hands in pockets or cracking knuckles.
+Punk 2 (left, medium build): Average height, lean and wiry. Wears a black hoodie with the sleeves torn off, dark cargo pants, combat boots, fingerless gloves. A beanie or bandana on his head. Sneering or smirking expression. Plasma Blade hilt at his belt. Slouched posture, hands in pockets or cracking knuckles.
 
-Punk 3 (right, smallest): The shortest and scrappiest of the three. Wears a black t-shirt with a torn collar, black skinny jeans, sneakers, studded wristbands. Messy unkempt hair. Twitchy and eager expression, like he is looking for a fight. Short sword at his hip. Bouncing on his feet or pointing aggressively.
+Punk 3 (right, smallest): The shortest and scrappiest of the three. Wears a black t-shirt with a torn collar, black skinny jeans, sneakers, studded wristbands. Messy unkempt hair. Twitchy and eager expression, like he is looking for a fight. Plasma Blade hilt at his belt. Bouncing on his feet or pointing aggressively.
 
 Group arrangement: All three standing together in a line — Leader in center (tallest, dominant), Punk 2 on the left leaning casually, Punk 3 on the right with restless energy. They should look like a cohesive gang with matching black streetwear aesthetic but individual personality.
 
 Views: One group shot (front view, all three together), then individual front-facing full-body views of each punk side by side for design clarity.
 
-Include detail callouts for: the short sword design (same basic weapon for all three — simple, cheap-looking blade), the Leader's chain accessories, and each punk's distinguishing accessory (Leader: scar + leather jacket, Punk 2: torn hoodie + beanie, Punk 3: studded wristbands + torn collar shirt).
+Include detail callouts for: the Plasma Blade hilt design (same basic cheap-looking hilt for all three — simple, mass-produced), the Leader's chain accessories, and each punk's distinguishing accessory (Leader: scar + leather jacket, Punk 2: torn hoodie + beanie, Punk 3: studded wristbands + torn collar shirt).
 ```
 
 ---
