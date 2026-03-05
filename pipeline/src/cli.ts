@@ -273,6 +273,77 @@ program
   });
 
 // ---------------------------------------------------------------------------
+// Kling AI generation (primary generation path)
+// ---------------------------------------------------------------------------
+
+program
+  .command('kling')
+  .description('Generate manga panels using Kling AI with character reference images')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
+  .option('--page <number>', 'Generate a single page')
+  .option('--pages <range>', 'Page range (e.g., "1-5" or "3,7,12")')
+  .option('--characters <ids...>', 'Character IDs to use as references (e.g., spyke-tinwall june-kamara)')
+  .option('--model <name>', 'Model override (default: kling-v2-1 or kling-image-o1 for multi-ref)')
+  .option('--aspect-ratio <ratio>', 'Aspect ratio (default: 3:4)', '3:4')
+  .option('--fidelity <number>', 'Reference fidelity 0-1 (default: 0.8)', '0.8')
+  .option('--prompt <text>', 'Custom prompt override (skip reading from prompts dir)')
+  .option('--notes <text>', 'Notes stored in generation log')
+  .option('-v, --verbose', 'Enable verbose logging')
+  .option('--dry-run', 'Show what would be done without doing it')
+  .action(async (options) => {
+    if (!options.chapter) {
+      console.error("error: required option '-c, --chapter <number>' not specified");
+      process.exit(1);
+    }
+
+    // Parse --pages range
+    let pages: number[] | undefined;
+    if (options.pages) {
+      const raw = options.pages as string;
+      if (raw.includes('-')) {
+        const [startStr, endStr] = raw.split('-');
+        const start = parseInt(startStr!);
+        const end = parseInt(endStr!);
+        if (isNaN(start) || isNaN(end) || start > end) {
+          console.error(`Invalid page range: ${raw}`);
+          process.exit(1);
+        }
+        pages = [];
+        for (let i = start; i <= end; i++) pages.push(i);
+      } else {
+        pages = raw.split(',').map((s) => {
+          const n = parseInt(s.trim());
+          if (isNaN(n)) {
+            console.error(`Invalid page number: ${s}`);
+            process.exit(1);
+          }
+          return n;
+        });
+      }
+    }
+
+    const { runKlingGenerate } = await import('./stages/kling-generate.js');
+    const result = await runKlingGenerate({
+      chapter: parseInt(options.chapter),
+      page: options.page ? parseInt(options.page) : undefined,
+      pages,
+      characters: options.characters,
+      model: options.model,
+      aspectRatio: options.aspectRatio,
+      fidelity: parseFloat(options.fidelity),
+      prompt: options.prompt,
+      notes: options.notes,
+      verbose: options.verbose,
+      dryRun: options.dryRun,
+    });
+    if (!result.success) {
+      console.error('Stage failed:', result.errors);
+      process.exit(1);
+    }
+    console.log(`Completed in ${result.duration}ms. Files: ${result.outputFiles.length}`);
+  });
+
+// ---------------------------------------------------------------------------
 // Character subcommands (lightweight CLI utilities, not pipeline stages)
 // ---------------------------------------------------------------------------
 
@@ -417,6 +488,71 @@ Main Row: Four full-body views: Front View, 3/4 Angle View, Side Profile View, B
 
     await saveGeneratedImage(result, outPath);
     console.log(`Saved: ${outPath}`);
+  });
+
+// ---------------------------------------------------------------------------
+// Reference image management
+// ---------------------------------------------------------------------------
+
+const reference = program
+  .command('reference')
+  .description('Manage character reference images for Kling AI consistency');
+
+reference
+  .command('list')
+  .description('List all characters with reference images')
+  .action(async () => {
+    const { loadAllReferences } = await import('./generation/references.js');
+    const manifest = await loadAllReferences();
+
+    if (manifest.characters.length === 0) {
+      console.log('No reference images found.');
+      console.log('Add references with: plasma-pipeline reference add <character-id> <image-path>');
+      return;
+    }
+
+    console.log(`\nCharacter References (${manifest.characters.length}):\n`);
+    for (const char of manifest.characters) {
+      console.log(`  ${char.characterId}`);
+      for (const img of char.imagePaths) {
+        console.log(`    - ${img}`);
+      }
+      console.log('');
+    }
+  });
+
+reference
+  .command('add')
+  .description('Add a reference image for a character')
+  .argument('<character-id>', 'Character ID (e.g., spyke-tinwall)')
+  .argument('<image-path>', 'Path to the reference image')
+  .option('--label <name>', 'Label for the reference (e.g., front, side, action)')
+  .action(async (characterId: string, imagePath: string, options) => {
+    const { existsSync } = await import('node:fs');
+    if (!existsSync(imagePath)) {
+      console.error(`Image not found: ${imagePath}`);
+      process.exit(1);
+    }
+    const { addReference } = await import('./generation/references.js');
+    const destPath = await addReference(characterId, imagePath, options.label);
+    console.log(`Added reference: ${destPath}`);
+  });
+
+reference
+  .command('show')
+  .description('Show reference images for a specific character')
+  .argument('<character-id>', 'Character ID')
+  .action(async (characterId: string) => {
+    const { loadCharacterReferences } = await import('./generation/references.js');
+    const refs = await loadCharacterReferences(characterId);
+    if (refs.length === 0) {
+      console.log(`No reference images for ${characterId}.`);
+      return;
+    }
+    console.log(`\nReferences for ${characterId} (${refs.length}):\n`);
+    for (const ref of refs) {
+      console.log(`  ${ref}`);
+    }
   });
 
 // Strip a lone '--' injected by pnpm:

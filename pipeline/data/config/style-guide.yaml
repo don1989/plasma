@@ -1,7 +1,10 @@
 # Style guide prefix — verbatim, included at the top of every prompt
-# Source: 03_manga/prompts/pages-01-to-15.md
-# DO NOT paraphrase — this exact text produces consistent Gemini output
+# Used by both Gemini (legacy) and Kling AI generation
+# DO NOT paraphrase — this exact text produces consistent output
 style_prefix: "Colored manga page, cel-shaded, clean linework, vibrant colors, dynamic panel layout."
+
+# Kling-specific style prefix (for Kling Image models)
+kling_style_prefix: "Manga art style, cel-shaded, clean linework, vibrant colors, anime aesthetic, high detail."
 
 # Art style settings
 setting: "Year 3031, sci-fi London — vertical tower city above ocean, hover vehicles, holographic tech"

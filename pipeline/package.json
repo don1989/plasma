@@ -11,6 +11,7 @@
     "stage:script": "tsx src/cli.ts script",
     "stage:prompt": "tsx src/cli.ts prompt",
     "stage:generate": "tsx src/cli.ts generate",
+    "stage:kling": "tsx src/cli.ts kling",
     "stage:overlay": "tsx src/cli.ts overlay",
     "stage:assemble": "tsx src/cli.ts assemble",
     "start:service": "tsx src/comfyui/service.ts"
@@ -18,6 +19,7 @@
   "dependencies": {
     "@google/genai": "^1.42.0",
     "commander": "^14.0.3",
+    "kling-api": "^1.0.0",
     "express": "^5.2.1",
     "nunjucks": "^3.2.4",
     "remark-parse": "^11.0.0",
