@@ -18,40 +18,40 @@ const REPO_ROOT = path.resolve(PATHS.pipelineRoot, '..');
 const SPYKE_REF = path.join(REPO_ROOT, '03_manga/concept/characters/spyke_tinwall/Spyke_Final.png');
 const OUTPUT_DIR = path.join(REPO_ROOT, '03_manga/concept/characters/spyke_tinwall/references');
 
-// Base outfit description used in every prompt for consistency
-const OUTFIT = 'wearing a long white cloak draped over his shoulders, a black sleeveless top with red trim underneath, red fingerless gloves, black pants, silver knee guards, and tall black boots';
-const FACE = 'a 21-year-old male anime character with long red hair, red headband, green glowing eyes with dark sclera';
+// Bible-accurate descriptions
+const FACE = 'a 21-year-old male anime character with spiky ginger hair reaching his traps, green eyes, wearing a red bandana headband';
+const OUTFIT = 'wearing a white knee-length sleeveless cloak with a decorative pattern along the bottom hem and a dojo emblem on the back, open at the front, over a black short-sleeved t-shirt with red trim and red accent markings. His left arm has a red fingerless glove and a red bracer on the forearm. His right hand has an armoured full-fingered dark glove with no bracer, just the glove. Red-accented belt, black pants, a single silver metal knee pauldron on his left knee only, bare right knee with no armor, tall dark grey boots. No shoulder strap, no cross-body strap, no sword on his back';
 
 const PROMPTS = [
   {
-    label: 'front_standing_v2',
+    label: 'front_standing_v6',
     prompt:
-      `A full-body front view of @Image1, ${FACE}, ${OUTFIT}. He is standing in a relaxed neutral pose with his arms at his sides, no weapons, no sword. Clean white background, character reference sheet style, anime art style.`,
+      `A full-body front view of @Image1, ${FACE}, ${OUTFIT}. He is standing in a relaxed neutral pose with his arms at his sides. Clean white background, character reference sheet style, anime art style.`,
   },
   {
-    label: 'three_quarter_v2',
+    label: 'three_quarter_v3',
     prompt:
-      `A full-body 3/4 angle view of @Image1, ${FACE}, ${OUTFIT}. The white cloak flows slightly to the side. Arms relaxed at his sides, no weapons, no sword. Clean white background, character reference sheet, anime art style.`,
+      `A full-body 3/4 angle view of @Image1, ${FACE}, ${OUTFIT}. The white cloak flows slightly to the side. Arms relaxed at his sides, no weapons. Clean white background, character reference sheet, anime art style.`,
   },
   {
-    label: 'side_profile_v2',
+    label: 'side_profile_v3',
     prompt:
-      `A full-body side profile view of @Image1, ${FACE}, ${OUTFIT}. The white cloak drapes down his back. Standing straight, arms at sides, no weapons, no sword. Clean white background, character reference sheet, anime art style.`,
+      `A full-body side profile view of @Image1, ${FACE}, ${OUTFIT}. The white cloak drapes down his back. Standing straight, arms at sides, no weapons. Clean white background, character reference sheet, anime art style.`,
   },
   {
-    label: 'back_view',
+    label: 'back_view_v2',
     prompt:
-      `A full-body back view of @Image1, ${FACE}, ${OUTFIT}. Seen from directly behind, the white cloak is fully visible covering his back with a Greek key pattern along the bottom hem. His long red hair flows over the cloak. Standing straight, no weapons. Clean white background, character reference sheet, anime art style.`,
+      `A full-body back view of @Image1, ${FACE}, ${OUTFIT}. Seen from directly behind, the white cloak is fully visible covering his back with a dojo emblem and a decorative pattern along the bottom hem. His ginger hair flows over the cloak. Standing straight, no weapons. Clean white background, character reference sheet, anime art style.`,
   },
   {
-    label: 'drawing_katana_v6',
+    label: 'katana_draw_stance',
     prompt:
-      `A full-body 3/4 view of @Image1, a 21-year-old male anime character with long red hair, red headband, bright green eyes, green irises, ${OUTFIT}. He wears the same long sleeveless white cloak with a Greek key pattern along the bottom hem, open at the front, reaching down to his knees. He stands in an iaido ready stance with knees slightly bent. A sheathed katana hangs at his left hip. His left hand holds the sheath, his right hand is reaching for the katana handle, about to grip it and draw. The blade is still fully inside the sheath, not yet drawn. Calm intense expression with bright green eyes. Clean white background, character reference sheet style, anime art style.`,
+      `A full-body 3/4 view of @Image1, ${FACE} with bright green irises, ${OUTFIT}. He wears the same white knee-length sleeveless cloak with a decorative pattern along the bottom hem. He stands in an iaido battojutsu ready stance, knees slightly bent, body low. A sheathed patterned katana hangs at his left hip. His left hand grips the scabbard, his right hand hovers over the katana handle, about to draw. The blade is completely sheathed, not drawn. Calm determined expression with green eyes. Clean white background, character reference sheet style, anime art style.`,
   },
   {
-    label: 'holding_broadsword',
+    label: 'plasma_blade_active',
     prompt:
-      `A full-body front view of @Image1, ${FACE}, ${OUTFIT}. He is standing confidently holding a large broadsword in one hand, the blade resting against his shoulder. The white cloak drapes around him. Clean white background, anime art style.`,
+      `A full-body front view of @Image1, ${FACE} with bright green irises, ${OUTFIT}. He wears the same white knee-length sleeveless cloak with a decorative pattern along the bottom hem. He holds a small metal hilt in his right hand. From the hilt, a glowing energy blade is projected like a lightsaber, bright blue-white plasma energy forming a broadsword-shaped blade of light. The blade glows intensely. Confident battle stance. Clean white background, anime art style.`,
   },
 ];
 
