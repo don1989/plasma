@@ -200,6 +200,63 @@ Include detail callouts for: the Plasma Blade hilt design (same basic cheap-look
 
 ---
 
+## 3D MODEL REFERENCE PROMPTS
+
+> **Purpose:** Generate T-pose character sheets from existing reference images, suitable for 3D modeling (rigging, texturing, UV mapping).
+> **Usage:** Attach the front and back reference images of the character, then paste the prompt into Gemini.
+
+---
+
+### Spyke Tinwall — T-Pose (3D Model Reference)
+
+```
+3D character model reference sheet — T-POSE, Spyke Tinwall.
+
+Use the attached front and back reference images as the definitive design. Reproduce this character exactly in a clean T-pose for 3D modeling.
+
+POSE: Standing T-pose — arms extended straight out to the sides at shoulder height, palms facing down, fingers together and straight. Legs straight, feet shoulder-width apart, facing directly forward. Body perfectly upright and symmetrical. This is a standard rigging reference pose.
+
+CHARACTER (match reference images exactly):
+
+Hair: Ginger/copper-red hair, messy and layered, length stopping at the bottom of the neck. Bright red bandana tied around the forehead with tails trailing into the hair.
+
+Eyes: Sharp green eyes (both eyes normal green in this reference).
+
+Build: Male, age 21, slim but strong athletic build, lean muscle definition.
+
+Outfit:
+- Torso: Black fitted t-shirt underneath a white sleeveless cloak. The cloak has a clean hem with a black geometric pattern along the bottom edge. Black insignia on the center of the back.
+- NO belt strap over the shoulder. NO cross-body straps. NO chest harness. The torso is clean — just the t-shirt and cloak.
+- Right Arm: Red fingerless glove covering the hand only, stopping at the wrist (forearm skin visible).
+- Left Arm: Red metallic armored bracer/gauntlet covering the hand and extending up the forearm.
+- Legs: Black combat pants with reinforced knees. Metal knee pauldron on the right knee (solid armor piece, no hidden weapons visible).
+- Feet: Dark combat boots.
+- Belt: Red-accented belt at the waist. Plasma Blade hilt (compact dark grey cylinder with red accent rings) clipped to the RIGHT side of the belt. Master's katana sheathed at the LEFT hip.
+
+IMPORTANT — DO NOT INCLUDE:
+- No shoulder straps or cross-body belts
+- No back-mounted weapons
+- No leather harness across the chest
+- No extra accessories not described above
+
+VIEWS — Generate these on a plain white background:
+1. Front view — full body T-pose, facing camera directly
+2. Back view — full body T-pose, facing away from camera
+3. Left side view — full body T-pose, profile facing left
+4. Right side view — full body T-pose, profile facing right
+
+STYLE: Clean, flat coloring with clear outlines. No heavy shading or cel-shading — keep colors flat and readable for 3D texture reference. White background. No perspective distortion — orthographic/flat projection for each view. Each view should be the same scale and aligned vertically.
+
+COLOR CALLOUTS (small swatches along the bottom):
+- Ginger/copper hair
+- Red (bandana, glove, bracer, belt accents)
+- White (cloak)
+- Black (t-shirt, pants, cloak trim)
+- Dark grey metallic (Plasma Blade hilt, knee pauldron)
+```
+
+---
+
 ## Usage Notes
 
 - **Copy-paste each code block directly** into Nano Banana (Google Gemini image model) as a single prompt.
