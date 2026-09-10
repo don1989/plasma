@@ -17,6 +17,7 @@ import { extractCharactersFromPanel } from '../templates/prompt-generator.js';
 import { aspectForShot, assignSpeakerSides, pickEmphasisPanel } from './shot-rules.js';
 import { rowFlowLayout } from '../layout/row-flow.js';
 import { buildPanelPrompt } from './panel-prompt.js';
+import { findScene, type SceneEntry, type Location } from './scenes.js';
 import { PATHS } from '../config/paths.js';
 
 export function hashPanelPrompt(prompt: string): string {
@@ -32,7 +33,10 @@ function speakerNames(panel: Panel, registry: CharacterRegistry): Record<string,
   return names;
 }
 
-function buildPanel(panel: Panel, registry: CharacterRegistry, stylePrefix: string): PanelPlan {
+export interface SceneContext { scenes: SceneEntry[]; locations: Map<string, Location>; locationsWithRefs: Set<string> }
+const NO_SCENES: SceneContext = { scenes: [], locations: new Map(), locationsWithRefs: new Set() };
+
+function buildPanel(panel: Panel, registry: CharacterRegistry, stylePrefix: string, pageNumber: number, ctx: SceneContext): PanelPlan {
   const { known } = extractCharactersFromPanel(panel, registry);
   const seen = new Set<string>();
   const fingerprints: Array<{ id: string; name: string; fingerprint: string }> = [];
@@ -47,15 +51,19 @@ function buildPanel(panel: Panel, registry: CharacterRegistry, stylePrefix: stri
     .map((d) => d.character)
     .filter((k) => { const c = registry.get(k); return !!c && seen.has(c.id); });
   const speakerSides = assignSpeakerSides(panel.dialogue, onPanelSpeakers);
+  const scene = findScene(ctx.scenes, pageNumber, panel.panelNumber);
+  const location = scene ? ctx.locations.get(scene.locationId) : undefined;
   const prompt = buildPanelPrompt({
     stylePrefix, action: panel.action, notes: panel.notes, shotType: panel.shotType,
     fingerprints, speakerSides, speakerNames: speakerNames(panel, registry),
+    setting: location?.setting, hasLocationRef: !!scene && ctx.locationsWithRefs.has(scene.locationId),
   });
   return {
     panelNumber: panel.panelNumber,
     shotType: panel.shotType,
     aspectRatio: aspectForShot(panel.shotType),
     characterIds: fingerprints.map((f) => f.id),
+    ...(scene ? { locationId: scene.locationId } : {}),
     speakerSides,
     dialogue: panel.dialogue,
     sfx: panel.sfx,
@@ -66,9 +74,9 @@ function buildPanel(panel: Panel, registry: CharacterRegistry, stylePrefix: stri
   };
 }
 
-export function buildChapterPlan(chapter: Chapter, registry: CharacterRegistry, stylePrefix: string): ChapterPlan {
+export function buildChapterPlan(chapter: Chapter, registry: CharacterRegistry, stylePrefix: string, ctx: SceneContext = NO_SCENES): ChapterPlan {
   const pages: PagePlan[] = chapter.pages.map((page) => {
-    const panels = page.panels.map((p) => buildPanel(p, registry, stylePrefix));
+    const panels = page.panels.map((p) => buildPanel(p, registry, stylePrefix, page.pageNumber, ctx));
     const emphasis = pickEmphasisPanel(page.panels.map((p) => ({
       panelNumber: p.panelNumber, dialogueCount: p.dialogue.length, notes: p.notes,
     })));

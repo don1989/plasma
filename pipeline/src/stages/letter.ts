@@ -9,6 +9,8 @@ import type { PagePlan } from '../types/page-plan.js';
 import { DEFAULT_OVERLAY_CONFIG } from '../types/overlay.js';
 import { PATHS } from '../config/paths.js';
 import { loadChapterPlan, pageFileName } from '../planning/page-plan.js';
+import type { Rect } from '../overlay/placement.js';
+import type { PanelPlan, SlotRect } from '../types/page-plan.js';
 import { placeBalloons } from '../overlay/placement.js';
 import { generateBalloonShapeSvg } from '../overlay/balloon.js';
 import { renderText } from '../overlay/text-measure.js';
@@ -45,6 +47,23 @@ function bodySize(text: RenderedText, type: 'speech' | 'thought' | 'narration'):
   return { width: Math.ceil(text.width * f.x) + 2 * PAD.x, height: Math.ceil(text.height * f.y) + 2 * PAD.y };
 }
 
+/**
+ * Face boxes of the approved version, mapped from source-image space into the
+ * slot after compose's cover-fit + centre crop (with the 4 px frame border).
+ */
+export function faceRectsForSlot(panel: PanelPlan, slot: SlotRect, border = 4): Rect[] {
+  const v = panel.versions.find((x) => x.version === panel.approvedVersion);
+  if (!v?.faces?.length || !v.imageSize) return [];
+  const innerW = slot.w - 2 * border, innerH = slot.h - 2 * border;
+  const scale = Math.max(innerW / v.imageSize.w, innerH / v.imageSize.h);
+  const drawnW = v.imageSize.w * scale, drawnH = v.imageSize.h * scale;
+  const offX = slot.x + border - (drawnW - innerW) / 2;
+  const offY = slot.y + border - (drawnH - innerH) / 2;
+  return v.faces.map((f) => ({
+    x: offX + f.x * drawnW, y: offY + f.y * drawnH, w: f.w * drawnW, h: f.h * drawnH,
+  }));
+}
+
 export async function letterPage(pageFile: string, page: PagePlan): Promise<Buffer> {
   const font = letterFont();
   const layers: OverlayOptions[] = [];
@@ -61,6 +80,7 @@ export async function letterPage(pageFile: string, page: PagePlan): Promise<Buff
       const balloons = await placeBalloons({
         slot, dialogue: panel.dialogue, speakerSides: panel.speakerSides, inset: INSET, spacing: SPACING,
         overrides: panel.balloonOverrides,
+        avoid: faceRectsForSlot(panel, slot),
         measure: async (text, maxWidth) => {
           const type = types.get(text) ?? 'speech';
           // Wrap narrowly enough that the enclosing body still fits within maxWidth.

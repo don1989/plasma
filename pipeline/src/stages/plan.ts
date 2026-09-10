@@ -10,7 +10,8 @@ import type { Chapter } from '../types/manga.js';
 import { PATHS } from '../config/paths.js';
 import { loadCharacterRegistry } from '../characters/registry.js';
 import { loadStyleGuide } from '../templates/prompt-generator.js';
-import { buildChapterPlan, mergeChapterPlan, loadChapterPlan, saveChapterPlan } from '../planning/page-plan.js';
+import { buildChapterPlan, mergeChapterPlan, loadChapterPlan, saveChapterPlan, type SceneContext } from '../planning/page-plan.js';
+import { loadScenes, loadLocation, loadLocationReferences } from '../planning/scenes.js';
 
 export async function runPlan(options: StageOptions): Promise<StageResult> {
   const start = Date.now();
@@ -22,7 +23,15 @@ export async function runPlan(options: StageOptions): Promise<StageResult> {
   const chapter = JSON.parse(await readFile(scriptPath, 'utf-8')) as Chapter;
   const registry = await loadCharacterRegistry();
   const style = loadStyleGuide(PATHS.styleGuide);
-  const fresh = buildChapterPlan(chapter, registry, style.stylePrefix);
+  const scenes = await loadScenes(options.chapter);
+  const ctx: SceneContext = { scenes, locations: new Map(), locationsWithRefs: new Set() };
+  for (const id of new Set(scenes.map((s) => s.locationId))) {
+    const loc = await loadLocation(id);
+    if (!loc) { console.warn(`[plan] warning: scene references unknown location ${id} (data/locations/${id}.yaml)`); continue; }
+    ctx.locations.set(id, loc);
+    if ((await loadLocationReferences(id)).length > 0) ctx.locationsWithRefs.add(id);
+  }
+  const fresh = buildChapterPlan(chapter, registry, style.stylePrefix, ctx);
   const merged = mergeChapterPlan(fresh, await loadChapterPlan(options.chapter));
 
   if (options.verbose) {

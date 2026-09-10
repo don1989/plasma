@@ -7,11 +7,16 @@ export interface PanelPromptInput {
   speakerSides: Record<string, 'left' | 'right'>;
   /** Display name per script speaker key, e.g. { 'PUNK 1': 'the punk leader' } */
   speakerNames: Record<string, string>;
+  /** Scene continuity text; rendered as a SETTING block when present. */
+  setting?: string;
+  /** Whether a location reference image accompanies this panel. */
+  hasLocationRef?: boolean;
 }
 
 const CLOSER =
   'Single manga panel, one continuous scene, no panel borders inside the image. ' +
-  'Leave clear headroom above the characters for dialogue balloons. ' +
+  'Keep every character\'s head in the lower two thirds of the image and leave clear empty space above them for dialogue balloons. ' +
+  'Characters keep their feet on the ground in a natural stride or stance unless the action says they jump or fall. ' +
   'NO text, NO speech balloons, NO sound-effect lettering, NO captions.';
 
 /**
@@ -26,6 +31,11 @@ export function buildPanelPrompt(input: PanelPromptInput): string {
   if (action) parts.push(action);
   const notes = input.notes.trim();
   if (notes) parts.push(notes);
+
+  const setting = input.setting?.trim();
+  if (setting) {
+    parts.push('SETTING (same location as the other panels of this scene' + (input.hasLocationRef ? ', match the setting reference image' : '') + '):\n' + setting);
+  }
 
   if (input.fingerprints.length > 0) {
     parts.push('CHARACTERS (match the reference images; these specs are canon):\n' +

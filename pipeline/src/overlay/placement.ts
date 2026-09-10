@@ -18,6 +18,16 @@ export interface PlacementInput {
   inset: number;
   spacing: number;
   overrides?: Record<string, { dx: number; dy: number }>;
+  /** Rectangles (page pixels) balloons must not cover, e.g. detected faces. */
+  avoid?: Rect[];
+}
+
+export interface Rect { x: number; y: number; w: number; h: number }
+
+const SPEECH_TAIL_H = 30;
+
+function intersects(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
 type Side = 'left' | 'right' | 'centre';
@@ -58,19 +68,38 @@ export async function placeBalloons(i: PlacementInput): Promise<PlacedBalloon[]>
       else if (fits('centre')) side = 'centre';
     }
 
-    let x: number;
-    if (side === 'left') x = slot.x + i.inset;
-    else if (side === 'right') x = slot.x + slot.w - i.inset - w;
-    else x = Math.round(slot.x + (slot.w - w) / 2);
+    const xFor = (s: Side): number => s === 'left' ? slot.x + i.inset
+      : s === 'right' ? slot.x + slot.w - i.inset - w
+      : Math.round(slot.x + (slot.w - w) / 2);
+    const footprint = (x0: number, y0: number): Rect => ({ x: x0, y: y0, w, h: h + (d.type === 'speech' ? SPEECH_TAIL_H : 0) });
+    // Faces are checked against the full footprint (body + tail); sibling balloons
+    // against bodies only, so normal same-side stacking keeps its fixed spacing.
+    const blocked = (r: Rect): boolean =>
+      (i.avoid ?? []).some((a) => intersects(r, a)) || placed.some((p) => intersects({ ...r, h: h }, { x: p.x, y: p.y, w: p.w, h: p.h }));
 
-    // Pin to the bottom inset on overflow; a balloon taller than the slot pins to the top.
+    // Preferred position: this column's cursor. Pin to the bottom inset on overflow;
+    // a balloon taller than the slot pins to the top.
+    let x = xFor(side);
     let y = Math.max(Math.min(cursor[side], bottom - h), top);
+
+    // If that covers a face or another balloon, search other positions: same column
+    // lower down, then the other column, then centre. Keep the speaker's tail side.
+    if (blocked(footprint(x, y))) {
+      const order: Side[] = side === 'centre' ? ['centre', 'left', 'right'] : [side, side === 'left' ? 'right' : 'left', 'centre'];
+      const step = Math.max(24, Math.floor(h / 2));
+      search: for (const s of order) {
+        for (let yy = Math.max(cursor[s], top); yy <= bottom - h; yy += step) {
+          if (!blocked(footprint(xFor(s), yy))) { x = xFor(s); y = yy; side = s; break search; }
+        }
+      }
+    }
     cursor[side] = Math.min(y + h + i.spacing, bottom);
 
     const o = i.overrides?.[String(idx)];
     if (o) { x += o.dx; y += o.dy; }
 
-    placed.push({ index: idx, text: d.line, type: d.type, x, y, w, h, tail: side === 'centre' ? 'none' : side });
+    const speakerSide = d.type === 'narration' ? 'centre' : (i.speakerSides[d.character] ?? 'centre');
+    placed.push({ index: idx, text: d.line, type: d.type, x, y, w, h, tail: speakerSide === 'centre' ? 'none' : speakerSide });
   }
   return placed;
 }

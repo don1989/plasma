@@ -146,7 +146,7 @@ describe('generatePanels', () => {
     const refsFor = vi.fn(noRefs);
     await generatePanels(plan(), { chapterRoot: root, modelAlias: 'runway-muse', refsFor, generate: async () => okResponse, download: fakeDownload, notes: '' });
     expect(refsFor).toHaveBeenCalledTimes(1);
-    expect(refsFor).toHaveBeenCalledWith(['spyke-tinwall']);
+    expect(refsFor.mock.calls[0]![0]).toEqual(['spyke-tinwall']);
   });
 });
 

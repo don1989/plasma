@@ -73,7 +73,7 @@
 
 **Action:** The lead punk calls out to Spyke from behind. Spyke doesn't stop walking. His back is to us — the white cloak with dojo emblem and katana at his hip are prominent.
 **Dialogue:**
-- PUNK 1: "Hey... that's a pretty cool weapon on yo' back."
+- PUNK 1: "Hey... that's a pretty cool weapon on yo' hip."
 **SFX:** —
 **Notes:** The punk's tone is casual but probing. Spyke's body language says "don't care."
 

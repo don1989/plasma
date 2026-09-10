@@ -72,3 +72,20 @@ describe('placeBalloons', () => {
     }
   });
 });
+
+describe('placeBalloons face avoidance', () => {
+  it('moves a balloon that would cover a face and keeps the speaker tail side', async () => {
+    const face = { x: slot.x + 24, y: slot.y + 24, w: 300, h: 200 }; // where the left balloon would land
+    const out = await placeBalloons({
+      slot, dialogue: [{ character: 'SPYKE', line: 'Hi there', type: 'speech' }],
+      speakerSides: { SPYKE: 'left' }, measure: size, inset: 24, spacing: 12, avoid: [face],
+    });
+    const b = out[0]!;
+    const tailH = 30;
+    const overlaps = b.x < face.x + face.w && face.x < b.x + b.w && b.y < face.y + face.h && face.y < b.y + b.h + tailH;
+    expect(overlaps).toBe(false);
+    expect(b.tail).toBe('left');
+    expect(b.x).toBeGreaterThanOrEqual(slot.x);
+    expect(b.x + b.w).toBeLessThanOrEqual(slot.x + slot.w);
+  });
+});

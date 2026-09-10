@@ -668,6 +668,7 @@ program
   .option('--panel <number>', 'Only this panel number (with --page)')
   .option('--model <name>', 'Model alias (default: runway-muse)')
   .option('--redo', 'Generate a new version even for approved panels')
+  .option('--no-faces', 'Skip the Gemini face-detection pass used for balloon placement')
   .option('--notes <text>', 'Notes stored with each version')
   .option('-v, --verbose', 'Enable verbose logging')
   .option('--dry-run', 'List what would be generated without calling any API')
@@ -682,7 +683,7 @@ program
     }
     const { runPanels } = await import('./stages/panel-generate.js');
     const result = await runPanels({ chapter: parseInt(options.chapter), pages: panelPages, panel: panelFilter,
-      model: options.model, redo: options.redo, notes: options.notes, verbose: options.verbose, dryRun: options.dryRun });
+      model: options.model, redo: options.redo, noFaces: options.faces === false, notes: options.notes, verbose: options.verbose, dryRun: options.dryRun });
     if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
   });
 
@@ -709,6 +710,35 @@ program
   .action(async (options) => {
     const { runApprove } = await import('./stages/review.js');
     const result = await runApprove({ chapter: parseInt(options.chapter), page: parseInt(options.page), panel: parseInt(options.panel), version: parseInt(options.version) });
+    if (!result.success) { console.error('Failed:', result.errors); process.exit(1); }
+  });
+
+program
+  .command('faces')
+  .description('Detect faces on approved panels (Gemini) so lettering avoids them; stores boxes in pages.json')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
+  .option('--page <number>', 'Single page')
+  .option('--pages <range>', 'Page range')
+  .option('--redo', 'Re-detect even when boxes exist')
+  .action(async (options) => {
+    if (!options.chapter) { console.error("error: required option '-c, --chapter <number>' not specified"); process.exit(1); }
+    const { runFaces } = await import('./stages/panel-generate.js');
+    const result = await runFaces({ chapter: parseInt(options.chapter), pages: parsePages(options.pages, options.page), redo: options.redo });
+    if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
+  });
+
+const location = program.command('location').description('Location (setting) reference images');
+location
+  .command('generate')
+  .description('Generate a wide establishing reference for a location (output/locations/<id>/candidates/<model>/)')
+  .argument('<locationId>', 'Location id matching data/locations/<id>.yaml')
+  .option('--model <name>', 'Model alias (default: runway-muse)')
+  .option('--count <n>', 'Images to generate (default: 1)', '1')
+  .option('--extra <text>', 'Extra instruction appended to the setting')
+  .option('--dry-run', 'Print the prompt without calling any API')
+  .action(async (locationId: string, options) => {
+    const { runLocationGenerate } = await import('./stages/location-generate.js');
+    const result = await runLocationGenerate({ locationId, model: options.model, count: parseInt(options.count), extra: options.extra, dryRun: options.dryRun });
     if (!result.success) { console.error('Failed:', result.errors); process.exit(1); }
   });
 

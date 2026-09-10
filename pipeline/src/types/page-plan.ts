@@ -18,6 +18,10 @@ export const PanelVersionSchema = z.object({
   requestId: z.string(),
   timestamp: z.string(),
   notes: z.string().default(''),
+  /** Source image size, recorded when faces are detected. */
+  imageSize: z.object({ w: z.number().positive(), h: z.number().positive() }).optional(),
+  /** Face boxes normalised to the source image (0-1), from the vision pass. */
+  faces: z.array(z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })).optional(),
 });
 
 export const SlotRectSchema = z.object({
@@ -33,6 +37,8 @@ export const PanelPlanSchema = z.object({
   shotType: z.string(),
   aspectRatio: z.enum(ASPECT_RATIOS),
   characterIds: z.array(z.string()),
+  /** Scene continuity: location whose setting text and refs are injected. */
+  locationId: z.string().optional(),
   speakerSides: z.record(z.string(), z.enum(['left', 'right'])),
   dialogue: z.array(DialogueLineSchema),
   sfx: z.string(),

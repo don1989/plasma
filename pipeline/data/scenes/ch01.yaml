@@ -1,0 +1,15 @@
+# Scene continuity for chapter 1. Every panel prompt on a matching page gets this
+# SETTING block and the location's reference images. First matching entry wins,
+# so put panel-specific entries before page ranges.
+scenes:
+  - pages: [2, 2]
+    panels: [1, 2]
+    locationId: westminster-walkway
+  - pages: [1, 1]
+    locationId: westminster-walkway
+  - pages: [2, 6]
+    locationId: pocket-park
+  - pages: [7, 7]
+    locationId: hover-rail
+  - pages: [8, 12]
+    locationId: formican-base-reception
