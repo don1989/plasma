@@ -18,17 +18,18 @@ export interface RefGroup { label: string; count: number }
 export interface GenerateRequest { prompt: string; aspectRatio: string; refs: string[]; refGroups: RefGroup[] }
 export interface GenerateResponse { imageUrls: string[]; requestId: string; model: { alias: string; endpoint: string } }
 
-export interface GeneratePanelsDeps {
+export interface PanelSelection { pages?: number[]; panel?: number; redo?: boolean }
+
+export interface GeneratePanelsDeps extends PanelSelection {
   chapterRoot: string;
   modelAlias: string;
   /** Reference image paths/URLs for the panel's characters, plus one binding group per character (in the same order). */
   refsFor: (characterIds: string[]) => Promise<{ refs: string[]; groups: RefGroup[] }>;
   generate: (req: GenerateRequest) => Promise<GenerateResponse>;
   download: (url: string, dest: string) => Promise<void>;
+  /** Called after each panel's version is recorded, so a killed run never orphans paid-for images. */
+  persist?: (plan: ChapterPlan) => Promise<void>;
   notes: string;
-  pages?: number[];
-  panel?: number;
-  redo?: boolean;
   log?: (msg: string) => void;
 }
 
@@ -36,9 +37,25 @@ export function panelFileName(chapter: number, page: number, panel: number, vers
   return `ch${String(chapter).padStart(2, '0')}_p${String(page).padStart(2, '0')}_pn${panel}_v${version}.png`;
 }
 
-function shouldGenerate(panel: PanelPlan, deps: GeneratePanelsDeps): boolean {
-  if (deps.panel != null && panel.panelNumber !== deps.panel) return false;
-  return deps.redo === true || panel.approvedVersion == null;
+/**
+ * The panels a run would generate: unapproved ones (or all with `redo`), narrowed by
+ * `pages` and `panel`. Shared by the core loop and the dry-run listing so they cannot drift.
+ */
+export function selectPanels(plan: ChapterPlan, sel: PanelSelection): Array<{ page: PagePlan; panel: PanelPlan }> {
+  const out: Array<{ page: PagePlan; panel: PanelPlan }> = [];
+  for (const page of plan.pages) {
+    if (sel.pages && !sel.pages.includes(page.pageNumber)) continue;
+    for (const panel of page.panels) {
+      if (sel.panel != null && panel.panelNumber !== sel.panel) continue;
+      if (sel.redo !== true && panel.approvedVersion != null) continue;
+      out.push({ page, panel });
+    }
+  }
+  return out;
+}
+
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }
 
 /** Core: mutates the plan in place, writes images + logs, returns per-panel errors. */
@@ -49,35 +66,34 @@ export async function generatePanels(plan: ChapterPlan, deps: GeneratePanelsDeps
   const rawDir = path.join(deps.chapterRoot, 'raw', deps.modelAlias);
   await mkdir(rawDir, { recursive: true });
 
-  const pages: PagePlan[] = plan.pages.filter((p) => !deps.pages || deps.pages.includes(p.pageNumber));
-  for (const page of pages) {
-    for (const panel of page.panels) {
-      if (!shouldGenerate(panel, deps)) continue;
-      const version = panel.versions.reduce((n, v) => Math.max(n, v.version), 0) + 1;
-      const file = panelFileName(plan.chapterNumber, page.pageNumber, panel.panelNumber, version);
-      const rel = path.posix.join('raw', deps.modelAlias, file);
-      try {
-        const { refs, groups } = await deps.refsFor(panel.characterIds);
-        const res = await deps.generate({ prompt: panel.prompt, aspectRatio: panel.aspectRatio, refs, refGroups: groups });
-        if (res.imageUrls.length === 0) throw new Error('no images returned');
-        const dest = path.join(deps.chapterRoot, rel);
-        await deps.download(res.imageUrls[0]!, dest);
-        const entry = { version, file: rel, model: res.model.endpoint, requestId: res.requestId, timestamp: new Date().toISOString(), notes: deps.notes };
-        panel.versions.push(entry);
-        if (panel.approvedVersion == null) panel.approvedVersion = version;
-        await writeFile(`${dest}.log.json`, JSON.stringify({ ...entry, page: page.pageNumber, panel: panel.panelNumber, prompt: panel.prompt, refs }, null, 2));
-        outputFiles.push(dest);
-        log(`[panels] page ${page.pageNumber} panel ${panel.panelNumber} → ${file}`);
-      } catch (e) {
-        errors.push(`page ${page.pageNumber} panel ${panel.panelNumber}: ${(e as Error).message}`);
-        log(`[panels] page ${page.pageNumber} panel ${panel.panelNumber}: ERROR ${(e as Error).message}`);
-      }
+  for (const { page, panel } of selectPanels(plan, deps)) {
+    const version = panel.versions.reduce((n, v) => Math.max(n, v.version), 0) + 1;
+    const file = panelFileName(plan.chapterNumber, page.pageNumber, panel.panelNumber, version);
+    const rel = path.posix.join('raw', deps.modelAlias, file);
+    try {
+      const { refs, groups } = await deps.refsFor(panel.characterIds);
+      const res = await deps.generate({ prompt: panel.prompt, aspectRatio: panel.aspectRatio, refs, refGroups: groups });
+      if (res.imageUrls.length === 0) throw new Error('no images returned');
+      const dest = path.join(deps.chapterRoot, rel);
+      await deps.download(res.imageUrls[0]!, dest);
+      const entry = { version, file: rel, model: res.model.endpoint, requestId: res.requestId, timestamp: new Date().toISOString(), notes: deps.notes };
+      // Sidecar first: a failed log write must not leave a phantom version in the plan.
+      await writeFile(`${dest}.log.json`, JSON.stringify({ ...entry, page: page.pageNumber, panel: panel.panelNumber, prompt: panel.prompt, refs }, null, 2));
+      panel.versions.push(entry);
+      if (panel.approvedVersion == null) panel.approvedVersion = version;
+      if (deps.persist) await deps.persist(plan);
+      outputFiles.push(dest);
+      log(`[panels] page ${page.pageNumber} panel ${panel.panelNumber} → ${file}`);
+    } catch (e) {
+      const msg = errorMessage(e);
+      errors.push(`page ${page.pageNumber} panel ${panel.panelNumber}: ${msg}`);
+      log(`[panels] page ${page.pageNumber} panel ${panel.panelNumber}: ERROR ${msg}`);
     }
   }
   return { outputFiles, errors };
 }
 
-export interface PanelStageOptions { chapter: number; pages?: number[]; panel?: number; model?: string; redo?: boolean; notes?: string; verbose?: boolean; dryRun?: boolean }
+export interface PanelStageOptions extends PanelSelection { chapter: number; model?: string; notes?: string; verbose?: boolean; dryRun?: boolean }
 
 /** CLI runner: wires real providers into generatePanels. */
 export async function runPanels(options: PanelStageOptions): Promise<StageResult> {
@@ -90,19 +106,18 @@ export async function runPanels(options: PanelStageOptions): Promise<StageResult
 
   let model: ModelSpec;
   try { model = resolveModel(options.model); }
-  catch (e) { return { stage: 'panels', success: false, outputFiles: [], errors: [(e as Error).message], duration: Date.now() - start }; }
+  catch (e) { return { stage: 'panels', success: false, outputFiles: [], errors: [errorMessage(e)], duration: Date.now() - start }; }
 
   if (options.dryRun) {
-    const todo = plan.pages.filter((p) => !options.pages || options.pages.includes(p.pageNumber))
-      .flatMap((p) => p.panels.filter((q) => (options.panel == null || q.panelNumber === options.panel) && (options.redo || q.approvedVersion == null)).map((q) => `p${p.pageNumber}/${q.panelNumber}`));
+    const todo = selectPanels(plan, options).map(({ page, panel }) => `p${page.pageNumber}/${panel.panelNumber}`);
     console.log(`[panels] dry run via ${model.endpoint}: ${todo.length} panel(s): ${todo.join(' ')}`);
     return { stage: 'panels', success: true, outputFiles: [], errors: [], duration: Date.now() - start };
   }
 
-  // Provider SDKs are loaded only on a real run so the pure core stays offline-testable.
+  // Loaded lazily so dry runs and tests never load the provider SDKs.
   const { configureProvider, generateImage, downloadAndSave, uploadToFal } = await import('../generation/kling-client.js');
   try { configureProvider(model); }
-  catch (e) { return { stage: 'panels', success: false, outputFiles: [], errors: [(e as Error).message], duration: Date.now() - start }; }
+  catch (e) { return { stage: 'panels', success: false, outputFiles: [], errors: [errorMessage(e)], duration: Date.now() - start }; }
 
   const chapterRoot = PATHS.chapterOutput(options.chapter).root;
   const refCache = new Map<string, string[]>();
@@ -126,6 +141,7 @@ export async function runPanels(options: PanelStageOptions): Promise<StageResult
   const { outputFiles, errors } = await generatePanels(plan, {
     chapterRoot, modelAlias: model.alias, refsFor, notes: options.notes ?? '', pages: options.pages, panel: options.panel, redo: options.redo,
     log: (m) => console.log(m),
+    persist: async (p) => { await saveChapterPlan(p); },
     generate: async (req) => {
       const bindings = req.refGroups.length ? buildRefBindings(model, req.refGroups) + ' ' : '';
       const r = await generateImage({ model: model.alias, prompt: bindings + req.prompt, imageUrls: req.refs, aspectRatio: req.aspectRatio, resolution: '2K' });
