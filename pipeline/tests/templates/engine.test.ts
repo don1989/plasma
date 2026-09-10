@@ -45,6 +45,7 @@ describe('createPromptEngine', () => {
       setting: '',
       panel_count: 2,
       layout_description: 'vertical layout',
+      character_fingerprints: ['Spyke — STRAIGHT and layered ginger hair'],
       panels: [
         {
           panelNumber: 1,
@@ -73,12 +74,18 @@ describe('createPromptEngine', () => {
 
     // Verify structure
     expect(result).toContain('Colored manga page, cel-shaded, clean linework, vibrant colors, dynamic panel layout.');
-    expect(result).toContain('2-panel vertical layout.');
+    expect(result).toContain('2-panel vertical layout, panels separated by thin white gutters.');
     expect(result).toContain('PANEL 1 (WIDE');
     expect(result).toContain('PANEL 2 (CLOSE-UP');
-    expect(result).toContain('Character: Spyke — spiky ginger hair');
-    expect(result).toContain('Speech balloon: Spyke: "Hello!"');
-    expect(result).toContain('Stylized SFX text integrated into the panel: "BOOM"');
+    // Canon is stated once per page; dialogue and SFX are never baked into the prompt (text is overlaid later).
+    expect(result).toContain('CHARACTERS');
+    expect(result).toContain('- Spyke — STRAIGHT and layered ginger hair');
+    expect(result).not.toContain('Character:');
+    expect(result).not.toContain('Speech balloon:');
+    expect(result).not.toContain('Hello!');
+    expect(result).not.toContain('Stylized SFX');
+    expect(result).not.toContain('BOOM');
+    expect(result).toContain('NO text');
     expect(result).toContain('Focus on expression.');
     // Should NOT contain setting since has_establishing_shot is false
     expect(result).not.toContain('Setting:');
@@ -171,7 +178,8 @@ describe('createPromptEngine', () => {
       ],
     });
 
-    expect(result).toContain('Thought bubble: Spyke: "I must hurry..."');
+    expect(result).not.toContain('Thought bubble:');
+    expect(result).not.toContain('I must hurry');
   });
 
   it('renders narration box dialogue correctly', () => {
@@ -197,7 +205,8 @@ describe('createPromptEngine', () => {
       ],
     });
 
-    expect(result).toContain('Narration box: "The 9:27 from Kings Cross."');
+    expect(result).not.toContain('Narration box:');
+    expect(result).not.toContain('Kings Cross');
   });
 
   it('renders character-sheet.njk with reference sheet prompt', () => {
@@ -212,7 +221,7 @@ describe('createPromptEngine', () => {
     expect(result).toContain('Main Row: Four full-body views: Front View, 3/4 Angle View, Side Profile View, Back View.');
   });
 
-  it('renders panel position with em-dash separator', () => {
+  it('renders the panel header as PANEL N (SHOT) without a position suffix', () => {
     const env = createPromptEngine(TEMPLATE_DIR);
     const result = env.render('page-prompt.njk', {
       has_establishing_shot: false,
@@ -233,6 +242,7 @@ describe('createPromptEngine', () => {
       ],
     });
 
-    expect(result).toContain('PANEL 1 (WIDE \u2014 top half of page): Action here.');
+    expect(result).toContain('PANEL 1 (WIDE): Action here.');
+    expect(result).not.toContain('\u2014 top half of page');
   });
 });

@@ -126,8 +126,8 @@ describe('generateChapterPrompts (unit)', () => {
       templateDir: TEMPLATE_DIR,
     });
 
-    expect(results[0]!.prompt).toContain('Character:');
-    expect(results[0]!.prompt).toContain('spiky ginger hair');
+    expect(results[0]!.prompt).toContain('CHARACTERS');
+    expect(results[0]!.prompt).toContain('STRAIGHT and layered');
     expect(results[0]!.charactersIncluded).toContain('Spyke Tinwall');
   });
 
@@ -290,12 +290,12 @@ describe('generateChapterPrompts (unit)', () => {
     });
 
     // Should have both characters
-    expect(results[0]!.prompt).toContain('spiky ginger hair');
+    expect(results[0]!.prompt).toContain('STRAIGHT and layered');
     expect(results[0]!.prompt).toContain('blonde hair');
     expect(results[0]!.charactersIncluded.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('renders thought bubble and narration dialogue types correctly', () => {
+  it('omits thought bubble and narration dialogue from the prompt', () => {
     const page = makePage({
       panels: [
         makePanel({
@@ -315,11 +315,15 @@ describe('generateChapterPrompts (unit)', () => {
       templateDir: TEMPLATE_DIR,
     });
 
-    expect(results[0]!.prompt).toContain('Thought bubble: Spyke: "I must hurry..."');
-    expect(results[0]!.prompt).toContain('Narration box: "The dawn breaks."');
+    // Dialogue is never baked into image prompts; it is overlaid by the letter stage.
+    expect(results[0]!.prompt).not.toContain('Thought bubble:');
+    expect(results[0]!.prompt).not.toContain('Narration box:');
+    expect(results[0]!.prompt).not.toContain('I must hurry');
+    expect(results[0]!.prompt).not.toContain('The dawn breaks');
+    expect(results[0]!.prompt).toContain('NO text');
   });
 
-  it('renders SFX when present in a panel', () => {
+  it('omits SFX text from the prompt even when a panel has SFX', () => {
     const page = makePage({
       panels: [
         makePanel({
@@ -336,7 +340,8 @@ describe('generateChapterPrompts (unit)', () => {
       templateDir: TEMPLATE_DIR,
     });
 
-    expect(results[0]!.prompt).toContain('Stylized SFX text integrated into the panel: "BOOM CRASH"');
+    expect(results[0]!.prompt).not.toContain('Stylized SFX');
+    expect(results[0]!.prompt).not.toContain('BOOM CRASH');
   });
 
   it('double-page spread notes double-page composition', () => {
@@ -432,7 +437,7 @@ describe('generateChapterPrompts (integration)', () => {
     // Page 1 should include Spyke's fingerprint
     const page1 = results.find((r) => r.pageNumber === 1);
     expect(page1).toBeDefined();
-    expect(page1!.prompt).toContain('spiky ginger hair');
+    expect(page1!.prompt).toContain('STRAIGHT and layered');
     expect(page1!.charactersIncluded).toContain('Spyke Tinwall');
 
     // Page 1 should include setting (has establishing Wide shot)

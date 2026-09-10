@@ -99,7 +99,7 @@ Input is the composed page and the plan's slots. For each panel, balloons are la
 
 - Font: Comic Neue Bold (OFL), bundled at `pipeline/data/fonts/ComicNeue-Bold.ttf`, loaded through Pango via `fontfile`. Font size = clamp(slot width / 28, 18, 34).
 - Max balloon width = min(0.45 × slot width, 420).
-- Speech and thought balloons start 24 px inside the top edge on the speaker's side (left or right), stacking downward with 12 px spacing when the same side repeats. Tail points down toward the speaker's side. Narration boxes sit top-left, full-width up to 0.6 × slot width. Off-panel speech goes top-centre with the tail clipped.
+- Speech and thought balloons start 24 px inside the top edge on the speaker's side (left or right), stacking downward with 12 px spacing when the same side repeats. Tail points down toward the speaker's side. Narration boxes are centred at the top, up to 0.6 × slot width (max 560 px). Off-panel speech goes top-centre with the tail clipped.
 - SFX renders through the existing `renderSfx` at bottom-centre of the panel slot.
 - `balloonOverrides` in the plan add a pixel offset per dialogue index.
 - Existing `generateBalloonSvg`, `calculateBalloonSize`, `renderSfx` are reused; the `overlayPage` zone heuristic is retired.

@@ -34,7 +34,7 @@ API-only manga panel generator for the Plasma project. Wraps the existing pipeli
 | Character ref images | `pipeline/data/characters/<id>/references/*.png` |
 | Style prefix (auto-prepended) | `pipeline/data/config/style-guide.yaml` |
 | CLI entry | `pnpm stage:kling` |
-| Output destination | `output/ch-NN/raw/<model-alias>/chNN_pNNN_vN.png` (auto-versioned per model folder, e.g. `raw/runway-muse/`) |
+| Output destination | raw: `output/ch-NN/raw/<model-alias>/` (per-model, auto-versioned) · composed pages: `output/ch-NN/pages/` · lettered: `output/ch-NN/lettered/` |
 
 API keys live in `pipeline/.env` (`FAL_KEY`, `GEMINI_API_KEY`, `RUNWAYML_API_SECRET`).
 
@@ -149,9 +149,16 @@ Use **chapter 99** for all test/iteration shots. Production chapters (1, 2, ...)
 - [ch99_p002_v1.png](output/ch-99/raw/kling-o1/ch99_p002_v1.png) — Spyke combat with Plasma Blade activated (canon ✓)
 - [ch99_p003_v1.png](output/ch-99/raw/kling-o1/ch99_p003_v1.png) — Spyke seated in ramen shop (canon ✓)
 
-## Production prompts from the script
+## Page production (panel pipeline)
 
-`pnpm stage:script -- -c N` then `pnpm stage:prompt -- -c N` regenerate `output/ch-NN/prompts/page-NN.txt` from the chapter script with the current canon YAML fingerprints, no dialogue or SFX text, and a `page-NN.characters.json` sidecar. `pnpm stage:kling -- -c N --pages A-B` then attaches each page's character refs automatically; `--characters` overrides the sidecar. Re-run the prompt stage whenever a YAML fingerprint or the script changes.
+1. `pnpm stage:script -- -c N` — parse the chapter script
+2. `pnpm stage:plan -- -c N` — build `output/ch-NN/pages.json` (layout, per-panel prompts, speaker sides). Safe to re-run; approvals survive unless a panel's prompt changed.
+3. `pnpm stage:panels -- -c N --pages A-B` — one Muse image per panel (skips approved; `--redo` for new versions; `--panel K` with `--page`). Output: `raw/<model>/chNN_pPP_pnK_vV.png`. Always `--dry-run` first to see the panel list.
+4. `pnpm stage:review -- -c N --page P` — contact sheet in `output/ch-NN/review/`; then `pnpm dev approve -c N --page P --panel K --version V`.
+5. `pnpm stage:compose -- -c N` — page grids in `output/ch-NN/pages/` (grey MISSING slots for unapproved panels).
+6. `pnpm stage:letter -- -c N` — balloons + SFX inside slots → `output/ch-NN/lettered/`. Nudge a balloon by adding `balloonOverrides: { "<dialogueIndex>": { "dx": 0, "dy": 0 } }` to the panel in `pages.json`.
+
+`stage:kling` remains for single-image tests and reference work. Note: the full test suite deletes `output/ch-01/script.json`; re-run step 1 if `plan` complains.
 
 ## Example invocations
 
