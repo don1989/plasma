@@ -283,7 +283,9 @@ program
   .option('--page <number>', 'Generate a single page')
   .option('--pages <range>', 'Page range (e.g., "1-5" or "3,7,12")')
   .option('--characters <ids...>', 'Character IDs to use as references (e.g., spyke-tinwall june-kamara)')
-  .option('--model <name>', 'Model override (default: fal-ai/kling-image/o1 via fal.ai)')
+  .option('--model <name>', 'Model alias: nano-banana-pro (default), nano-banana-2, kling-o1, runway-gen4, runway-gen4-turbo, runway-muse')
+  .option('--resolution <res>', 'Resolution: 1K (default), 2K, 4K where supported', '1K')
+  .option('--seed <number>', 'Deterministic seed where supported')
   .option('--aspect-ratio <ratio>', 'Aspect ratio (default: 3:4)', '3:4')
   .option('--fidelity <number>', 'Reference fidelity 0-1 (default: 0.8)', '0.8')
   .option('--prompt <text>', 'Custom prompt override (skip reading from prompts dir)')
@@ -328,6 +330,9 @@ program
       page: options.page ? parseInt(options.page) : undefined,
       pages,
       characters: options.characters,
+      model: options.model,
+      resolution: options.resolution,
+      seed: options.seed ? parseInt(options.seed) : undefined,
       aspectRatio: options.aspectRatio,
       fidelity: parseFloat(options.fidelity),
       prompt: options.prompt,
@@ -535,6 +540,48 @@ reference
     const { addReference } = await import('./generation/references.js');
     const destPath = await addReference(characterId, imagePath, options.label);
     console.log(`Added reference: ${destPath}`);
+  });
+
+reference
+  .command('generate')
+  .description('Generate a candidate reference image for a character view (saved to output/characters/<id>/candidates/)')
+  .argument('<characterId>', 'Character ID (e.g. spyke-tinwall)')
+  .argument('<view>', 'front | three-quarter | side | back | face | action')
+  .option('--model <name>', 'Model alias: nano-banana-pro (default), nano-banana-2, kling-o1, runway-gen4, runway-gen4-turbo, runway-muse')
+  .option('--resolution <res>', 'Resolution (default: 2K)')
+  .option('--extra <text>', 'Extra instruction appended to the canon spec')
+  .option('--ref <paths...>', 'Additional local images to use as references')
+  .option('--no-refs', 'Ignore existing approved references (pure text-to-image)')
+  .option('--count <n>', 'Images to generate (default: 1)', '1')
+  .option('--seed <number>', 'Deterministic seed where supported')
+  .option('--notes <text>', 'Notes stored in the log')
+  .option('-v, --verbose', 'Print the full prompt')
+  .option('--dry-run', 'Show what would be done without spending an API call')
+  .action(async (characterId: string, view: string, options) => {
+    const { runReferenceGenerate } = await import('./stages/reference-generate.js');
+    const views = ['front', 'three-quarter', 'side', 'back', 'face', 'action'];
+    if (!views.includes(view)) {
+      console.error(`Invalid view "${view}". Use one of: ${views.join(', ')}`);
+      process.exit(1);
+    }
+    const result = await runReferenceGenerate({
+      characterId,
+      view: view as never,
+      model: options.model,
+      resolution: options.resolution,
+      extra: options.extra,
+      extraRefs: options.ref,
+      noRefs: options.refs === false,
+      count: parseInt(options.count),
+      seed: options.seed ? parseInt(options.seed) : undefined,
+      notes: options.notes,
+      verbose: options.verbose,
+      dryRun: options.dryRun,
+    });
+    if (!result.success) {
+      console.error('Failed:', result.errors);
+      process.exit(1);
+    }
   });
 
 reference

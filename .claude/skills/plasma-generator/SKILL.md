@@ -5,7 +5,7 @@ description: Generate canon-locked Plasma manga panels via fal.ai Kling API. Use
 
 # Plasma Manga Generator
 
-API-only manga panel generator for the Plasma project. Wraps the existing pipeline at `pipeline/src/stages/kling-generate.ts` (Kling O1 on fal.ai). No UI steps. No manual copy-paste.
+API-only manga panel generator for the Plasma project. Wraps the existing pipeline at `pipeline/src/stages/kling-generate.ts`. Default model is Nano Banana Pro on fal.ai; Kling O1, Nano Banana 2, and Runway (gen4, gen4-turbo, muse) are selectable with `--model`. No UI steps. No manual copy-paste.
 
 ## When to invoke
 
@@ -26,7 +26,9 @@ API-only manga panel generator for the Plasma project. Wraps the existing pipeli
 | Component | Path |
 |---|---|
 | Kling stage (fal.ai) | `pipeline/src/stages/kling-generate.ts` |
-| fal.ai client | `pipeline/src/generation/kling-client.ts` |
+| Provider client (fal.ai + Runway) | `pipeline/src/generation/kling-client.ts` |
+| Model registry | `pipeline/src/generation/models.ts` |
+| Reference view generator | `pipeline/src/stages/reference-generate.ts` (`pnpm reference generate <id> <view>`) |
 | Reference loader | `pipeline/src/generation/references.ts` |
 | Character canon YAMLs | `pipeline/data/characters/<id>.yaml` |
 | Character ref images | `pipeline/data/characters/<id>/references/*.png` |
@@ -34,7 +36,7 @@ API-only manga panel generator for the Plasma project. Wraps the existing pipeli
 | CLI entry | `pnpm stage:kling` |
 | Output destination | `output/ch-NN/raw/kling/chNN_pNNN_vN.png` (auto-versioned) |
 
-API keys live in `pipeline/.env` (`FAL_KEY`, `GEMINI_API_KEY`).
+API keys live in `pipeline/.env` (`FAL_KEY`, `GEMINI_API_KEY`, `RUNWAYML_API_SECRET`).
 
 ## Character IDs (verbatim — match the YAML filenames)
 
@@ -104,10 +106,13 @@ Write the composed prompt to a temp file, then:
 
 Useful flags:
 - `--aspect-ratio 3:4` (default — manga vertical) · `--aspect-ratio 16:9` for wide establishing shots
-- `--fidelity 0.8` (default — how strictly to follow the ref image) · `0.9` for tighter lock · `0.6` for more creative leeway
+- `--model nano-banana-pro` (default) · `nano-banana-2` · `kling-o1` · `runway-gen4` · `runway-gen4-turbo` · `runway-muse`
+- `--resolution 1K` (default) · `2K` · `4K` (Nano Banana only)
+- `--seed <n>` for repeatable rolls where the model supports it
+- All reference images in `references/` are sent, split across characters up to the model's cap (14 Nano Banana, 10 Kling/Muse, 3 Runway Gen-4)
 - `--dry-run` — preview without spending an API call
 
-Total time: ~35s per shot. Cost: ~$0.07 per Kling O1 call.
+Cost per shot: ~$0.15 Nano Banana Pro, ~$0.08 Nano Banana 2, ~$0.03 Kling O1, ~$0.08 Runway Gen-4, ~$0.01 Runway Muse.
 
 ### Step 6 — Verify and report
 
@@ -133,7 +138,8 @@ Use **chapter 99** for all test/iteration shots. Production chapters (1, 2, ...)
 |---|---|
 | Pauldron renders on both knees | Add explicit `RIGHT knee completely bare, NO pad, NO pauldron` |
 | Cloak sleeves render clean (not frayed) | Currently unsolved at prompt level. Acknowledge as minor. |
-| Face structure varies slightly between shots | Acceptable — the character still reads. For tighter lock, consider enhancing kling-client to send multiple refs (currently uses only ref #1). |
+| Face structure varies slightly between shots | Acceptable — the character still reads. All refs are now sent; add a `05_face_closeup.png` ref for tighter lock. |
+| Model copies the reference pose instead of rotating (3/4 views) | Nano Banana Pro anchors hard to a front ref. Generate the angle with `--no-refs --ref <side> <back> <face>` or a different model. |
 | Background character drift in multi-character panels | Expected — primary character locks best. Accept some drift on secondaries. |
 | Style drifts toward photoreal | Strengthen the style closer: `Not photoreal, not painterly, not 3D-rendered. Strictly cel-shaded colored manga.` |
 

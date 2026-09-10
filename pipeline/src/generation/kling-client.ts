@@ -1,74 +1,53 @@
 /**
- * Kling AI image generation via fal.ai.
+ * fal.ai image generation client.
  *
- * Uses the @fal-ai/client SDK to access Kling models through fal.ai's
- * pay-per-use API instead of the official Kling API ($2,100/mo minimum).
- *
- * Supports:
- * - Text-only generation (backgrounds, establishing shots)
- * - Single-reference generation (one character ref)
- * - Multi-reference generation (up to 10 refs via Kling O1)
- * - Auto-polling for task completion (handled by fal.subscribe)
- * - Local file upload via fal.storage.upload()
+ * Originally Kling-only; now a thin wrapper over any model in the registry
+ * (`models.ts`). Handles credentials, reference upload, request shaping per
+ * model, and download of results.
  */
 
 import { fal } from '@fal-ai/client';
-import { readFile } from 'node:fs/promises';
-import { writeFile, mkdir } from 'node:fs/promises';
+import RunwayML from '@runwayml/sdk';
+import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { resolveModel, runwayTag, RUNWAY_RATIOS, type ModelSpec } from './models.js';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface GenerateImageOptions {
-  /** Text prompt describing the panel. */
+export interface GenerateOptions {
+  /** Text prompt. Reference bindings should already be appended. */
   prompt: string;
+  /** Reference image URLs (already uploaded) or local paths. May be empty. */
+  imageUrls?: string[];
+  /** Model alias or endpoint (default: registry default). */
+  model?: string;
   /** Aspect ratio (default: 3:4 for portrait manga panels). */
   aspectRatio?: string;
-  /** Number of images to generate (1-9, default: 1). */
+  /** Number of images to generate (default: 1). */
   count?: number;
-  /** Resolution: '1K' or '2K' (default: '1K'). */
+  /** Resolution string (default: '1K'). */
   resolution?: string;
+  /** Deterministic seed, where the model supports it. */
+  seed?: number;
 }
 
-export interface ReferenceImageOptions extends GenerateImageOptions {
-  /** Path or URL to a single reference image. */
-  referenceImage: string;
-  /** How closely to match the reference (0-1, default: 0.8). */
-  fidelity?: number;
-}
-
-export interface MultiRefOptions {
-  /** Text prompt with @Image1, @Image2 placeholders for references. */
-  prompt: string;
-  /** Array of reference image URLs (up to 10). Must be publicly accessible URLs. */
+export interface GenerationResult {
   imageUrls: string[];
-  /** Aspect ratio (default: 3:4). */
-  aspectRatio?: string;
-  /** Number of images to generate (1-9, default: 1). */
-  count?: number;
-  /** Resolution: '1K' or '2K' (default: '1K'). */
-  resolution?: string;
-}
-
-export interface KlingGenerationResult {
-  /** URL(s) of generated images. */
-  imageUrls: string[];
-  /** Request ID for tracking. */
   requestId: string;
+  model: ModelSpec;
 }
 
-// ---------------------------------------------------------------------------
-// fal.ai response types
-// ---------------------------------------------------------------------------
+/** @deprecated use GenerationResult */
+export type KlingGenerationResult = GenerationResult;
 
 interface FalImage {
   url: string;
   content_type?: string;
 }
 
-interface FalKlingResult {
+interface FalImageResult {
   images: FalImage[];
 }
 
@@ -76,16 +55,6 @@ interface FalKlingResult {
 // Configuration
 // ---------------------------------------------------------------------------
 
-/** fal.ai model ID for Kling O1 (multi-reference image generation). */
-const FAL_KLING_O1 = 'fal-ai/kling-image/o1';
-
-type KlingAspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '3:2' | '2:3' | '21:9' | 'auto';
-type KlingResolution = '1K' | '2K';
-
-/**
- * Configure fal.ai credentials from environment.
- * Must be called before any generation functions.
- */
 export function configureFal(): void {
   const key = process.env['FAL_KEY'];
   if (!key) {
@@ -97,18 +66,40 @@ export function configureFal(): void {
   fal.config({ credentials: key });
 }
 
-/**
- * Upload a local file to fal.ai storage and return a public URL.
- * Caches uploads within a session to avoid re-uploading the same file.
- */
+let runway: RunwayML | null = null;
+
+export function configureRunway(): RunwayML {
+  const key = process.env['RUNWAYML_API_SECRET'];
+  if (!key) {
+    throw new Error(
+      'Missing Runway API key. Set RUNWAYML_API_SECRET in your .env file.\n' +
+      'Get your key from: https://dev.runwayml.com',
+    );
+  }
+  runway ??= new RunwayML({ apiKey: key });
+  return runway;
+}
+
+/** Configure whichever provider the model needs. fal is also configured when a key is present (used for uploads). */
+export function configureProvider(model: ModelSpec): void {
+  if (model.provider === 'runway') {
+    configureRunway();
+    if (process.env['FAL_KEY']) fal.config({ credentials: process.env['FAL_KEY'] });
+  } else {
+    configureFal();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Upload
+// ---------------------------------------------------------------------------
+
 const uploadCache = new Map<string, string>();
 
 export async function uploadToFal(localPath: string): Promise<string> {
-  // If it's already a URL, return as-is
   if (localPath.startsWith('http://') || localPath.startsWith('https://')) {
     return localPath;
   }
-
   const cached = uploadCache.get(localPath);
   if (cached) return cached;
 
@@ -127,106 +118,163 @@ export async function uploadToFal(localPath: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// Generation functions
+// Generation
 // ---------------------------------------------------------------------------
 
 /**
- * Generate a manga panel image using Kling AI via fal.ai (no reference image).
+ * Shape the request body for a given model. Each endpoint has its own schema.
  */
-export async function generatePanel(
-  options: GenerateImageOptions,
-): Promise<KlingGenerationResult> {
-  const result = await fal.subscribe(FAL_KLING_O1, {
-    input: {
-      prompt: options.prompt,
-      image_urls: [],
-      aspect_ratio: (options.aspectRatio ?? '3:4') as KlingAspectRatio,
-      num_images: options.count ?? 1,
-      resolution: (options.resolution ?? '1K') as KlingResolution,
-    },
-  });
+function buildInput(model: ModelSpec, options: GenerateOptions, imageUrls: string[]): Record<string, unknown> {
+  const aspect = options.aspectRatio ?? '3:4';
+  const resolution = options.resolution ?? '1K';
+  if (!model.resolutions.includes(resolution)) {
+    throw new Error(`${model.alias} does not support resolution "${resolution}" (supports ${model.resolutions.join(', ')})`);
+  }
 
-  const data = result.data as FalKlingResult;
+  switch (model.alias) {
+    case 'kling-o1':
+      return {
+        prompt: options.prompt,
+        image_urls: imageUrls,
+        aspect_ratio: aspect,
+        num_images: options.count ?? 1,
+        resolution,
+      };
+    case 'nano-banana-pro':
+    case 'nano-banana-2':
+      return {
+        prompt: options.prompt,
+        image_urls: imageUrls,
+        aspect_ratio: aspect,
+        num_images: options.count ?? 1,
+        resolution,
+        output_format: 'png',
+        ...(options.seed !== undefined ? { seed: options.seed } : {}),
+      };
+    default:
+      throw new Error(`No input builder for model ${model.alias}`);
+  }
+}
+
+const RUNWAY_DATA_URI_LIMIT = 4.5 * 1024 * 1024;
+
+/** Runway accepts https URLs or data URIs up to 5MB. Small files inline; large ones go via fal storage. */
+async function toRunwayUri(ref: string): Promise<string> {
+  if (ref.startsWith('http://') || ref.startsWith('https://') || ref.startsWith('data:')) return ref;
+  const size = (await stat(ref)).size;
+  if (size <= RUNWAY_DATA_URI_LIMIT) {
+    const ext = path.extname(ref).toLowerCase();
+    const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+    return `data:${mime};base64,${(await readFile(ref)).toString('base64')}`;
+  }
+  if (!process.env['FAL_KEY']) {
+    throw new Error(`Reference ${path.basename(ref)} exceeds Runway's 5MB data-URI limit and FAL_KEY is not set for upload`);
+  }
+  return uploadToFal(ref);
+}
+
+async function generateViaRunway(model: ModelSpec, options: GenerateOptions, refs: string[]): Promise<GenerationResult> {
+  const client = configureRunway();
+  const aspect = options.aspectRatio ?? '3:4';
+  const family = model.endpoint.startsWith('muse') ? 'muse' : 'gen4';
+  const ratio = RUNWAY_RATIOS[family]?.[aspect];
+  if (!ratio) {
+    throw new Error(`${model.alias} has no ratio mapping for aspect ${aspect} (known: ${Object.keys(RUNWAY_RATIOS[family] ?? {}).join(', ')})`);
+  }
+  if (model.endpoint === 'gen4_image_turbo' && refs.length === 0) {
+    throw new Error('gen4_image_turbo requires at least one reference image');
+  }
+
+  const referenceImages = [];
+  for (let i = 0; i < refs.length; i++) {
+    const uri = await toRunwayUri(refs[i]!);
+    referenceImages.push(model.refSyntax === 'runway-tag' ? { uri, tag: runwayTag(i + 1) } : { uri });
+  }
+
+  const body = {
+    model: model.endpoint,
+    promptText: options.prompt,
+    ratio,
+    ...(referenceImages.length > 0 ? { referenceImages } : {}),
+    ...(options.seed !== undefined && family === 'gen4' ? { seed: options.seed } : {}),
+    ...(family === 'muse' ? { outputCount: options.count ?? 1, outputFormat: 'png' } : {}),
+  } as Parameters<typeof client.textToImage.create>[0];
+
+  const task = await client.textToImage.create(body).waitForTaskOutput();
   return {
-    imageUrls: (data.images ?? []).map((img) => img.url),
-    requestId: result.requestId,
+    imageUrls: task.output ?? [],
+    requestId: task.id,
+    model,
   };
 }
 
 /**
- * Generate a manga panel with a single character reference image.
- * Uploads the local reference file to fal.ai storage first.
+ * Generate one or more images. Local reference paths are uploaded first.
  */
+export async function generateImage(options: GenerateOptions): Promise<GenerationResult> {
+  const model = resolveModel(options.model);
+  const refs = options.imageUrls ?? [];
+  if (refs.length > model.maxRefs) {
+    throw new Error(`${model.alias} supports at most ${model.maxRefs} reference images (got ${refs.length})`);
+  }
+  if (model.provider === 'runway') {
+    return generateViaRunway(model, options, refs);
+  }
+  if (refs.length === 0 && model.refSyntax === 'natural') {
+    // The fal edit endpoints require at least one image. Fall back to Kling for text-only.
+    return generateImage({ ...options, model: 'kling-o1' });
+  }
+
+  const imageUrls: string[] = [];
+  for (const ref of refs) imageUrls.push(await uploadToFal(ref));
+
+  const result = await fal.subscribe(model.endpoint, {
+    input: buildInput(model, options, imageUrls),
+  });
+
+  const data = result.data as FalImageResult;
+  return {
+    imageUrls: (data.images ?? []).map((img) => img.url),
+    requestId: result.requestId,
+    model,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Backwards-compatible wrappers (older call sites)
+// ---------------------------------------------------------------------------
+
+export async function generatePanel(options: GenerateOptions): Promise<GenerationResult> {
+  return generateImage({ ...options, imageUrls: [] });
+}
+
 export async function generatePanelWithReference(
-  options: ReferenceImageOptions,
-): Promise<KlingGenerationResult> {
-  const imageUrl = await uploadToFal(options.referenceImage);
-
-  const result = await fal.subscribe(FAL_KLING_O1, {
-    input: {
-      prompt: `@Image1 ${options.prompt}`,
-      image_urls: [imageUrl],
-      aspect_ratio: (options.aspectRatio ?? '3:4') as KlingAspectRatio,
-      num_images: options.count ?? 1,
-      resolution: (options.resolution ?? '1K') as KlingResolution,
-    },
-  });
-
-  const data = result.data as FalKlingResult;
-  return {
-    imageUrls: (data.images ?? []).map((img) => img.url),
-    requestId: result.requestId,
-  };
+  options: GenerateOptions & { referenceImage: string },
+): Promise<GenerationResult> {
+  const model = resolveModel(options.model);
+  const prompt = model.refSyntax === 'at-image' ? `@Image1 ${options.prompt}` : options.prompt;
+  return generateImage({ ...options, prompt, imageUrls: [options.referenceImage] });
 }
 
-/**
- * Generate a manga panel with multiple character reference images.
- * Uses Kling O1 via fal.ai for multi-reference consistency.
- *
- * Prompt must include @Image1, @Image2 etc. placeholders
- * to reference the provided images.
- */
 export async function generatePanelMultiRef(
-  options: MultiRefOptions,
-): Promise<KlingGenerationResult> {
+  options: GenerateOptions & { imageUrls: string[] },
+): Promise<GenerationResult> {
   if (options.imageUrls.length === 0) {
     throw new Error('At least one reference image URL is required for multi-ref generation');
   }
-  if (options.imageUrls.length > 10) {
-    throw new Error('Kling O1 supports a maximum of 10 reference images');
-  }
-
-  const result = await fal.subscribe(FAL_KLING_O1, {
-    input: {
-      prompt: options.prompt,
-      image_urls: options.imageUrls,
-      aspect_ratio: (options.aspectRatio ?? '3:4') as KlingAspectRatio,
-      num_images: options.count ?? 1,
-      resolution: (options.resolution ?? '1K') as KlingResolution,
-    },
-  });
-
-  const data = result.data as FalKlingResult;
-  return {
-    imageUrls: (data.images ?? []).map((img) => img.url),
-    requestId: result.requestId,
-  };
+  return generateImage(options);
 }
 
-/**
- * Download a generated image from URL and save to disk.
- */
-export async function downloadAndSave(
-  imageUrl: string,
-  outputPath: string,
-): Promise<void> {
-  await mkdir(path.dirname(outputPath), { recursive: true });
+// ---------------------------------------------------------------------------
+// Download
+// ---------------------------------------------------------------------------
 
+export async function downloadAndSave(imageUrl: string, outputPath: string): Promise<void> {
+  await mkdir(path.dirname(outputPath), { recursive: true });
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
   }
-
   const buffer = Buffer.from(await response.arrayBuffer());
   await writeFile(outputPath, buffer);
 }

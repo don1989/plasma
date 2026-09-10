@@ -18,13 +18,12 @@ import { parse as parseYaml } from 'yaml';
 
 import { PATHS } from '../config/paths.js';
 import {
-  configureFal,
+  configureProvider,
   uploadToFal,
-  generatePanel,
-  generatePanelWithReference,
-  generatePanelMultiRef,
+  generateImage,
   downloadAndSave,
 } from '../generation/kling-client.js';
+import { resolveModel, buildRefBindings } from '../generation/models.js';
 import {
   loadCharacterReferences,
 } from '../generation/references.js';
@@ -44,8 +43,14 @@ export interface KlingGenerateOptions {
   characters?: string[];
   /** Override aspect ratio. */
   aspectRatio?: string;
-  /** Reference fidelity 0-1 (default: 0.8). */
+  /** Reference fidelity 0-1 (default: 0.8). Kept for log parity; not all models expose it. */
   fidelity?: number;
+  /** Model alias or fal endpoint (default: registry default). */
+  model?: string;
+  /** Resolution string (default: '1K'). */
+  resolution?: string;
+  /** Deterministic seed where supported. */
+  seed?: number;
   /** Custom prompt override (skip reading from prompts dir). */
   prompt?: string;
   /** Notes stored in generation log. */
@@ -91,8 +96,10 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
   }
 
   // Configure fal.ai credentials
+  let model;
   try {
-    configureFal();
+    model = resolveModel(options.model);
+    if (!options.dryRun) configureProvider(model);
   } catch (e) {
     return { success: false, duration: Date.now() - start, outputFiles: [], errors: [(e as Error).message] };
   }
@@ -213,47 +220,37 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
     }
 
     try {
-      let result;
-      const mode = charRefUrls.size > 1 ? 'multi-ref' : charRefUrls.size === 1 ? 'single-ref' : 'text-only';
+      const refGroups = [...charRefUrls.entries()].map(([charId, urls]) => ({ label: charId, urls }));
+      const totalRefs = refGroups.reduce((n, g) => n + g.urls.length, 0);
+      const mode = refGroups.length > 1 ? 'multi-ref' : refGroups.length === 1 ? 'single-ref' : 'text-only';
 
-      if (charRefUrls.size > 1) {
-        // Multi-reference: use Kling O1 with @Image syntax
-        // Build prompt with @Image placeholders and collect uploaded URLs
-        const imageUrls: string[] = [];
-        let multiPrompt = prompt;
-        let imageIndex = 1;
-        for (const [charId, urls] of charRefUrls) {
-          imageUrls.push(urls[0]!);
-          multiPrompt += ` @Image${imageIndex} is ${charId}.`;
-          imageIndex++;
-        }
-
-        console.log(`  Mode: multi-ref (${imageUrls.length} character references) via fal.ai`);
-
-        result = await generatePanelMultiRef({
-          prompt: multiPrompt,
-          imageUrls,
-          aspectRatio: options.aspectRatio,
-        });
-      } else if (charRefUrls.size === 1) {
-        // Single reference
-        const [, urls] = [...charRefUrls.entries()][0]!;
-        console.log(`  Mode: single-ref via fal.ai`);
-
-        result = await generatePanelWithReference({
-          prompt,
-          referenceImage: urls[0]!,
-          aspectRatio: options.aspectRatio,
-        });
-      } else {
-        // No reference: text-only
-        console.log(`  Mode: text-only via fal.ai`);
-
-        result = await generatePanel({
-          prompt,
-          aspectRatio: options.aspectRatio,
-        });
+      // Cap references at the model limit, spreading the budget across characters.
+      let budget = model.maxRefs;
+      const perChar = refGroups.length > 0 ? Math.max(1, Math.floor(budget / refGroups.length)) : 0;
+      const imageUrls: string[] = [];
+      const bindings: Array<{ label: string; count: number }> = [];
+      for (const group of refGroups) {
+        const take = group.urls.slice(0, Math.min(perChar, budget));
+        imageUrls.push(...take);
+        bindings.push({ label: group.label, count: take.length });
+        budget -= take.length;
       }
+
+      let fullPrompt = prompt;
+      if (bindings.length > 0) {
+        fullPrompt = `${buildRefBindings(model, bindings)} ${prompt}`;
+      }
+
+      console.log(`  Mode: ${mode} (${imageUrls.length}/${totalRefs} refs) via ${model.endpoint}`);
+
+      const result = await generateImage({
+        model: model.alias,
+        prompt: fullPrompt,
+        imageUrls,
+        aspectRatio: options.aspectRatio,
+        resolution: options.resolution,
+        seed: options.seed,
+      });
 
       // Download and save
       if (result.imageUrls.length > 0) {
@@ -271,10 +268,10 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
         version,
         requestId: result.requestId,
         provider: 'fal.ai',
-        model: 'fal-ai/kling-image/o1',
+        model: result.model.endpoint,
         mode,
         characterRefs: [...charRefs.keys()],
-        prompt: prompt.slice(0, 500),
+        prompt: fullPrompt,
         notes: options.notes ?? '',
         timestamp: new Date().toISOString(),
       }, null, 2));

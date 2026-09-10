@@ -12,14 +12,16 @@
     "stage:prompt": "tsx src/cli.ts prompt",
     "stage:generate": "tsx src/cli.ts generate",
     "stage:kling": "tsx src/cli.ts kling",
+    "reference": "tsx src/cli.ts reference",
     "stage:overlay": "tsx src/cli.ts overlay",
     "stage:assemble": "tsx src/cli.ts assemble",
     "start:service": "tsx src/comfyui/service.ts"
   },
   "dependencies": {
-    "@google/genai": "^1.42.0",
-    "commander": "^14.0.3",
     "@fal-ai/client": "^1.9.4",
+    "@google/genai": "^1.42.0",
+    "@runwayml/sdk": "^4.20.0",
+    "commander": "^14.0.3",
     "express": "^5.2.1",
     "nunjucks": "^3.2.4",
     "remark-parse": "^11.0.0",
