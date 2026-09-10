@@ -52,17 +52,31 @@ export function generateBalloonSvg(
   switch (type) {
     case 'speech': {
       // White ellipse with solid black stroke and triangular tail.
-      // Tail base sits at 30% of the width for a left tail, 70% for right.
-      const tailCx = tail === 'right' ? width * 0.7 : width * 0.3;
-      const tailX1 = tailCx - 10;
-      const tailX2 = tailCx + 10;
-      const tailTipX = tailCx + 5;
-      const tailTipY = height + tailHeight;
-      const tailPolygon = hasTail
-        ? `
-        <polygon points="${tailX1},${height - 5} ${tailX2},${height - 5} ${tailTipX},${tailTipY}"
-          fill="white" stroke="black" stroke-width="2.5" />`
-        : '';
+      let tailPolygon = '';
+      if (hasTail) {
+        // Tail base centred at 30% of the width for a left tail, 70% for right,
+        // clamped so the 20 px base stays within the central 80% of the ellipse.
+        const halfBase = 10;
+        const reach = rx * 0.8;
+        const lo = cx - reach + halfBase;
+        const hi = cx + reach - halfBase;
+        const wanted = tail === 'right' ? width * 0.7 : width * 0.3;
+        const tailCx = lo > hi ? cx : Math.min(Math.max(wanted, lo), hi);
+        // Each base point sits 2 px inside the ellipse's lower edge at its own x,
+        // so the base never floats free and the cover ellipse hides its stroke.
+        const baseY = (x: number): number => {
+          const t = Math.min(Math.abs(x - cx) / rx, 1);
+          return cy + ry * Math.sqrt(1 - t * t) - 2;
+        };
+        const tailX1 = tailCx - halfBase;
+        const tailX2 = tailCx + halfBase;
+        // Tip leans outward toward the speaker's side.
+        const tailTipX = tail === 'right' ? tailCx + 6 : tailCx - 6;
+        const tailTipY = height + tailHeight;
+        tailPolygon = `
+        <polygon points="${tailX1},${baseY(tailX1)} ${tailX2},${baseY(tailX2)} ${tailTipX},${tailTipY}"
+          fill="white" stroke="black" stroke-width="2.5" />`;
+      }
       svgBody = `
         <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"
           fill="white" stroke="black" stroke-width="2.5" />${tailPolygon}

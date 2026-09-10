@@ -1,4 +1,4 @@
-// src/overlay/fonts.ts
+/** Lettering font lookup: bundled Comic Neue Bold with a system fallback. */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { PATHS } from '../config/paths.js';

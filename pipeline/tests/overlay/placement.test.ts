@@ -1,4 +1,4 @@
-// tests/overlay/placement.test.ts
+/** Tests for slot-aware balloon placement. */
 import { describe, it, expect } from 'vitest';
 import { placeBalloons } from '../../src/overlay/placement.js';
 
@@ -38,5 +38,37 @@ describe('placeBalloons', () => {
     expect(Math.abs((out[0]!.x + out[0]!.w / 2) - (slot.x + slot.w / 2))).toBeLessThan(2);
     expect(out[1]!.tail).toBe('none');
     expect(out[1]!.x).toBe(Math.round(slot.x + (slot.w - out[1]!.w) / 2) + 10);
+  });
+
+  it('pins a balloon taller than the slot to the top inset and keeps it inside horizontally', async () => {
+    const shortSlot = { panelNumber: 1, x: 100, y: 200, w: 800, h: 100 };
+    const tall = async () => ({ width: 300, height: 200 });
+    const out = await placeBalloons({ slot: shortSlot, dialogue: [
+      { character: 'SPYKE', line: 'A very long speech', type: 'speech' }],
+      speakerSides: { SPYKE: 'left' }, measure: tall, inset: 24, spacing: 12 });
+    expect(out[0]!.y).toBe(shortSlot.y + 24);
+    expect(out[0]!.x).toBeGreaterThanOrEqual(shortSlot.x);
+    expect(out[0]!.x + out[0]!.w).toBeLessThanOrEqual(shortSlot.x + shortSlot.w);
+  });
+
+  it('never repeats a rectangle or overflows the slot when same-side balloons run out of room', async () => {
+    const shortSlot = { panelNumber: 1, x: 100, y: 200, w: 800, h: 200 };
+    const out = await placeBalloons({ slot: shortSlot, dialogue: [
+      { character: 'SPYKE', line: 'One', type: 'speech' },
+      { character: 'SPYKE', line: 'Two', type: 'speech' },
+      { character: 'SPYKE', line: 'Three', type: 'speech' }],
+      speakerSides: { SPYKE: 'left' }, measure: size, inset: 24, spacing: 12 });
+    expect(out).toHaveLength(3);
+    for (const b of out) {
+      expect(b.y).toBeGreaterThanOrEqual(shortSlot.y);
+      expect(b.y + b.h).toBeLessThanOrEqual(shortSlot.y + shortSlot.h);
+    }
+    for (let a = 0; a < out.length; a++) {
+      for (let b = a + 1; b < out.length; b++) {
+        const p = out[a]!, q = out[b]!;
+        const overlap = p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h && q.y < p.y + p.h;
+        expect(overlap, `balloons ${a} and ${b} overlap`).toBe(false);
+      }
+    }
   });
 });
