@@ -40,6 +40,8 @@ export interface ModelSpec {
   resolutions: readonly string[];
   /** Approximate USD per image, for logging. */
   approxCost: number;
+  /** Hard prompt length cap enforced by the API, if any. */
+  maxPromptChars?: number;
 }
 
 export const MODELS: Record<string, ModelSpec> = {
@@ -78,6 +80,7 @@ export const MODELS: Record<string, ModelSpec> = {
     refSyntax: 'runway-tag',
     resolutions: ['1K', '2K'],
     approxCost: 0.08,
+    maxPromptChars: 1000,
   },
   'runway-gen4-turbo': {
     alias: 'runway-gen4-turbo',
@@ -87,6 +90,7 @@ export const MODELS: Record<string, ModelSpec> = {
     refSyntax: 'runway-tag',
     resolutions: ['1K', '2K'],
     approxCost: 0.02,
+    maxPromptChars: 1000,
   },
   'runway-muse': {
     alias: 'runway-muse',

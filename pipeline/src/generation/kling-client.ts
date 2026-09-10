@@ -7,7 +7,7 @@
  */
 
 import { fal } from '@fal-ai/client';
-import RunwayML from '@runwayml/sdk';
+import RunwayML, { TaskFailedError } from '@runwayml/sdk';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { resolveModel, runwayTag, RUNWAY_RATIOS, type ModelSpec } from './models.js';
@@ -200,7 +200,16 @@ async function generateViaRunway(model: ModelSpec, options: GenerateOptions, ref
     ...(family === 'muse' ? { outputCount: options.count ?? 1, outputFormat: 'png' } : {}),
   } as Parameters<typeof client.textToImage.create>[0];
 
-  const task = await client.textToImage.create(body).waitForTaskOutput();
+  let task;
+  try {
+    task = await client.textToImage.create(body).waitForTaskOutput();
+  } catch (e) {
+    if (e instanceof TaskFailedError) {
+      const d = e.taskDetails as { failure?: string; failureCode?: string };
+      throw new Error(`Runway task failed: ${d.failure ?? 'no reason given'} (${d.failureCode ?? 'no code'})`);
+    }
+    throw e;
+  }
   return {
     imageUrls: task.output ?? [],
     requestId: task.id,
@@ -216,6 +225,9 @@ export async function generateImage(options: GenerateOptions): Promise<Generatio
   const refs = options.imageUrls ?? [];
   if (refs.length > model.maxRefs) {
     throw new Error(`${model.alias} supports at most ${model.maxRefs} reference images (got ${refs.length})`);
+  }
+  if (model.maxPromptChars && options.prompt.length > model.maxPromptChars) {
+    throw new Error(`${model.alias} caps prompts at ${model.maxPromptChars} characters; this prompt is ${options.prompt.length}. Trim it (the style prefix and reference bindings count).`);
   }
   if (model.provider === 'runway') {
     return generateViaRunway(model, options, refs);
