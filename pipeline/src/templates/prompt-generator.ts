@@ -46,7 +46,7 @@ export interface GeneratedPrompt {
  * 1. Dialogue speakers (exact match from panel.dialogue[].character)
  * 2. Word-boundary matches of registered character names/aliases in action text
  */
-function extractCharactersFromPanel(
+export function extractCharactersFromPanel(
   panel: Panel,
   registry: CharacterRegistry,
 ): { known: Set<string>; unknown: Set<string> } {
