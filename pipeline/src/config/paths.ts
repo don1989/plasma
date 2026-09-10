@@ -55,6 +55,8 @@ export const PATHS = {
       lettered: path.join(root, 'lettered'),
       webtoon: path.join(root, 'webtoon'),
       prompts: path.join(root, 'prompts'),
+      pages: path.join(root, 'pages'),      // composed, unlettered page grids
+      review: path.join(root, 'review'),    // contact sheets
       comfyuiRaw: path.join(raw, 'comfyui'),  // raw/comfyui/ for ComfyUI-generated images
       klingRaw: path.join(raw, 'kling'),  // legacy: pre-registry Kling output
       /** raw/<model-alias>/ — one folder per generation model. */

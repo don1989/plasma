@@ -629,6 +629,21 @@ program
     if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
   });
 
+program
+  .command('compose')
+  .description('Compose approved panels into page grids (output/ch-NN/pages/)')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
+  .option('--page <number>', 'Single page')
+  .option('--pages <range>', 'Page range, e.g. "1-5" or "3,7"')
+  .option('-v, --verbose', 'Enable verbose logging')
+  .option('--dry-run', 'Show what would be done')
+  .action(async (options) => {
+    if (!options.chapter) { console.error("error: required option '-c, --chapter <number>' not specified"); process.exit(1); }
+    const { runCompose } = await import('./stages/compose.js');
+    const result = await runCompose({ chapter: parseInt(options.chapter), pages: parsePages(options.pages, options.page), verbose: options.verbose, dryRun: options.dryRun });
+    if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
+  });
+
 // Strip a lone '--' injected by pnpm:
 //   argv[2] === '--': `pnpm dev -- overlay -c 1`
 //   argv[3] === '--': `pnpm stage:generate -- -c 1` (subcommand already fixed in script, pnpm appends '--' before user args)
