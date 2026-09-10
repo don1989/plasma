@@ -701,6 +701,20 @@ program
     if (!result.success) { console.error('Failed:', result.errors); process.exit(1); }
   });
 
+program
+  .command('letter')
+  .description('Letter composed pages with balloons and SFX using pages.json slots (output/ch-NN/lettered/)')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
+  .option('--page <number>', 'Single page')
+  .option('--pages <range>', 'Page range, e.g. "1-3"')
+  .option('--dry-run', 'Show what would be done')
+  .action(async (options) => {
+    if (!options.chapter) { console.error("error: required option '-c, --chapter <number>' not specified"); process.exit(1); }
+    const { runLetter } = await import('./stages/letter.js');
+    const result = await runLetter({ chapter: parseInt(options.chapter), pages: parsePages(options.pages, options.page), dryRun: options.dryRun });
+    if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
+  });
+
 // Strip a lone '--' injected by pnpm:
 //   argv[2] === '--': `pnpm dev -- overlay -c 1`
 //   argv[3] === '--': `pnpm stage:generate -- -c 1` (subcommand already fixed in script, pnpm appends '--' before user args)

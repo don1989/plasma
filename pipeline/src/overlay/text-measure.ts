@@ -16,6 +16,8 @@ import type { OverlayConfig } from '../types/overlay.js';
  * @param fontSize - Font size in points
  * @param maxWidth - Maximum width before wrapping
  * @param dpi - DPI for rendering (default: 150)
+ * @param fontfile - Optional path to a font file; needed for bundled fonts Pango
+ *   cannot find by family name (only installed fonts are discoverable)
  * @returns Promise resolving to width and height in pixels
  */
 export async function measureText(
@@ -24,6 +26,7 @@ export async function measureText(
   fontSize: number,
   maxWidth: number,
   dpi: number = 150,
+  fontfile?: string,
 ): Promise<{ width: number; height: number }> {
   const pangoMarkup = `<span font="${font} ${fontSize}">${text}</span>`;
 
@@ -34,6 +37,7 @@ export async function measureText(
       rgba: true,
       width: maxWidth,
       wrap: 'word' as const,
+      ...(fontfile ? { fontfile } : {}),
     },
   })
     .png()
