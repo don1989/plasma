@@ -156,21 +156,23 @@ function buildInput(model: ModelSpec, options: GenerateOptions, imageUrls: strin
   }
 }
 
-const RUNWAY_DATA_URI_LIMIT = 4.5 * 1024 * 1024;
+const RUNWAY_DATA_URI_LIMIT = 1.5 * 1024 * 1024;
 
-/** Runway accepts https URLs or data URIs up to 5MB. Small files inline; large ones go via fal storage. */
+/**
+ * Runway accepts https URLs or data URIs. Several multi-MB data URIs in one
+ * request trip its body-size limit (413), so prefer a fal storage URL when a
+ * key is available and only inline small files.
+ */
 async function toRunwayUri(ref: string): Promise<string> {
   if (ref.startsWith('http://') || ref.startsWith('https://') || ref.startsWith('data:')) return ref;
+  if (process.env['FAL_KEY']) return uploadToFal(ref);
   const size = (await stat(ref)).size;
   if (size <= RUNWAY_DATA_URI_LIMIT) {
     const ext = path.extname(ref).toLowerCase();
     const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
     return `data:${mime};base64,${(await readFile(ref)).toString('base64')}`;
   }
-  if (!process.env['FAL_KEY']) {
-    throw new Error(`Reference ${path.basename(ref)} exceeds Runway's 5MB data-URI limit and FAL_KEY is not set for upload`);
-  }
-  return uploadToFal(ref);
+  throw new Error(`Reference ${path.basename(ref)} is too large to inline for Runway and FAL_KEY is not set for upload`);
 }
 
 async function generateViaRunway(model: ModelSpec, options: GenerateOptions, refs: string[]): Promise<GenerationResult> {
