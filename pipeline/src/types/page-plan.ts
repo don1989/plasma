@@ -3,15 +3,12 @@
  * Built from script.json by the plan stage; read by panels, review, compose, letter.
  */
 import { z } from 'zod';
+import { DialogueLineSchema } from '../schemas/manga.schema.js';
 
 export const ASPECT_RATIOS = ['16:9', '4:3', '3:4', '1:1'] as const;
 export type AspectRatio = (typeof ASPECT_RATIOS)[number];
 
-export const DialogueLineSchema = z.object({
-  character: z.string(),
-  line: z.string(),
-  type: z.enum(['speech', 'thought', 'narration']),
-});
+export const CanvasSchema = z.object({ w: z.number().positive(), h: z.number().positive() });
 
 export const PanelVersionSchema = z.object({
   version: z.number().int().positive(),
@@ -25,7 +22,10 @@ export const PanelVersionSchema = z.object({
 
 export const SlotRectSchema = z.object({
   panelNumber: z.number().int().positive(),
-  x: z.number(), y: z.number(), w: z.number().positive(), h: z.number().positive(),
+  x: z.number(),
+  y: z.number(),
+  w: z.number().positive(),
+  h: z.number().positive(),
 });
 
 export const PanelPlanSchema = z.object({
@@ -49,7 +49,7 @@ export const PagePlanSchema = z.object({
   pageNumber: z.number().int().positive(),
   isSplash: z.boolean(),
   layout: z.object({
-    canvas: z.object({ w: z.number().positive(), h: z.number().positive() }),
+    canvas: CanvasSchema,
     slots: z.array(SlotRectSchema),
   }),
   panels: z.array(PanelPlanSchema),
@@ -57,7 +57,7 @@ export const PagePlanSchema = z.object({
 
 export const ChapterPlanSchema = z.object({
   chapterNumber: z.number().int().positive(),
-  canvas: z.object({ w: z.number().positive(), h: z.number().positive() }),
+  canvas: CanvasSchema,
   pages: z.array(PagePlanSchema),
 });
 
