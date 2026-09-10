@@ -56,4 +56,44 @@ describe('rowFlowLayout', () => {
     );
     expect(slots[2]!.w).toBe(canvas.w - 2 * margin);
   });
+
+  it('falls back to rows of two above seven panels', () => {
+    const panels = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
+      panelNumber: n,
+      aspectRatio: n === 1 || n === 4 ? '16:9' : '3:4',
+    } as const));
+    const slots = rowFlowLayout(panels, { canvas, margin, gutter, emphasisPanel: 4, isSplash: false });
+    const fullWidth = canvas.w - 2 * margin;
+
+    expect(slots.map((s) => s.panelNumber)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(slots[0]!.y).toBe(slots[1]!.y);
+    expect(slots[2]!.y).toBe(slots[3]!.y);
+    expect(slots[4]!.y).toBe(slots[5]!.y);
+    expect(slots[6]!.y).toBe(slots[7]!.y);
+    expect(slots[0]!.w).toBeLessThan(fullWidth);   // panel 1 (16:9) does not get a full-width row
+    expect(slots[3]!.w).toBeLessThan(fullWidth);   // panel 4 (16:9) does not get a full-width row
+    for (const a of slots) for (const b of slots) if (a !== b) expect(overlaps(a, b)).toBe(false);
+    const last = slots[slots.length - 1]!;
+    expect(last.y + last.h).toBe(canvas.h - margin);
+  });
+
+  it('two panels: wide then portrait get two full rows; portrait then portrait share one row', () => {
+    const fullWidth = canvas.w - 2 * margin;
+
+    const widePortrait = rowFlowLayout(
+      [{ panelNumber: 1, aspectRatio: '16:9' }, { panelNumber: 2, aspectRatio: '3:4' }],
+      { canvas, margin, gutter, emphasisPanel: 1, isSplash: false },
+    );
+    expect(widePortrait[0]!.y).not.toBe(widePortrait[1]!.y);
+    expect(widePortrait[0]!.w).toBe(fullWidth);
+    expect(widePortrait[1]!.w).toBe(fullWidth);
+
+    const portraitPortrait = rowFlowLayout(
+      [{ panelNumber: 1, aspectRatio: '3:4' }, { panelNumber: 2, aspectRatio: '3:4' }],
+      { canvas, margin, gutter, emphasisPanel: 1, isSplash: false },
+    );
+    expect(portraitPortrait[0]!.y).toBe(portraitPortrait[1]!.y);
+    expect(portraitPortrait[0]!.w).toBeLessThan(fullWidth);
+    expect(portraitPortrait[1]!.w).toBeLessThan(fullWidth);
+  });
 });
