@@ -21,10 +21,28 @@ describe('buildPanelPrompt', () => {
     expect(p).toContain('MEDIUM shot');
     expect(p).toContain('NO text');
     expect(p).not.toContain('Tension.\n\nTension.');
+
+    const styleIdx = p.indexOf('Colored manga, cel-shaded.');
+    const actionIdx = p.indexOf('Spyke turns to face the punks.');
+    const charactersIdx = p.indexOf('CHARACTERS');
+    const framingIdx = p.indexOf('FRAMING');
+    const noTextIdx = p.indexOf('NO text');
+    expect(styleIdx).toBeLessThan(actionIdx);
+    expect(actionIdx).toBeLessThan(charactersIdx);
+    expect(charactersIdx).toBeLessThan(framingIdx);
+    expect(framingIdx).toBeLessThan(noTextIdx);
   });
   it('omits framing sides when nobody speaks', () => {
     const p = buildPanelPrompt({ stylePrefix: 's', action: 'a', notes: '', shotType: 'Wide', fingerprints: [], speakerSides: {}, speakerNames: {} });
     expect(p).not.toContain('of the frame');
     expect(p).toContain('WIDE shot');
+  });
+  it('omits the CHARACTERS block when fingerprints is empty', () => {
+    const p = buildPanelPrompt({ stylePrefix: 's', action: 'a', notes: '', shotType: 'Wide', fingerprints: [], speakerSides: {}, speakerNames: {} });
+    expect(p).not.toContain('CHARACTERS');
+  });
+  it('does not leave a blank paragraph when action is empty', () => {
+    const p = buildPanelPrompt({ stylePrefix: 's', action: '', notes: '', shotType: 'Wide', fingerprints: [], speakerSides: {}, speakerNames: {} });
+    expect(p).not.toContain('\n\n\n');
   });
 });
