@@ -87,6 +87,12 @@ export async function runPrompt(options: StageOptions): Promise<StageResult> {
     if (!options.dryRun) {
       await writeFile(filePath, gp.prompt, 'utf-8');
       outputFiles.push(filePath);
+      // Sidecar: which character refs the generation stage should attach for this page.
+      await writeFile(
+        path.join(promptsDir, `page-${pageNum}.characters.json`),
+        JSON.stringify(gp.characterIds),
+        'utf-8',
+      );
     }
 
     // Track unknown characters

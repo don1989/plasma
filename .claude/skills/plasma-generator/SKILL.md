@@ -5,7 +5,7 @@ description: Generate canon-locked Plasma manga panels via fal.ai Kling API. Use
 
 # Plasma Manga Generator
 
-API-only manga panel generator for the Plasma project. Wraps the existing pipeline at `pipeline/src/stages/kling-generate.ts`. Default model is Nano Banana Pro on fal.ai; Kling O1, Nano Banana 2, and Runway (gen4, gen4-turbo, muse) are selectable with `--model`. No UI steps. No manual copy-paste.
+API-only manga panel generator for the Plasma project. Wraps the existing pipeline at `pipeline/src/stages/kling-generate.ts`. Default model is Runway Muse (`runway-muse`, ~$0.01/page, 10 refs); Nano Banana Pro/2, Kling O1, and Runway Gen-4 are selectable with `--model`. No UI steps. No manual copy-paste.
 
 ## When to invoke
 
@@ -106,7 +106,7 @@ Write the composed prompt to a temp file, then:
 
 Useful flags:
 - `--aspect-ratio 3:4` (default — manga vertical) · `--aspect-ratio 16:9` for wide establishing shots
-- `--model nano-banana-pro` (default) · `nano-banana-2` · `kling-o1` · `runway-gen4` · `runway-gen4-turbo` · `runway-muse`
+- `--model runway-muse` (default) · `nano-banana-pro` · `nano-banana-2` · `kling-o1` · `runway-gen4` · `runway-gen4-turbo`
 - `--resolution 1K` (default) · `2K` · `4K` (Nano Banana only)
 - `--seed <n>` for repeatable rolls where the model supports it
 - All reference images in `references/` are sent, split across characters up to the model's cap (14 Nano Banana, 10 Kling/Muse, 3 Runway Gen-4)
@@ -149,11 +149,9 @@ Use **chapter 99** for all test/iteration shots. Production chapters (1, 2, ...)
 - [ch99_p002_v1.png](output/ch-99/raw/kling/ch99_p002_v1.png) — Spyke combat with Plasma Blade activated (canon ✓)
 - [ch99_p003_v1.png](output/ch-99/raw/kling/ch99_p003_v1.png) — Spyke seated in ramen shop (canon ✓)
 
-## Important — stale production prompts
+## Production prompts from the script
 
-`output/ch-01/prompts/page-NN.txt` files were written against an older canon and reference a **back-mounted broadsword + leather X-harness** — both forbidden by the current YAML. **Do not use `--page N` to consume those prompts directly.** Always compose a fresh prompt with `--prompt` until those files are regenerated.
-
-A separate task is needed to refresh those page prompts from the updated canon YAML.
+`pnpm stage:script -- -c N` then `pnpm stage:prompt -- -c N` regenerate `output/ch-NN/prompts/page-NN.txt` from the chapter script with the current canon YAML fingerprints, no dialogue or SFX text, and a `page-NN.characters.json` sidecar. `pnpm stage:kling -- -c N --pages A-B` then attaches each page's character refs automatically; `--characters` overrides the sidecar. Re-run the prompt stage whenever a YAML fingerprint or the script changes.
 
 ## Example invocations
 

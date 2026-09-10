@@ -30,6 +30,8 @@ export interface GeneratedPrompt {
   pageNumber: number;
   prompt: string;
   charactersIncluded: string[];
+  /** Character IDs (YAML ids) detected on the page, for reference lookup. */
+  characterIds: string[];
   charactersUnknown: string[];
 }
 
@@ -88,13 +90,14 @@ function extractCharactersFromPanel(
 function resolveCharacterFingerprints(
   panel: Panel,
   registry: CharacterRegistry,
-): { fingerprints: string[]; included: string[]; unknown: string[] } {
+): { fingerprints: string[]; included: string[]; ids: string[]; unknown: string[] } {
   const { known, unknown } = extractCharactersFromPanel(panel, registry);
 
   // Deduplicate fingerprints by character id
   const seenIds = new Set<string>();
   const fingerprints: string[] = [];
   const included: string[] = [];
+  const ids: string[] = [];
 
   for (const name of known) {
     const char = registry.get(name);
@@ -102,11 +105,13 @@ function resolveCharacterFingerprints(
     seenIds.add(char.id);
     fingerprints.push(char.fingerprint.trim());
     included.push(char.name);
+    ids.push(char.id);
   }
 
   return {
     fingerprints,
     included,
+    ids,
     unknown: [...unknown],
   };
 }
@@ -208,16 +213,20 @@ export function generateChapterPrompts(
   for (const page of chapter.pages) {
     const allIncluded: string[] = [];
     const allUnknown: string[] = [];
+    const allIds: string[] = [];
+    const pageFingerprints = new Map<string, string>();
 
     // Build panel data with resolved fingerprints
     const panelData = page.panels.map((panel) => {
-      const { fingerprints, included, unknown } = resolveCharacterFingerprints(
+      const { fingerprints, included, ids, unknown } = resolveCharacterFingerprints(
         panel,
         registry,
       );
 
       allIncluded.push(...included);
       allUnknown.push(...unknown);
+      allIds.push(...ids);
+      ids.forEach((id, i) => { if (!pageFingerprints.has(id)) pageFingerprints.set(id, fingerprints[i]!); });
 
       return {
         panelNumber: panel.panelNumber,
@@ -244,6 +253,7 @@ export function generateChapterPrompts(
       panel_count: page.panels.length,
       layout_description: layoutDesc,
       panels: panelData,
+      character_fingerprints: [...pageFingerprints.values()],
     };
 
     const prompt = env.render('page-prompt.njk', context);
@@ -260,6 +270,7 @@ export function generateChapterPrompts(
       pageNumber: page.pageNumber,
       prompt: prompt.trim(),
       charactersIncluded: uniqueIncluded,
+      characterIds: [...new Set(allIds)],
       charactersUnknown: uniqueUnknown,
     });
   }

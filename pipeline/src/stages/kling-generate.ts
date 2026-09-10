@@ -23,7 +23,7 @@ import {
   generateImage,
   downloadAndSave,
 } from '../generation/kling-client.js';
-import { resolveModel, buildRefBindings } from '../generation/models.js';
+import { resolveModel, buildRefBindings, type ModelSpec } from '../generation/models.js';
 import {
   loadCharacterReferences,
 } from '../generation/references.js';
@@ -75,10 +75,23 @@ export interface StageResult {
  */
 async function readPagePrompt(chapter: number, page: number): Promise<string | null> {
   const chapterPaths = PATHS.chapterOutput(chapter);
-  const promptFile = path.join(chapterPaths.prompts, `page-${String(page).padStart(3, '0')}.txt`);
+  const promptFile = path.join(chapterPaths.prompts, `page-${String(page).padStart(2, '0')}.txt`);
 
   if (!existsSync(promptFile)) return null;
   return (await readFile(promptFile, 'utf-8')).trim();
+}
+
+/** Character IDs the prompt stage detected on a page (sidecar written next to the prompt). */
+async function readPageCharacters(chapter: number, page: number): Promise<string[]> {
+  const chapterPaths = PATHS.chapterOutput(chapter);
+  const file = path.join(chapterPaths.prompts, `page-${String(page).padStart(2, '0')}.characters.json`);
+  if (!existsSync(file)) return [];
+  try {
+    const ids = JSON.parse(await readFile(file, 'utf-8')) as unknown;
+    return Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -96,7 +109,7 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
   }
 
   // Configure fal.ai credentials
-  let model;
+  let model: ModelSpec;
   try {
     model = resolveModel(options.model);
     if (!options.dryRun) configureProvider(model);
@@ -135,35 +148,32 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
     };
   }
 
-  // Load character references and upload to fal.ai storage
-  const charRefs = new Map<string, string[]>();
-  const charRefUrls = new Map<string, string[]>();
-
-  if (options.characters && options.characters.length > 0) {
-    for (const charId of options.characters) {
-      const refs = await loadCharacterReferences(charId);
-      if (refs.length > 0) {
-        charRefs.set(charId, refs);
-
-        if (!options.dryRun) {
-          // Upload reference images to fal.ai storage
-          if (options.verbose) {
-            console.log(`  Uploading ${refs.length} reference(s) for ${charId}...`);
-          }
-          const urls: string[] = [];
-          for (const refPath of refs) {
-            const url = await uploadToFal(refPath);
-            urls.push(url);
-          }
-          charRefUrls.set(charId, urls);
-          if (options.verbose) {
-            console.log(`  Uploaded ${urls.length} reference(s) for ${charId}`);
-          }
+  // Reference loading is per page: explicit --characters wins, otherwise the
+  // prompt stage's sidecar says who is on the page. Uploads are cached.
+  const refCache = new Map<string, string[]>();
+  async function refsFor(charIds: string[]): Promise<Map<string, string[]>> {
+    const out = new Map<string, string[]>();
+    for (const charId of charIds) {
+      if (!refCache.has(charId)) {
+        const refs = await loadCharacterReferences(charId);
+        if (refs.length === 0) {
+          console.warn(`  Warning: no reference images for ${charId} (text-only for this character)`);
+          refCache.set(charId, []);
+          continue;
         }
-      } else {
-        console.warn(`  Warning: no reference images found for ${charId}`);
+        if (options.dryRun || model.provider === 'runway') {
+          refCache.set(charId, refs); // local paths; the client inlines or uploads as needed
+        } else {
+          if (options.verbose) console.log(`  Uploading ${refs.length} reference(s) for ${charId}...`);
+          const urls: string[] = [];
+          for (const refPath of refs) urls.push(await uploadToFal(refPath));
+          refCache.set(charId, urls);
+        }
       }
+      const cached = refCache.get(charId)!;
+      if (cached.length > 0) out.set(charId, cached);
     }
+    return out;
   }
 
   // Read style guide
@@ -219,6 +229,12 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
       continue;
     }
 
+    const pageChars = options.characters && options.characters.length > 0
+      ? options.characters
+      : await readPageCharacters(options.chapter, pageNum);
+    const charRefUrls = await refsFor(pageChars);
+    if (options.verbose) console.log(`  Characters: ${pageChars.join(', ') || 'none'}`);
+
     try {
       const refGroups = [...charRefUrls.entries()].map(([charId, urls]) => ({ label: charId, urls }));
       const totalRefs = refGroups.reduce((n, g) => n + g.urls.length, 0);
@@ -270,7 +286,7 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
         provider: 'fal.ai',
         model: result.model.endpoint,
         mode,
-        characterRefs: [...charRefs.keys()],
+        characterRefs: [...charRefUrls.keys()],
         prompt: fullPrompt,
         notes: options.notes ?? '',
         timestamp: new Date().toISOString(),

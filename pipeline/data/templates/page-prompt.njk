@@ -4,23 +4,19 @@
 {% include "partials/setting-description.njk" %}
 {% endif %}
 
-{{ panel_count }}-panel {{ layout_description }}.
+{{ panel_count }}-panel {{ layout_description }}, panels separated by thin white gutters.
 {% for panel in panels %}
 
-PANEL {{ panel.panelNumber }} ({{ panel.shotType | upper }}{% if panel.position %} — {{ panel.position }}{% endif %}): {{ panel.action }}
-{% for char in panel.character_fingerprints %}
-Character: {{ char }}
-{% endfor %}
-{% if panel.dialogue_lines | length %}
-{% for line in panel.dialogue_lines %}
-{% if line.type == 'thought' %}Thought bubble: {{ line.character }}: "{{ line.line }}"
-{% elif line.type == 'narration' %}Narration box: "{{ line.line }}"
-{% else %}Speech balloon: {{ line.character }}: "{{ line.line }}"
-{% endif %}
-{% endfor %}
-{% endif %}
-{% if panel.sfx %}Stylized SFX text integrated into the panel: "{{ panel.sfx }}"
-{% endif %}
+PANEL {{ panel.panelNumber }} ({{ panel.shotType | upper }}): {{ panel.action }}
 {% if panel.notes %}{{ panel.notes }}
 {% endif %}
 {% endfor %}
+{% if character_fingerprints | length %}
+
+CHARACTERS (match the reference images where provided; these specs are canon):
+{% for fp in character_fingerprints %}
+- {{ fp }}
+{% endfor %}
+{% endif %}
+
+NO text, NO speech balloons, NO thought bubbles, NO sound-effect lettering, NO captions anywhere in the image. Leave clean space in each panel where dialogue would sit.

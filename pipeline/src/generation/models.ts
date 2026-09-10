@@ -103,7 +103,7 @@ export const MODELS: Record<string, ModelSpec> = {
   },
 };
 
-export const DEFAULT_MODEL = 'nano-banana-pro';
+export const DEFAULT_MODEL = 'runway-muse';
 
 /**
  * Resolve a model by alias or full endpoint ID. Throws on unknown names.
