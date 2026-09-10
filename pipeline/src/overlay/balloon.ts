@@ -26,6 +26,8 @@ function escapeXml(text: string): string {
  * @param width - Balloon width in pixels
  * @param height - Balloon body height in pixels (excludes tail)
  * @param type - Balloon visual type (speech, thought, narration)
+ * @param font - Font family and size for the dialogue text
+ * @param tail - Which side the speech tail points toward; 'none' draws no tail
  * @returns SVG content as a Buffer for Sharp composite input
  */
 export function generateBalloonSvg(
@@ -33,9 +35,12 @@ export function generateBalloonSvg(
   width: number,
   height: number,
   type: BalloonType,
+  font: { family: string; size: number } = { family: 'sans-serif', size: 14 },
+  tail: 'left' | 'right' | 'none' = 'left',
 ): Buffer {
   const escapedText = escapeXml(text);
-  const tailHeight = type === 'speech' ? 30 : 0;
+  const hasTail = type === 'speech' && tail !== 'none';
+  const tailHeight = hasTail ? 30 : 0;
   const totalHeight = height + tailHeight;
   const cx = width / 2;
   const cy = height / 2;
@@ -46,16 +51,21 @@ export function generateBalloonSvg(
 
   switch (type) {
     case 'speech': {
-      // White ellipse with solid black stroke and triangular tail
-      const tailX1 = cx - 10;
-      const tailX2 = cx + 10;
-      const tailTipX = cx + 5;
+      // White ellipse with solid black stroke and triangular tail.
+      // Tail base sits at 30% of the width for a left tail, 70% for right.
+      const tailCx = tail === 'right' ? width * 0.7 : width * 0.3;
+      const tailX1 = tailCx - 10;
+      const tailX2 = tailCx + 10;
+      const tailTipX = tailCx + 5;
       const tailTipY = height + tailHeight;
+      const tailPolygon = hasTail
+        ? `
+        <polygon points="${tailX1},${height - 5} ${tailX2},${height - 5} ${tailTipX},${tailTipY}"
+          fill="white" stroke="black" stroke-width="2.5" />`
+        : '';
       svgBody = `
         <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"
-          fill="white" stroke="black" stroke-width="2.5" />
-        <polygon points="${tailX1},${height - 5} ${tailX2},${height - 5} ${tailTipX},${tailTipY}"
-          fill="white" stroke="black" stroke-width="2.5" />
+          fill="white" stroke="black" stroke-width="2.5" />${tailPolygon}
         <!-- Cover the stroke overlap between tail and ellipse -->
         <ellipse cx="${cx}" cy="${cy}" rx="${rx - 1}" ry="${ry - 1}"
           fill="white" stroke="none" />`;
@@ -112,7 +122,7 @@ export function generateBalloonSvg(
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${totalHeight}" viewBox="0 0 ${width} ${totalHeight}">
     ${svgBody}
     <text x="${cx}" y="${textStartY}" text-anchor="middle" dominant-baseline="middle"
-      font-family="sans-serif" font-size="14" fill="black">
+      font-family="${escapeXml(font.family)}" font-size="${font.size}" fill="black">
       ${tspans}
     </text>
   </svg>`;
