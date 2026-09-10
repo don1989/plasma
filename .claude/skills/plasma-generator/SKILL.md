@@ -28,13 +28,13 @@ API-only manga panel generator for the Plasma project. Wraps the existing pipeli
 | Kling stage (fal.ai) | `pipeline/src/stages/kling-generate.ts` |
 | Provider client (fal.ai + Runway) | `pipeline/src/generation/kling-client.ts` |
 | Model registry | `pipeline/src/generation/models.ts` |
-| Reference view generator | `pipeline/src/stages/reference-generate.ts` (`pnpm reference generate <id> <view>`) |
+| Reference view generator | `pipeline/src/stages/reference-generate.ts` (`pnpm reference generate <id> <view>`, candidates in `output/characters/<id>/candidates/<model-alias>/`) |
 | Reference loader | `pipeline/src/generation/references.ts` |
 | Character canon YAMLs | `pipeline/data/characters/<id>.yaml` |
 | Character ref images | `pipeline/data/characters/<id>/references/*.png` |
 | Style prefix (auto-prepended) | `pipeline/data/config/style-guide.yaml` |
 | CLI entry | `pnpm stage:kling` |
-| Output destination | `output/ch-NN/raw/kling/chNN_pNNN_vN.png` (auto-versioned) |
+| Output destination | `output/ch-NN/raw/<model-alias>/chNN_pNNN_vN.png` (auto-versioned per model folder, e.g. `raw/runway-muse/`) |
 
 API keys live in `pipeline/.env` (`FAL_KEY`, `GEMINI_API_KEY`, `RUNWAYML_API_SECRET`).
 
@@ -145,9 +145,9 @@ Use **chapter 99** for all test/iteration shots. Production chapters (1, 2, ...)
 
 ## Snapshots from verified working runs
 
-- [ch99_p001_v1.png](output/ch-99/raw/kling/ch99_p001_v1.png) — Spyke standing, dawn London walkway (canon ✓)
-- [ch99_p002_v1.png](output/ch-99/raw/kling/ch99_p002_v1.png) — Spyke combat with Plasma Blade activated (canon ✓)
-- [ch99_p003_v1.png](output/ch-99/raw/kling/ch99_p003_v1.png) — Spyke seated in ramen shop (canon ✓)
+- [ch99_p001_v1.png](output/ch-99/raw/kling-o1/ch99_p001_v1.png) — Spyke standing, dawn London walkway (canon ✓)
+- [ch99_p002_v1.png](output/ch-99/raw/kling-o1/ch99_p002_v1.png) — Spyke combat with Plasma Blade activated (canon ✓)
+- [ch99_p003_v1.png](output/ch-99/raw/kling-o1/ch99_p003_v1.png) — Spyke seated in ramen shop (canon ✓)
 
 ## Production prompts from the script
 

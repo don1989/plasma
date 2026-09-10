@@ -8,7 +8,7 @@
  * 2. Multi-ref: Multiple character references via Kling O1
  * 3. No-ref: Text-only generation (backgrounds, establishing shots)
  *
- * Generated images are saved to output/ch-NN/raw/kling/
+ * Generated images are saved to output/ch-NN/raw/<model-alias>/
  */
 
 import { existsSync } from 'node:fs';
@@ -118,7 +118,7 @@ export async function runKlingGenerate(options: KlingGenerateOptions): Promise<S
   }
 
   const chapterPaths = PATHS.chapterOutput(options.chapter);
-  const klingRawDir = path.join(chapterPaths.raw, 'kling');
+  const klingRawDir = chapterPaths.rawFor(model.alias);
   await mkdir(klingRawDir, { recursive: true });
 
   // Determine which pages to generate

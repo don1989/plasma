@@ -2,7 +2,7 @@
  * Character reference generation stage.
  *
  * Produces candidate reference images for a character from its canon YAML.
- * Candidates land in output/characters/<id>/candidates/ and are promoted
+ * Candidates land in output/characters/<id>/candidates/<model-alias>/ and are promoted
  * into pipeline/data/characters/<id>/references/ only after review
  * (`reference add`). Existing references are fed back in as image inputs so
  * new views stay locked to the approved look.
@@ -123,7 +123,7 @@ export async function runReferenceGenerate(options: ReferenceGenerateOptions): P
     prompt = `${binding} Reproduce this exact character, costume, colors, and face in the new view. ${prompt}`;
   }
 
-  const outDir = path.join(PATHS.characterOutput(options.characterId), 'candidates');
+  const outDir = path.join(PATHS.characterOutput(options.characterId), 'candidates', model.alias);
   await mkdir(outDir, { recursive: true });
   const existing = (await readdir(outDir)).filter((f) => f.startsWith(`${options.view}_v`));
   let version = 1;
