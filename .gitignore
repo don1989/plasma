@@ -18,3 +18,7 @@ dataset/**/*.png
 
 # OS files
 *.DS_Store
+
+# Game build artifacts
+game/node_modules/
+game/dist/
