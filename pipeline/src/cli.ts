@@ -9,7 +9,9 @@ const program = new Command();
 program
   .name('plasma-pipeline')
   .description('Manga production pipeline for Plasma')
-  .version('0.1.0');
+  .version('0.1.0')
+  // Root options bind only before the subcommand, so `approve --version 2` reaches approve instead of printing 0.1.0.
+  .enablePositionalOptions();
 
 program
   .command('script')
@@ -671,6 +673,32 @@ program
     const result = await runPanels({ chapter: parseInt(options.chapter), pages: parsePages(options.pages, options.page), panel: options.panel ? parseInt(options.panel) : undefined,
       model: options.model, redo: options.redo, notes: options.notes, verbose: options.verbose, dryRun: options.dryRun });
     if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
+  });
+
+program
+  .command('review')
+  .description('Render a contact sheet of every panel version per page (output/ch-NN/review/)')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
+  .option('--page <number>', 'Single page')
+  .option('--pages <range>', 'Page range, e.g. "1-3"')
+  .action(async (options) => {
+    if (!options.chapter) { console.error("error: required option '-c, --chapter <number>' not specified"); process.exit(1); }
+    const { runReview } = await import('./stages/review.js');
+    const result = await runReview({ chapter: parseInt(options.chapter), pages: parsePages(options.pages, options.page) });
+    if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
+  });
+
+program
+  .command('approve')
+  .description('Approve a panel version in pages.json')
+  .requiredOption('-c, --chapter <number>', 'Chapter number')
+  .requiredOption('--page <number>', 'Page number')
+  .requiredOption('--panel <number>', 'Panel number')
+  .requiredOption('--version <number>', 'Version number to approve')
+  .action(async (options) => {
+    const { runApprove } = await import('./stages/review.js');
+    const result = await runApprove({ chapter: parseInt(options.chapter), page: parseInt(options.page), panel: parseInt(options.panel), version: parseInt(options.version) });
+    if (!result.success) { console.error('Failed:', result.errors); process.exit(1); }
   });
 
 // Strip a lone '--' injected by pnpm:
