@@ -103,6 +103,11 @@ export function planPath(chapter: number, outputRoot?: string): string {
   return path.join(outputRoot ?? PATHS.chapterOutput(chapter).root, 'pages.json');
 }
 
+/** Composed/lettered page file name, e.g. ch01_p03.png. */
+export function pageFileName(chapter: number, page: number): string {
+  return `ch${String(chapter).padStart(2, '0')}_p${String(page).padStart(2, '0')}.png`;
+}
+
 export async function loadChapterPlan(chapter: number, outputRoot?: string): Promise<ChapterPlan | null> {
   const file = planPath(chapter, outputRoot);
   if (!existsSync(file)) return null;
