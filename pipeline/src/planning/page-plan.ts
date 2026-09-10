@@ -19,7 +19,7 @@ import { rowFlowLayout } from '../layout/row-flow.js';
 import { buildPanelPrompt } from './panel-prompt.js';
 import { PATHS } from '../config/paths.js';
 
-export function hashPrompt(prompt: string): string {
+export function hashPanelPrompt(prompt: string): string {
   return createHash('sha1').update(prompt).digest('hex').slice(0, 12);
 }
 
@@ -58,9 +58,9 @@ function buildPanel(panel: Panel, registry: CharacterRegistry, stylePrefix: stri
     characterIds: fingerprints.map((f) => f.id),
     speakerSides,
     dialogue: panel.dialogue,
-    sfx: panel.sfx.trim() === '—' ? '' : panel.sfx,
+    sfx: panel.sfx,
     prompt,
-    promptHash: hashPrompt(prompt),
+    promptHash: hashPanelPrompt(prompt),
     versions: [],
     approvedVersion: null,
   };
@@ -81,7 +81,7 @@ export function buildChapterPlan(chapter: Chapter, registry: CharacterRegistry, 
   return { chapterNumber: chapter.chapterNumber, canvas: { ...DEFAULT_CANVAS }, pages };
 }
 
-/** Carry versions forward; keep approval only if the prompt hash is unchanged. */
+/** Carry versions forward; keep approval only if the prompt hash is unchanged. Mutates and returns `fresh`. */
 export function mergeChapterPlan(fresh: ChapterPlan, existing: ChapterPlan | null): ChapterPlan {
   if (!existing) return fresh;
   const byKey = new Map<string, PanelPlan>();
@@ -98,18 +98,24 @@ export function mergeChapterPlan(fresh: ChapterPlan, existing: ChapterPlan | nul
   return fresh;
 }
 
-export function planPath(chapter: number): string {
-  return path.join(PATHS.chapterOutput(chapter).root, 'pages.json');
+/** `outputRoot` defaults to the chapter's output directory (`output/ch-NN`). */
+export function planPath(chapter: number, outputRoot?: string): string {
+  return path.join(outputRoot ?? PATHS.chapterOutput(chapter).root, 'pages.json');
 }
 
-export async function loadChapterPlan(chapter: number): Promise<ChapterPlan | null> {
-  const file = planPath(chapter);
+export async function loadChapterPlan(chapter: number, outputRoot?: string): Promise<ChapterPlan | null> {
+  const file = planPath(chapter, outputRoot);
   if (!existsSync(file)) return null;
-  return ChapterPlanSchema.parse(JSON.parse(await readFile(file, 'utf-8')));
+  const raw = await readFile(file, 'utf-8');
+  try {
+    return ChapterPlanSchema.parse(JSON.parse(raw));
+  } catch (e) {
+    throw new Error(`Invalid pages.json at ${file}: ${(e as Error).message}`);
+  }
 }
 
-export async function saveChapterPlan(plan: ChapterPlan): Promise<string> {
-  const file = planPath(plan.chapterNumber);
+export async function saveChapterPlan(plan: ChapterPlan, outputRoot?: string): Promise<string> {
+  const file = planPath(plan.chapterNumber, outputRoot);
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, JSON.stringify(ChapterPlanSchema.parse(plan), null, 2), 'utf-8');
   return file;
@@ -119,8 +125,8 @@ export function findPanel(plan: ChapterPlan, page: number, panel: number): Panel
   return plan.pages.find((p) => p.pageNumber === page)?.panels.find((q) => q.panelNumber === panel);
 }
 
-export function approvedFile(plan: ChapterPlan, panel: PanelPlan): string | null {
+export function approvedFile(plan: ChapterPlan, panel: PanelPlan, outputRoot?: string): string | null {
   if (panel.approvedVersion == null) return null;
   const v = panel.versions.find((x) => x.version === panel.approvedVersion);
-  return v ? path.join(PATHS.chapterOutput(plan.chapterNumber).root, v.file) : null;
+  return v ? path.join(outputRoot ?? PATHS.chapterOutput(plan.chapterNumber).root, v.file) : null;
 }

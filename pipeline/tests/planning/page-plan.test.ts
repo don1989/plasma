@@ -1,14 +1,32 @@
-import { describe, it, expect } from 'vitest';
-import { buildChapterPlan, mergeChapterPlan } from '../../src/planning/page-plan.js';
+import { describe, it, expect, afterEach } from 'vitest';
+import {
+  buildChapterPlan, mergeChapterPlan, planPath, loadChapterPlan, saveChapterPlan, findPanel, approvedFile,
+} from '../../src/planning/page-plan.js';
 import type { Chapter } from '../../src/types/manga.js';
 import { CharacterRegistry } from '../../src/characters/registry.js';
 import { mkdtemp, writeFile } from 'node:fs/promises';
+import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+// Every temp dir made during a test is removed afterwards.
+const tempDirs: string[] = [];
+async function tempDir(prefix: string): Promise<string> {
+  const dir = await mkdtemp(path.join(tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
+}
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) {
+    if (existsSync(dir)) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
+
 // The registry loads YAML from a directory; build a tiny one per test run.
 async function fixtureRegistry(): Promise<CharacterRegistry> {
-  const dir = await mkdtemp(path.join(tmpdir(), 'chars-'));
+  const dir = await tempDir('chars-');
   await writeFile(path.join(dir, 'spyke-tinwall.yaml'),
     'id: spyke-tinwall\nname: Spyke Tinwall\naliases: ["Spyke", "SPYKE"]\nfingerprint: "Spyke canon fingerprint text here"\n');
   await writeFile(path.join(dir, 'punks.yaml'),
@@ -31,6 +49,8 @@ const chapter: Chapter = {
   }],
 } as Chapter;
 
+const version1 = { version: 1, file: 'raw/runway-muse/ch01_p03_pn1_v1.png', model: 'muse_image', requestId: 'r', timestamp: 't', notes: '' };
+
 describe('buildChapterPlan', () => {
   it('derives panels, aspect, speakers and slots', async () => {
     const registry = await fixtureRegistry();
@@ -51,10 +71,9 @@ describe('mergeChapterPlan', () => {
     const registry = await fixtureRegistry();
     const fresh = buildChapterPlan(chapter, registry, 'STYLE');
     const existing = structuredClone(fresh);
-    const v = { version: 1, file: 'raw/runway-muse/ch01_p03_pn1_v1.png', model: 'muse_image', requestId: 'r', timestamp: 't', notes: '' };
-    existing.pages[0]!.panels[0]!.versions = [v];
+    existing.pages[0]!.panels[0]!.versions = [version1];
     existing.pages[0]!.panels[0]!.approvedVersion = 1;
-    existing.pages[0]!.panels[1]!.versions = [v];
+    existing.pages[0]!.panels[1]!.versions = [version1];
     existing.pages[0]!.panels[1]!.approvedVersion = 1;
     existing.pages[0]!.panels[1]!.promptHash = 'stale';
 
@@ -63,5 +82,75 @@ describe('mergeChapterPlan', () => {
     expect(merged.pages[0]!.panels[0]!.versions).toHaveLength(1);
     expect(merged.pages[0]!.panels[1]!.approvedVersion).toBeNull();
     expect(merged.pages[0]!.panels[1]!.versions).toHaveLength(1); // history kept, approval reset
+  });
+});
+
+describe('plan file I/O', () => {
+  it('planPath joins pages.json onto the given root', async () => {
+    const root = await tempDir('plan-');
+    expect(planPath(1, root)).toBe(path.join(root, 'pages.json'));
+  });
+
+  it('save then load round-trips the plan', async () => {
+    const root = await tempDir('plan-');
+    const plan = buildChapterPlan(chapter, await fixtureRegistry(), 'STYLE');
+    const file = await saveChapterPlan(plan, root);
+    expect(file).toBe(planPath(1, root));
+    expect(existsSync(file)).toBe(true);
+    expect(await loadChapterPlan(1, root)).toEqual(plan);
+  });
+
+  it('load returns null when the file is missing', async () => {
+    const root = await tempDir('plan-');
+    expect(await loadChapterPlan(1, root)).toBeNull();
+  });
+
+  it('load throws a descriptive error on malformed JSON', async () => {
+    const root = await tempDir('plan-');
+    const file = planPath(1, root);
+    await writeFile(file, '{ not json', 'utf-8');
+    await expect(loadChapterPlan(1, root)).rejects.toThrow(`Invalid pages.json at ${file}: `);
+  });
+
+  it('load throws a descriptive error on schema-invalid JSON', async () => {
+    const root = await tempDir('plan-');
+    const file = planPath(1, root);
+    await writeFile(file, JSON.stringify({ chapterNumber: 1 }), 'utf-8');
+    await expect(loadChapterPlan(1, root)).rejects.toThrow(`Invalid pages.json at ${file}: `);
+  });
+});
+
+describe('findPanel', () => {
+  it('returns the matching panel, or undefined for an unknown page or panel', async () => {
+    const plan = buildChapterPlan(chapter, await fixtureRegistry(), 'STYLE');
+    expect(findPanel(plan, 3, 2)?.panelNumber).toBe(2);
+    expect(findPanel(plan, 3, 9)).toBeUndefined();
+    expect(findPanel(plan, 9, 1)).toBeUndefined();
+  });
+});
+
+describe('approvedFile', () => {
+  it('returns null when nothing is approved', async () => {
+    const root = await tempDir('plan-');
+    const plan = buildChapterPlan(chapter, await fixtureRegistry(), 'STYLE');
+    expect(approvedFile(plan, plan.pages[0]!.panels[0]!, root)).toBeNull();
+  });
+
+  it('joins the approved version file onto the root', async () => {
+    const root = await tempDir('plan-');
+    const plan = buildChapterPlan(chapter, await fixtureRegistry(), 'STYLE');
+    const panel = plan.pages[0]!.panels[0]!;
+    panel.versions = [version1];
+    panel.approvedVersion = 1;
+    expect(approvedFile(plan, panel, root)).toBe(path.join(root, version1.file));
+  });
+
+  it('returns null when the approved version is not in versions', async () => {
+    const root = await tempDir('plan-');
+    const plan = buildChapterPlan(chapter, await fixtureRegistry(), 'STYLE');
+    const panel = plan.pages[0]!.panels[0]!;
+    panel.versions = [version1];
+    panel.approvedVersion = 2;
+    expect(approvedFile(plan, panel, root)).toBeNull();
   });
 });
