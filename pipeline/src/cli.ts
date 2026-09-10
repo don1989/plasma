@@ -606,14 +606,22 @@ reference
 // ---------------------------------------------------------------------------
 
 function parsePages(raw?: string, single?: string): number[] | undefined {
-  if (single) return [parseInt(single)];
+  if (single) {
+    const n = parseInt(single);
+    if (isNaN(n)) { console.error(`Invalid page number: ${single}`); process.exit(1); }
+    return [n];
+  }
   if (!raw) return undefined;
   if (raw.includes('-') && !raw.includes(',')) {
-    const [a, b] = raw.split('-').map((s) => parseInt(s));
-    if (a == null || b == null || isNaN(a) || isNaN(b) || a > b) { console.error(`Invalid page range: ${raw}`); process.exit(1); }
+    const [a = NaN, b = NaN] = raw.split('-').map((s) => parseInt(s));
+    if (isNaN(a) || isNaN(b) || a > b) { console.error(`Invalid page range: ${raw}`); process.exit(1); }
     return Array.from({ length: b - a + 1 }, (_, i) => a + i);
   }
-  return raw.split(',').map((s) => parseInt(s.trim()));
+  return raw.split(',').map((s) => {
+    const n = parseInt(s.trim());
+    if (isNaN(n)) { console.error(`Invalid page number: ${s}`); process.exit(1); }
+    return n;
+  });
 }
 
 program
@@ -627,6 +635,7 @@ program
     const { runPlan } = await import('./stages/plan.js');
     const result = await runPlan({ chapter: parseInt(options.chapter), verbose: options.verbose, dryRun: options.dryRun });
     if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
+    console.log(`Completed in ${result.duration}ms. Files: ${result.outputFiles.length}`);
   });
 
 program
