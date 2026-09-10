@@ -1,6 +1,6 @@
 /** Tests for the balloon SVG's selectable tail side and geometry. */
 import { describe, it, expect } from 'vitest';
-import { generateBalloonSvg } from '../../src/overlay/balloon.js';
+import { generateBalloonSvg, generateBalloonShapeSvg } from '../../src/overlay/balloon.js';
 
 const font = { family: 'sans-serif', size: 14 };
 
@@ -38,5 +38,28 @@ describe('generateBalloonSvg tail', () => {
       }
       expect(tip![1]).toBe(h + 30);
     }
+  });
+});
+
+describe('generateBalloonShapeSvg', () => {
+  it('draws the shape and tail with no text element', () => {
+    const svg = generateBalloonShapeSvg(200, 80, 'speech', 'left').toString();
+    expect(svg).not.toContain('<text');
+    expect(svg).toContain('<ellipse');
+    expect(svg).toContain('<polygon');
+    expect(svg).toContain('height="110"'); // body + 30 px tail
+  });
+
+  it('matches the legacy balloon tail geometry', () => {
+    const shape = polygonPoints(generateBalloonShapeSvg(200, 80, 'speech', 'right').toString());
+    const legacy = polygonPoints(generateBalloonSvg('Hi', 200, 80, 'speech', font, 'right').toString());
+    expect(shape).toEqual(legacy);
+  });
+
+  it('draws a rounded box without a tail for narration', () => {
+    const svg = generateBalloonShapeSvg(200, 80, 'narration', 'left').toString();
+    expect(svg).toContain('<rect');
+    expect(svg).not.toContain('<polygon');
+    expect(svg).toContain('height="80"');
   });
 });

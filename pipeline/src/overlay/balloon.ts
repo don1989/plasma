@@ -19,26 +19,15 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
-/**
- * Generate an SVG speech balloon buffer.
- *
- * @param text - The dialogue text to display inside the balloon
- * @param width - Balloon width in pixels
- * @param height - Balloon body height in pixels (excludes tail)
- * @param type - Balloon visual type (speech, thought, narration)
- * @param font - Font family and size for the dialogue text
- * @param tail - Which side the speech tail points toward; 'none' draws no tail
- * @returns SVG content as a Buffer for Sharp composite input
- */
-export function generateBalloonSvg(
-  text: string,
+interface BalloonShape { svgBody: string; totalHeight: number; cx: number; cy: number }
+
+/** Shape geometry shared by the text-bearing and shape-only balloon SVGs. */
+function balloonShape(
   width: number,
   height: number,
   type: BalloonType,
-  font: { family: string; size: number } = { family: 'sans-serif', size: 14 },
-  tail: 'left' | 'right' | 'none' = 'left',
-): Buffer {
-  const escapedText = escapeXml(text);
+  tail: 'left' | 'right' | 'none',
+): BalloonShape {
   const hasTail = type === 'speech' && tail !== 'none';
   const tailHeight = hasTail ? 30 : 0;
   const totalHeight = height + tailHeight;
@@ -104,6 +93,53 @@ export function generateBalloonSvg(
       break;
     }
   }
+
+  return { svgBody, totalHeight, cx, cy };
+}
+
+/**
+ * Generate a text-free balloon shape (ellipse, dashed thought ellipse, or
+ * narration box, plus the speech tail) for compositing under separately
+ * rendered text.
+ *
+ * @param width - Balloon width in pixels
+ * @param height - Balloon body height in pixels (excludes tail)
+ * @param type - Balloon visual type (speech, thought, narration)
+ * @param tail - Which side the speech tail points toward; 'none' draws no tail
+ */
+export function generateBalloonShapeSvg(
+  width: number,
+  height: number,
+  type: BalloonType,
+  tail: 'left' | 'right' | 'none' = 'left',
+): Buffer {
+  const { svgBody, totalHeight } = balloonShape(width, height, type, tail);
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${totalHeight}" viewBox="0 0 ${width} ${totalHeight}">
+    ${svgBody}
+  </svg>`);
+}
+
+/**
+ * Generate an SVG speech balloon buffer.
+ *
+ * @param text - The dialogue text to display inside the balloon
+ * @param width - Balloon width in pixels
+ * @param height - Balloon body height in pixels (excludes tail)
+ * @param type - Balloon visual type (speech, thought, narration)
+ * @param font - Font family and size for the dialogue text
+ * @param tail - Which side the speech tail points toward; 'none' draws no tail
+ * @returns SVG content as a Buffer for Sharp composite input
+ */
+export function generateBalloonSvg(
+  text: string,
+  width: number,
+  height: number,
+  type: BalloonType,
+  font: { family: string; size: number } = { family: 'sans-serif', size: 14 },
+  tail: 'left' | 'right' | 'none' = 'left',
+): Buffer {
+  const escapedText = escapeXml(text);
+  const { svgBody, totalHeight, cx, cy } = balloonShape(width, height, type, tail);
 
   // Word-wrap long text by splitting into multiple <tspan> lines
   const words = escapedText.split(' ');

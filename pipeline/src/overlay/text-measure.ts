@@ -75,3 +75,42 @@ export async function calculateBalloonSize(
 
   return { width, height };
 }
+
+export interface RenderTextOptions {
+  family: string;
+  fontfile?: string;
+  /** Font size in CSS px (rendered at 72 dpi). */
+  size: number;
+  /** Word-wrap width in px. */
+  maxWidth: number;
+  align?: 'left' | 'centre' | 'right';
+}
+
+/**
+ * Render text to a transparent RGBA PNG with Pango doing the wrapping and shaping.
+ *
+ * Rendered at 72 dpi so `size` is in px and matches SVG font sizes elsewhere.
+ */
+export async function renderText(
+  text: string,
+  { family, fontfile, size, maxWidth, align = 'centre' }: RenderTextOptions,
+): Promise<{ png: Buffer; width: number; height: number }> {
+  const { data, info } = await sharp({
+    text: {
+      text: `<span font="${family} ${size}">${escapePango(text)}</span>`,
+      dpi: 72,
+      rgba: true,
+      width: maxWidth,
+      wrap: 'word',
+      align,
+      ...(fontfile ? { fontfile } : {}),
+    },
+  })
+    .png()
+    .toBuffer({ resolveWithObject: true });
+  return { png: data, width: info.width, height: info.height };
+}
+
+function escapePango(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}

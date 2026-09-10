@@ -10,8 +10,8 @@ import { DEFAULT_OVERLAY_CONFIG } from '../types/overlay.js';
 import { PATHS } from '../config/paths.js';
 import { loadChapterPlan, pageFileName } from '../planning/page-plan.js';
 import { placeBalloons } from '../overlay/placement.js';
-import { generateBalloonSvg } from '../overlay/balloon.js';
-import { measureText } from '../overlay/text-measure.js';
+import { generateBalloonShapeSvg } from '../overlay/balloon.js';
+import { renderText } from '../overlay/text-measure.js';
 import { renderSfx } from '../overlay/sfx.js';
 import { letterFont } from '../overlay/fonts.js';
 
@@ -24,10 +24,25 @@ export interface LetterOptions { chapter: number; pages?: number[]; dryRun?: boo
 
 const INSET = 24;
 const SPACING = 12;
-const PAD = { x: 22, y: 16 };
+const PAD = { x: 18, y: 16 };
+/** An ellipse must be this much larger than the text box it encloses (wider than tall reads as a manga balloon). */
+const ELLIPSE_FACTOR = { x: 1.4, y: 1.4 };
 
 function fontSizeFor(slotWidth: number): number {
   return Math.max(18, Math.min(34, Math.round(slotWidth / 28)));
+}
+
+type RenderedText = { png: Buffer; width: number; height: number };
+
+/** Keep a trailing em dash on the word it interrupts ("a qu—"), never alone on a line. */
+function letteringText(line: string): string {
+  return line.replace(/(\S)\u2014/g, '$1\u2060\u2014');
+}
+
+/** Balloon body size that encloses a rendered text box. */
+function bodySize(text: RenderedText, type: 'speech' | 'thought' | 'narration'): { width: number; height: number } {
+  const f = type === 'narration' ? { x: 1, y: 1 } : ELLIPSE_FACTOR;
+  return { width: Math.ceil(text.width * f.x) + 2 * PAD.x, height: Math.ceil(text.height * f.y) + 2 * PAD.y };
 }
 
 export async function letterPage(pageFile: string, page: PagePlan): Promise<Buffer> {
@@ -40,16 +55,26 @@ export async function letterPage(pageFile: string, page: PagePlan): Promise<Buff
     const size = fontSizeFor(slot.w);
 
     if (panel.dialogue.length > 0) {
+      // Text is rendered once per line inside the measure callback and reused when compositing.
+      const rendered = new Map<string, RenderedText>();
+      const types = new Map(panel.dialogue.map((d) => [d.line, d.type]));
       const balloons = await placeBalloons({
         slot, dialogue: panel.dialogue, speakerSides: panel.speakerSides, inset: INSET, spacing: SPACING,
         overrides: panel.balloonOverrides,
         measure: async (text, maxWidth) => {
-          const m = await measureText(text, font.family, size, maxWidth - 2 * PAD.x, DEFAULT_OVERLAY_CONFIG.dpi, font.fontfile);
-          return { width: m.width + 2 * PAD.x, height: m.height + 2 * PAD.y };
+          const type = types.get(text) ?? 'speech';
+          // Wrap narrowly enough that the enclosing body still fits within maxWidth.
+          const wrapWidth = Math.floor((maxWidth - 2 * PAD.x) / (type === 'narration' ? 1 : ELLIPSE_FACTOR.x));
+          const t = await renderText(letteringText(text), { family: font.family, fontfile: font.fontfile, size, maxWidth: wrapWidth });
+          rendered.set(text, t);
+          return bodySize(t, type);
         },
       });
       for (const b of balloons) {
-        layers.push({ input: generateBalloonSvg(b.text, b.w, b.h, b.type, { family: font.family, size }, b.tail), left: Math.round(b.x), top: Math.round(b.y) });
+        const t = rendered.get(b.text)!;
+        const x = Math.round(b.x), y = Math.round(b.y);
+        layers.push({ input: generateBalloonShapeSvg(b.w, b.h, b.type, b.tail), left: x, top: y });
+        layers.push({ input: t.png, left: Math.round(x + (b.w - t.width) / 2), top: Math.round(y + (b.h - t.height) / 2) });
       }
     }
 
