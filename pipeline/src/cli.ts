@@ -644,6 +644,26 @@ program
     if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
   });
 
+program
+  .command('panels')
+  .description('Generate one image per panel from pages.json (skips approved panels unless --redo)')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
+  .option('--page <number>', 'Single page')
+  .option('--pages <range>', 'Page range, e.g. "1-3"')
+  .option('--panel <number>', 'Only this panel number (with --page)')
+  .option('--model <name>', 'Model alias (default: runway-muse)')
+  .option('--redo', 'Generate a new version even for approved panels')
+  .option('--notes <text>', 'Notes stored with each version')
+  .option('-v, --verbose', 'Enable verbose logging')
+  .option('--dry-run', 'List what would be generated without calling any API')
+  .action(async (options) => {
+    if (!options.chapter) { console.error("error: required option '-c, --chapter <number>' not specified"); process.exit(1); }
+    const { runPanels } = await import('./stages/panel-generate.js');
+    const result = await runPanels({ chapter: parseInt(options.chapter), pages: parsePages(options.pages, options.page), panel: options.panel ? parseInt(options.panel) : undefined,
+      model: options.model, redo: options.redo, notes: options.notes, verbose: options.verbose, dryRun: options.dryRun });
+    if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
+  });
+
 // Strip a lone '--' injected by pnpm:
 //   argv[2] === '--': `pnpm dev -- overlay -c 1`
 //   argv[3] === '--': `pnpm stage:generate -- -c 1` (subcommand already fixed in script, pnpm appends '--' before user args)
