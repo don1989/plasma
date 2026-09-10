@@ -601,6 +601,34 @@ reference
     }
   });
 
+// ---------------------------------------------------------------------------
+// Panel pipeline: plan → panels → review/approve → compose → letter
+// ---------------------------------------------------------------------------
+
+function parsePages(raw?: string, single?: string): number[] | undefined {
+  if (single) return [parseInt(single)];
+  if (!raw) return undefined;
+  if (raw.includes('-') && !raw.includes(',')) {
+    const [a, b] = raw.split('-').map((s) => parseInt(s));
+    if (a == null || b == null || isNaN(a) || isNaN(b) || a > b) { console.error(`Invalid page range: ${raw}`); process.exit(1); }
+    return Array.from({ length: b - a + 1 }, (_, i) => a + i);
+  }
+  return raw.split(',').map((s) => parseInt(s.trim()));
+}
+
+program
+  .command('plan')
+  .description('Build output/ch-NN/pages.json from script.json (layout, per-panel prompts)')
+  .option('-c, --chapter <number>', 'Chapter number (required)')
+  .option('-v, --verbose', 'Enable verbose logging')
+  .option('--dry-run', 'Show what would be done without writing')
+  .action(async (options) => {
+    if (!options.chapter) { console.error("error: required option '-c, --chapter <number>' not specified"); process.exit(1); }
+    const { runPlan } = await import('./stages/plan.js');
+    const result = await runPlan({ chapter: parseInt(options.chapter), verbose: options.verbose, dryRun: options.dryRun });
+    if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
+  });
+
 // Strip a lone '--' injected by pnpm:
 //   argv[2] === '--': `pnpm dev -- overlay -c 1`
 //   argv[3] === '--': `pnpm stage:generate -- -c 1` (subcommand already fixed in script, pnpm appends '--' before user args)
