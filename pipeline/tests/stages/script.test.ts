@@ -1,6 +1,6 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { existsSync } from 'node:fs';
-import { readFile, rm } from 'node:fs/promises';
+import { readFile, rm, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runScript } from '../../src/stages/script.js';
@@ -10,9 +10,14 @@ const PROJECT_ROOT = resolve(__dirname, '..', '..', '..');
 const OUTPUT_DIR = resolve(PROJECT_ROOT, 'output', 'ch-01');
 const OUTPUT_JSON = resolve(OUTPUT_DIR, 'script.json');
 
-// Clean up output after integration tests
+// Only remove script.json if this test created it; the real chapter parse is
+// an input to the plan stage and must survive a test run.
+let existedBefore = false;
+beforeEach(() => {
+  existedBefore = existsSync(OUTPUT_JSON);
+});
 afterEach(async () => {
-  if (existsSync(OUTPUT_JSON)) {
+  if (!existedBefore && existsSync(OUTPUT_JSON)) {
     await rm(OUTPUT_JSON);
   }
 });
@@ -46,10 +51,13 @@ describe('runScript', () => {
   });
 
   it('with dryRun parses but does not write file', async () => {
+    const before = existsSync(OUTPUT_JSON) ? (await stat(OUTPUT_JSON)).mtimeMs : null;
     const result = await runScript({ chapter: 1, dryRun: true });
     expect(result.success).toBe(true);
     expect(result.outputFiles).toHaveLength(0);
-    expect(existsSync(OUTPUT_JSON)).toBe(false);
+    // Either the file still does not exist, or a pre-existing one was left untouched.
+    const after = existsSync(OUTPUT_JSON) ? (await stat(OUTPUT_JSON)).mtimeMs : null;
+    expect(after).toBe(before);
   });
 });
 

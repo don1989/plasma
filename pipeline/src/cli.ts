@@ -1,5 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { Command } from 'commander';
+
+// sharp's macOS Pango defaults to CoreText, which ignores fontfile; the fontconfig
+// backend must be selected before the first text render in this process.
+process.env['PANGOCAIRO_BACKEND'] ??= 'fc';
 import { parse as parseYaml } from 'yaml';
 
 import { PATHS } from './config/paths.js';
@@ -669,8 +673,15 @@ program
   .option('--dry-run', 'List what would be generated without calling any API')
   .action(async (options) => {
     if (!options.chapter) { console.error("error: required option '-c, --chapter <number>' not specified"); process.exit(1); }
+    const panelPages = parsePages(options.pages, options.page);
+    let panelFilter: number | undefined;
+    if (options.panel != null) {
+      panelFilter = parseInt(options.panel);
+      if (isNaN(panelFilter)) { console.error(`Invalid panel number: ${options.panel}`); process.exit(1); }
+      if (!panelPages) { console.error('error: --panel requires --page or --pages (otherwise it would generate that panel on every page)'); process.exit(1); }
+    }
     const { runPanels } = await import('./stages/panel-generate.js');
-    const result = await runPanels({ chapter: parseInt(options.chapter), pages: parsePages(options.pages, options.page), panel: options.panel ? parseInt(options.panel) : undefined,
+    const result = await runPanels({ chapter: parseInt(options.chapter), pages: panelPages, panel: panelFilter,
       model: options.model, redo: options.redo, notes: options.notes, verbose: options.verbose, dryRun: options.dryRun });
     if (!result.success) { console.error('Stage failed:', result.errors); process.exit(1); }
   });

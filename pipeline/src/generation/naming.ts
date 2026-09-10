@@ -9,7 +9,8 @@ import { readdirSync, existsSync } from 'node:fs';
 import type { PanelImageName } from '../types/generation.js';
 
 /** Regex for parsing panel image filenames. */
-const PANEL_FILENAME_RE = /^ch(\d{2})_p(\d{3})_v(\d+)\.(png|jpg|jpeg|webp)$/;
+/** Matches raw panel/page images `chNN_pNNN_vN.ext` and composed pages `chNN_pNN.ext` (version defaults to 1). */
+const PANEL_FILENAME_RE = /^ch(\d{2})_p(\d{2,3})(?:_v(\d+))?\.(png|jpg|jpeg|webp)$/;
 
 /**
  * Generate a panel image filename from its components.
@@ -45,7 +46,7 @@ export function parsePanelImageFilename(filename: string): PanelImageName | null
   return {
     chapter: Number(chStr),
     page: Number(pgStr),
-    version: Number(verStr),
+    version: verStr === undefined ? 1 : Number(verStr),
     filename,
     extension: ext!,
   };
